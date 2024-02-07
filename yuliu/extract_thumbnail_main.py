@@ -1,0 +1,611 @@
+import io
+import os
+import random
+import re
+import shutil
+import subprocess
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+import cv2
+import numpy as np
+from PIL import Image
+from PIL import ImageDraw, ImageFont
+from paddleocr import PaddleOCR
+
+from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator
+
+
+def is_resolution_gte_1920x1080(image_path):
+    with Image.open(image_path) as img:
+        width, height = img.size
+        print(f"Image width: {width}, Image height: {height}")  # 打印图片的宽度和高度
+        return width >= 1920 and height >= 1080
+
+
+def delete_files_if_exist(files_list):
+    for file_name in files_list:
+        if os.path.exists(file_name):
+            os.remove(file_name)
+            print(f"Deleted {file_name}")
+        else:
+            print(f"{file_name} does not exist")
+
+
+def get_image_dimensions(image_path):
+    """
+    获取图像的尺寸（宽度和高度）。
+
+    参数:
+        image_path (str): 图像的路径。
+
+    返回:
+        tuple: (width, height)
+    """
+    with Image.open(image_path) as img:
+        return img.size
+
+
+def get_corner_coordinates(width, height):
+    """
+    获取图像四角的坐标点。
+
+    参数:
+        width (int): 图像的宽度。
+        height (int): 图像的高度。
+
+    返回:
+        dict: 包含四个角的坐标点。
+    """
+    return {
+        "top_left": (0, 0),
+        "top_right": (width - 1, 0),
+        "bottom_left": (0, height - 1),
+        "bottom_right": (width - 1, height - 1)
+    }
+
+
+def split_image_into_three(image_path):
+    """
+    将图片竖直地分成三份并获取这三张图片的坐标点。
+
+    参数:
+        image_path (str): 图像的路径。
+
+    返回:
+        list: 包含三个坐标点的元组，每个元组代表一个分片的左上和右下坐标点。
+    """
+    width, height = get_image_dimensions(image_path)
+    segment_width = width // 3
+
+    segments = []
+    for i in range(3):
+        top_left = (i * segment_width, 0)
+        if i == 2:  # 对于最后一份，确保捕获所有剩余的像素
+            bottom_right = (width, height)
+        else:
+            bottom_right = ((i + 1) * segment_width, height)
+        segments.append((top_left, bottom_right))
+
+    return segments
+
+
+def split_image_into_three(image_path, save_path_prefix="抖音三联屏"):
+    """
+    将图片竖直地分成三份并保存它们。
+
+    参数:
+        image_path (str): 图像的路径。
+        save_path_prefix (str): 保存分割图像的文件名前缀。
+
+    返回:
+        list: 三个新文件的路径。
+    """
+    with Image.open(image_path) as img:
+        width, height = img.size
+        segment_width = width // 3
+
+        saved_files = []
+        for i in range(3):
+            left = i * segment_width
+            if i == 2:  # 对于最后一份，确保捕获所有剩余的像素
+                right = width
+            else:
+                right = (i + 1) * segment_width
+
+            # 根据坐标点裁剪图片
+            segment = img.crop((left, 0, right, height))
+            file_name = f"{save_path_prefix}_{i + 1}.png"
+            segment.save(file_name)
+            saved_files.append(file_name)
+
+        return saved_files
+
+
+def write_title(title, textColor, font_path, font_size_title, input_img, output_img):
+    # 打开图片
+    with Image.open(input_img) as img:
+        draw = ImageDraw.Draw(img)
+
+        # 使用内置的字体。如果要使用其他字体，可以使用ImageFont.truetype('path_to_font.ttf', size)
+        # 这只是一个示例值，可能需要根据实际需求调整
+        font = ImageFont.truetype(font_path, font_size_title)  # 使用Arial字体
+
+        bbox = font.getmask(title).getbbox()
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
+        # 计算文本应该放置的位置
+        x = img.width - text_width - 32  # 减去10为了从右边留出一点间距
+        y = 32  # 加上10为了从顶部留出一点间距
+
+        # 以白色绘制文本
+        draw.text((x, y), title, font=font, fill=textColor)
+
+        # 保存图像
+        img.save(output_img)
+
+
+def write_numbers(text_color, font_path, font_size, input_path, output_path, text):
+    # 打开图片
+    image = Image.open(input_path)
+    width, height = image.size
+    draw = ImageDraw.Draw(image)
+
+    # 计算中间的横线位置，但不绘制
+    horizontal_line_y = height // 2
+
+    # 计算两条竖线的位置，但不绘制
+    part_width = width // 3
+
+    # 使用指定的字体和大小
+    font = ImageFont.truetype(font_path, font_size)
+
+    for i in range(3):
+        x_center = part_width * (i + 0.5)
+        y_center = horizontal_line_y + height // 4
+
+        # 用中心坐标计算bbox
+        bbox = draw.textbbox((x_center, y_center), text, font=font, anchor="mm")
+        text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+        x = x_center - text_width / 2
+        y = y_center - text_height / 2
+        draw.text((x, y), str(i + 1), font=font, fill=text_color)
+
+    image.save(output_path)
+
+
+def optimize_image_for_size(img, max_size=2 * 1024 * 1024, quality=85):
+    """
+    优化图像大小，确保不超过指定的最大大小。
+    :param img: PIL Image对象。
+    :param max_size: 最大文件大小（以字节为单位）。
+    :param quality: 初始质量参数，用于JPEG图像。
+    :return: 优化后的PIL Image对象。
+    """
+    # 尝试保存图像并检查大小
+    img_temp = io.BytesIO()
+    img.save(img_temp, format='JPEG', quality=quality)
+    while img_temp.tell() > max_size and quality > 10:
+        quality -= 5  # 降低质量以减小文件大小
+        img_temp.seek(0)  # 重置文件指针
+        img.save(img_temp, format='JPEG', quality=quality)
+
+    img_temp.seek(0)  # 重置文件指针以供读取
+    optimized_img = Image.open(img_temp)
+    return optimized_img
+
+
+def split_title_into_lines(title, max_chars_per_line):
+    words = title.split(' ')
+    lines = []
+    current_line = ''
+    for word in words:
+        if len(current_line) + len(word) <= max_chars_per_line:
+            current_line += word
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    return lines
+
+
+def write_big_title(title, text_color, font_path, font_size_title, input_img, max_chars_per_line=7):
+    # 打开图片
+    with Image.open(input_img) as img:
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.truetype(font_path, font_size_title)
+
+        # 将标题拆分成多行，每行最多 max_chars_per_line 个字
+        lines = split_title_into_lines(title, max_chars_per_line)
+
+        # 如果只有两行且总字符数大于 max_chars_per_line
+        if len(lines) == 2 and len(title) > max_chars_per_line:
+            first_line_chars = len(title) % max_chars_per_line
+            if first_line_chars == 0:
+                first_line_chars = max_chars_per_line
+            lines = [title[:first_line_chars]] + [title[first_line_chars:]]
+
+        # 计算每行文本的高度和总文本块的高度
+        line_height = font.getbbox('高')[3] - font.getbbox('高')[1]
+        total_text_height = line_height * len(lines) + 16 * (len(lines) - 1)
+
+        # 计算起始Y坐标，确保文本块底部与图片底部有16px间距
+        y_start = img.height - total_text_height - 96
+
+        # 逐行绘制文本
+        for i, line in enumerate(lines):
+            bbox = font.getbbox(line)
+            text_width = bbox[2] - bbox[0]
+            x = (img.width - text_width) // 2
+            y = y_start + i * (line_height + 16)
+
+            draw.text((x, y), line, font=font, fill=text_color)
+
+        # 在保存前优化图像大小
+        optimized_img = optimize_image_for_size(img)
+
+        # 保存优化后的图像
+        optimized_img.save(input_img, quality=85)
+    return input_img  # 在这里添加返回值
+
+
+def write_big_numbers(text_color, font_path, font_size, input_path, text):
+    # 打开图片
+    image = Image.open(input_path)
+    width, height = image.size
+    draw = ImageDraw.Draw(image)
+
+    # 使用指定的字体和大小
+    font = ImageFont.truetype(font_path, font_size)
+
+    # 计算右上角的位置
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+    # 设置右上角的x和y坐标，使文本距离右边和上边都有16px的间距
+    margin = 16
+    x = width - text_width - margin * 2
+    y = margin * 2
+
+    # 绘制文本
+    draw.text((x, y), text, font=font, fill=text_color)
+
+    # 保存图像
+    image.save(input_path)
+    return input_path
+
+
+# 示例调用方式
+
+
+# 确保所有的导入
+def has_chinese_characters(text):
+    return any('\u4e00' <= char <= '\u9fff' for char in text)
+
+
+def extract_and_print_chinese_text(output_path):
+    ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False)
+    result = ocr.ocr(output_path, cls=True)
+    chinese_text = ''
+    if result and isinstance(result, list):
+        for line in result:
+            if line and isinstance(line, list):
+                for word_info in line:
+                    if word_info and isinstance(word_info, list):
+                        word = word_info[1][0]
+                        chinese_text += ''.join(filter(lambda x: '\u4e00' <= x <= '\u9fff', word))
+    return chinese_text
+
+
+def get_cover_images(frame_images, output_dir):
+    frame_images_length = len(frame_images)
+    if frame_images_length % 3 != 0:
+        raise ValueError("Number of frames must be a multiple of 3")
+    batch_size = 3
+    for i in range(0, frame_images_length, batch_size):
+        batch_paths = frame_images[i:i + batch_size]
+        images = [Image.open(x) for x in batch_paths]
+        widths, heights = zip(*(im.size for im in images))
+
+        total_width = sum(widths)
+        max_height = max(heights)
+
+        new_im = Image.new('RGB', (total_width, max_height))
+
+        x_offset = 0
+        for im in images:
+            new_im.paste(im, (x_offset, 0))
+            x_offset += im.size[0]
+
+        batch_index = ''.join([str(j + 1) for j in range(i, i + batch_size)])
+        final_image_path = os.path.join(output_dir, f'input_img{batch_index}.jpg')
+        new_im.save(final_image_path)
+        print(f"Concatenated image saved as: {final_image_path}")
+
+    return [os.path.join(output_dir, f'input_img{"".join([str(j + 1) for j in range(i, i + batch_size)])}.jpg') for i in
+            range(0, frame_images_length, batch_size)]
+
+
+def generate_frame(index, video_path, duration, output_dir, crop_height, model_path, frame_paths, lock):
+    while True:
+        time = random.randint(1, int(duration))
+        output_path = os.path.join(output_dir, f"frame_{index + 1}.jpg")
+        if os.path.exists(output_path) and not has_chinese_characters(extract_and_print_chinese_text(output_path)):
+            with lock:
+                frame_paths[index] = output_path
+            break
+
+        command = [
+            'ffmpeg',
+            '-v',
+            'quiet',
+            '-y',
+            '-ss', str(time), '-i', video_path, '-frames:v', '1',
+            '-q:v', '2', output_path
+        ]
+        command += ['-loglevel', 'quiet']
+        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+
+        if os.path.exists(output_path):
+            try:
+                image = Image.open(output_path)
+                original_width, original_height = image.size
+                new_height = original_height - crop_height
+                new_width = int(new_height * original_width / original_height)
+
+                left = (original_width - new_width) // 2
+                top = 0
+                right = left + new_width
+                bottom = top + new_height
+
+                cropped_image = image.crop((left, top, right, bottom))
+                cropped_image.save(output_path)
+
+                chinese_text = extract_and_print_chinese_text(output_path)
+                if not has_chinese_characters(chinese_text):
+                    cropped_image_cv = cv2.cvtColor(np.array(cropped_image), cv2.COLOR_RGB2BGR)
+                    sr = cv2.dnn_superres.DnnSuperResImpl_create()
+                    sr.readModel(model_path)
+                    sr.setModel("espcn", 3)
+                    enhanced_image_cv = sr.upsample(cropped_image_cv)
+                    enhanced_image_cv = cv2.resize(enhanced_image_cv, (original_width, original_height))
+                    enhanced_image = Image.fromarray(cv2.cvtColor(enhanced_image_cv, cv2.COLOR_BGR2RGB))
+                    enhanced_image.save(output_path)
+                    with lock:
+                        frame_paths[index] = output_path
+                    break
+            except Exception as e:
+                print(f"Error processing image {output_path}: {e}")
+        else:
+            print(f"Failed to generate frame at {output_path}")
+
+
+def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path):
+    frame_paths = [None] * num_frames
+    lock = threading.Lock()
+
+    with ThreadPoolExecutor(max_workers=num_frames) as executor:
+        futures = [
+            executor.submit(generate_frame, i, video_path, duration, output_dir, crop_height, model_path, frame_paths, lock)
+            for i in range(num_frames)
+        ]
+        for future in futures:
+            future.result()
+
+    return frame_paths
+
+
+def extract_covers_and_frames(video_path, num_frames=3 * 1, crop_height=0):
+    output_dir = os.path.dirname(video_path)
+
+    # Get video duration
+    command = ['ffprobe', '-v', 'quiet', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', video_path]
+    command += ['-loglevel', 'quiet']
+    result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+    duration = float(result.stdout)
+
+    # Model path for super resolution
+    model_path = "ESPCN_x3.pb"
+
+    # 截图列表
+    frame_images = get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path)
+    # 封面图列表
+    cover_images = get_cover_images(frame_images, output_dir)
+
+    return cover_images, frame_images
+
+
+def print_image_size(image_path):
+    """
+    打印指定路径图像的尺寸和名称。
+
+    参数:
+    image_path (str): 图像文件的路径。
+    """
+    try:
+        with Image.open(image_path) as img:
+            # 获取图像尺寸
+            width, height = img.size
+            # 获取图像名称
+            image_name = os.path.basename(image_path)
+            print(f"图像名称: {image_name}, 图像尺寸: {width}x{height}")
+    except Exception as e:
+        print(f"无法打开图像。错误信息：{e}")
+
+
+def check_and_crop_images(frame_paths):
+    """
+    检查并裁剪一组图像，使其符合指定的宽高比，同时确保尽可能多的画面内容显示。
+
+    参数：
+    - frame_paths: list, 包含图像文件路径的列表。
+
+    返回值：
+    - 无
+    """
+    # 预期的宽高比
+    ratios = [
+        427 / 720,
+        426 / 720,
+        427 / 720
+    ]
+
+    for i, path in enumerate(frame_paths):
+        expected_ratio = ratios[i % len(ratios)]
+
+        with Image.open(path) as img:
+            width, height = img.size
+            current_ratio = width / height
+
+            # 计算需要的宽度和高度以匹配期望的比例
+            if current_ratio > expected_ratio:
+                # 当前图像过宽，需要裁剪宽度
+                new_width = int(height * expected_ratio)
+                new_height = height
+                left = (width - new_width) // 2
+                top = 0
+            else:
+                # 当前图像过高，需要裁剪高度
+                new_width = width
+                new_height = int(width / expected_ratio)
+                left = 0
+                top = (height - new_height) // 2
+
+            right = left + new_width
+            bottom = top + new_height
+
+            # 裁剪图像，确保中心部分显示
+            cropped_img = img.crop((left, top, right, bottom))
+            cropped_img.save(path)
+            print(f"Cropped image saved as: {path}")
+
+
+def get_unique_path(dst_path):
+    """生成唯一的文件路径，以避免覆盖现有文件"""
+    base, ext = os.path.splitext(dst_path)
+    counter = 1
+    unique_path = dst_path
+    while os.path.exists(unique_path):
+        unique_path = f"{base}_{counter}{ext}"
+        counter += 1
+    return unique_path
+
+
+def move_images_to_release(cover_images, frame_images, release_video_dir):
+    """移动cover_images和frame_images中的图片到release_video目录"""
+    # 确保输出目录存在
+    os.makedirs(release_video_dir, exist_ok=True)
+
+    # 移动cover_images中的图片
+    for src_path in cover_images:
+        if os.path.exists(src_path) and os.path.isfile(src_path):
+            filename = os.path.basename(src_path)
+            dst_path = os.path.join(release_video_dir, filename)
+            unique_dst_path = get_unique_path(dst_path)
+            shutil.move(src_path, unique_dst_path)
+            print(f"移动文件: {src_path} 到 {unique_dst_path}")
+
+    # 移动frame_images中的图片
+    for src_path in frame_images:
+        if os.path.exists(src_path) and os.path.isfile(src_path):
+            filename = os.path.basename(src_path)
+            dst_path = os.path.join(release_video_dir, filename)
+            unique_dst_path = get_unique_path(dst_path)
+            shutil.move(src_path, unique_dst_path)
+            print(f"移动文件: {src_path} 到 {unique_dst_path}")
+
+
+def check_images_in_release_dir(release_video_dir, number_covers=1):
+    # 定义匹配文件名的正则表达式
+    pattern = re.compile(r'^input_img\d+\.png$')
+    # 获取目录中的所有文件
+    files = os.listdir(release_video_dir)
+    # 过滤出符合条件的文件
+    matched_files = [file for file in files if pattern.match(file)]
+    # 检查是否满足number_covers的数量
+    if len(matched_files) >= number_covers:
+        print(f"目录中已存在 {number_covers} 张满足条件的图片文件，退出方法。")
+        return True
+    else:
+        print(f"目录中没有找到足够的图片文件，需要 {number_covers} 张，但仅找到 {len(matched_files)} 张。")
+        return False
+
+
+def extract_thumbnail_main(video_path, release_video_dir, number_covers=1, crop_height=100):
+    # 截取3张没有汉字的截图
+    if check_images_in_release_dir(release_video_dir, number_covers):
+        return
+
+    print_separator("开始制作封面图")
+    output_dir = os.path.dirname(video_path)
+    cover_images, frame_images = extract_covers_and_frames(video_path, 3 * number_covers, crop_height)
+    # 示例调用
+    resize_images_if_needed(cover_images)
+    # 示例调用
+    cover_images = convert_jpeg_to_png(cover_images)
+
+    for cover_image in cover_images:
+        try:
+            with Image.open(cover_image) as img:
+                width, height = img.size
+                if width < 1920 or height < 1080:
+                    img_resized = img.resize((1920, 1080), Image.Resampling.LANCZOS)
+                    img_resized.save(cover_image)
+        except Exception as e:
+            print(f"无法处理图像 {cover_image}。错误信息：{e}")
+
+    for cover_image in cover_images:
+        if is_resolution_gte_1920x1080(cover_image):
+
+            # 先判断input_img的尺寸是不是宽高比,9:4,不是就切成9:4的宽高
+            title = os.path.basename(os.path.dirname(video_path))
+            textColorTitle = "#FFF000"
+            textColor = "#FFF000"
+
+            # textColorTitle = "#FFFFFF"
+            # textColor = "#FFFFFF"
+
+            font_size = 80 * 3 * 1.2
+            font_title_size = 80 * 3 * 1.2
+            font_path = os.path.join('ziti', 'FanThinkGrotesk', 'FanThinkGrotesk-Medium.otf')
+
+            # file_path = os.path.join(output_dir, '横屏大图.png')
+            title_img = write_big_title(title, textColorTitle, font_path, font_title_size, cover_image)
+            file_path = write_big_numbers(textColor, font_path, font_size, title_img, '全集')
+
+            # 检查文件是否存在且大于2MB,大于2m的变成1280*720,让所有图片都能上传youtube
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 2 * 1024 * 1024:
+                with Image.open(file_path) as img:
+                    # 优化图像大小
+                    img = img.resize((1280, 720), Image.LANCZOS)
+                    # 保存优化后的图像，保持高质量
+                    img.save(file_path, optimize=True, quality=85)
+                # 获取文件大小
+                file_size = os.path.getsize(file_path) / (1024 * 1024)  # 转换为MB
+                print(f"Optimization completed for {file_path}, new size: {file_size:.2f} MB")
+
+            else:
+                print(f"No optimization needed for {file_path}")
+
+            # 移动cover_images, frame_images图片到 release_video 目录中去
+            # 不会覆盖之前的封面
+
+    move_images_to_release(cover_images, frame_images, release_video_dir)
+
+
+if __name__ == "__main__":
+    output_dir = os.path.join('download_directory', 'aa测试目录')
+    os.makedirs(output_dir, exist_ok=True)
+    video_path = os.path.join(output_dir, '1.mp4')
+    duration = 10
+    crop_height = 100
+    num_frames = 6
+    model_path = "ESPCN_x3.pb"
+    start_time = time.time()
+    frame_paths = get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path)
+    end_time = time.time()
+    print(f"===================Frame generation completed in {end_time - start_time} seconds.")
