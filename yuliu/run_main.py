@@ -54,23 +54,25 @@ def clear_directory(directory_path):
 def process_audio_with_mvsep_mdx23(audio_file):
     start_time = time.time()
     print(f"\n=========================处理音频文件: {os.path.basename(audio_file)}")
-    clear_directory(mvsep_input_dir)
+    # clear_directory(mvsep_input_dir)
     shutil.copy(audio_file, mvsep_input_dir)
+    intput_file_audio = os.path.join(mvsep_input_dir, get_file_name_with_extension(audio_file))
 
-    output_file = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
+    output_file_vocals = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
     output_file_instrum = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_instrum.wav")
-    if not os.path.isfile(output_file):
+
+    if not os.path.exists(output_file_vocals):
         original_directory = os.getcwd()
         os.chdir(os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2"))
-        command = ['python', 'mvsep_main.py', '--input', mvsep_input_dir, '--output', mvsep_output_dir]
+        command = ['python', 'mvsep_main.py', '--input', intput_file_audio, '--output', mvsep_output_dir]
         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         os.chdir(original_directory)
 
     if os.path.isfile(output_file_instrum):
         os.remove(output_file_instrum)
 
-    if os.path.isfile(output_file):
-        destination = shutil.copy(output_file, download_directory_dir)
+    if os.path.isfile(output_file_vocals):
+        destination = shutil.copy(output_file_vocals, download_directory_dir)
         elapsed_time = time.time() - start_time
         print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
         return os.path.abspath(destination)
@@ -303,8 +305,6 @@ def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, dow
 
     process_and_save_results(original_video, download_time, process_video_time, result_file_name)
     finalize_video_processing(processed_videos, output_path, release_video_dir)
-
-
 
     print("""
     【高清完結合集】

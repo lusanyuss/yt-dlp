@@ -102,7 +102,8 @@ if __name__ == '__main__':
     separate_audio(
         input=args.input,
         output=args.output,
-        output_format='float',
+
+        output_format='PCM_16',
         Separation_mode='Vocals/Instrumental',
         input_gain=0,
         restore_gain_after_separation=False,
@@ -113,11 +114,9 @@ if __name__ == '__main__':
         weight_InstVoc=4,
         use_VitLarge=True,
         weight_VitLarge=1,
-
         use_InstHQ4=False,
         weight_InstHQ4=2,
         overlap_InstHQ4=0.1,
-
         use_VOCFT=False,
         weight_VOCFT=2,
         overlap_VOCFT=0.1,
