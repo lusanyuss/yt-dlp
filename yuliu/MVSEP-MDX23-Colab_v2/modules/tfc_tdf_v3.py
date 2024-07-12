@@ -80,7 +80,7 @@ class TFC_TDF(nn.Module):
     def __init__(self, in_c, c, l, f, bn, norm, act):
         super().__init__()
         self.blocks = nn.ModuleList()
-
+        
         for i in range(l):
             block = nn.Module()
             block.tfc1 = nn.Sequential(norm(in_c), act, nn.Conv2d(in_c, c, 3, 1, 1, bias=False),)
@@ -117,7 +117,7 @@ class TFC_TDF_net(nn.Module):
         f = config.audio.dim_f // self.num_subbands
         self.first_conv = nn.Conv2d(dim_c, c, 1, 1, 0, bias=False)
         self.encoder_blocks = nn.ModuleList()
-
+        
         for i in range(n):
             block = nn.Module()
             block.tfc_tdf = TFC_TDF(c, c, l, f, bn, norm, act)
@@ -128,7 +128,7 @@ class TFC_TDF_net(nn.Module):
 
         self.bottleneck_block = TFC_TDF(c, c, l, f, bn, norm, act)
         self.decoder_blocks = nn.ModuleList()
-
+        
         for i in range(n):
             block = nn.Module()
             block.upscale = Upscale(c, c - g, scale, norm, act)
@@ -160,28 +160,28 @@ class TFC_TDF_net(nn.Module):
         first_conv_out = x = self.first_conv(x)
         x = x.transpose(-1, -2)
         encoder_outputs = []
-
+        
         for block in self.encoder_blocks:
             x = block.tfc_tdf(x)
             encoder_outputs.append(x)
             x = block.downscale(x)
-
+            
         x = self.bottleneck_block(x)
-
+        
         for block in self.decoder_blocks:
             x = block.upscale(x)
             x = torch.cat([x, encoder_outputs.pop()], 1)
             x = block.tfc_tdf(x)
 
         x = x.transpose(-1, -2)
-        x = x * first_conv_out
+        x = x * first_conv_out  
         x = self.final_conv(torch.cat([mix, x], 1))
         x = self.cws2cac(x)
-
+        
         if self.num_target_instruments > 1:
             b, c, f, t = x.shape
             x = x.reshape(b, self.num_target_instruments, -1, f, t)
-
+            
         x = self.stft.inverse(x)
 
         return x

@@ -11,25 +11,25 @@ def separate_audio(input,
                    input_gain=0,
                    restore_gain_after_separation=False,
                    filter_vocals_below_50hz=False,
-                   BigShifts=3,
-                   BSRoformer_model='ep_317_1297',
-                   weight_BSRoformer=10,
-                   weight_InstVoc=4,
-                   use_VitLarge=True,
-                   weight_VitLarge=1,
-                   use_InstHQ4=False,
-                   weight_InstHQ4=2,
-                   overlap_InstHQ4=0.1,
-                   use_VOCFT=False,
-                   weight_VOCFT=2,
-                   overlap_VOCFT=0.1,
-                   overlap_demucs=0.6
+                   BigShifts=1,  # 优先速度，设置为较低值
+                   BSRoformer_model='ep_317_1297',  # 使用快速模型
+                   weight_BSRoformer=0,  # 降低权重以加快处理
+                   weight_InstVoc=0,  # 降低权重以加快处理
+                   use_VitLarge=False,  # 不使用VitLarge模型以提高速度
+                   weight_VitLarge=0,
+                   use_InstHQ4=False,  # 不使用InstHQ4模型以提高速度
+                   weight_InstHQ4=0,
+                   overlap_InstHQ4=0,
+                   use_VOCFT=False,  # 不使用VOCFT模型以提高速度
+                   weight_VOCFT=0,
+                   overlap_VOCFT=0,
+                   overlap_demucs=0.6  # Demucs仅在4-STEMS模式下使用
                    ):
-    use_InstVoc_ = '--use_InstVoc'
+    use_InstVoc_ = ''
     use_BSRoformer_ = '--use_BSRoformer'
-    use_VOCFT_ = '--use_VOCFT' if use_VOCFT else ''
-    use_VitLarge_ = '--use_VitLarge' if use_VitLarge else ''
-    use_InstHQ4_ = '--use_InstHQ4' if use_InstHQ4 else ''
+    use_VOCFT_ = ''
+    use_VitLarge_ = ''
+    use_InstHQ4_ = ''
     restore_gain = '--restore_gain' if restore_gain_after_separation else ''
     vocals_only = '--vocals_only' if Separation_mode == 'Vocals/Instrumental' else ''
     filter_vocals = '--filter_vocals' if filter_vocals_below_50hz else ''
@@ -102,24 +102,22 @@ if __name__ == '__main__':
     separate_audio(
         input=args.input,
         output=args.output,
-        output_format='float',
-        Separation_mode='Vocals/Instrumental',
+        output_format='PCM_16',  # 使用PCM_16格式以加快处理速度
+        Separation_mode='Vocals/Instrumental',  # 仅分离人声
         input_gain=0,
         restore_gain_after_separation=False,
         filter_vocals_below_50hz=False,
-        BigShifts=3,
+        BigShifts=1,  # 优先速度
         BSRoformer_model='ep_317_1297',
-        weight_BSRoformer=10,
-        weight_InstVoc=4,
-        use_VitLarge=True,
-        weight_VitLarge=1,
-
-        use_InstHQ4=False,
-        weight_InstHQ4=2,
-        overlap_InstHQ4=0.1,
-
-        use_VOCFT=False,
-        weight_VOCFT=2,
-        overlap_VOCFT=0.1,
-        overlap_demucs=0.6
+        weight_BSRoformer=0,  # 降低权重以加快处理
+        weight_InstVoc=0,  # 降低权重以加快处理
+        use_VitLarge=False,  # 不使用VitLarge模型以提高速度
+        weight_VitLarge=0,
+        use_InstHQ4=False,  # 不使用InstHQ4模型以提高速度
+        weight_InstHQ4=0,
+        overlap_InstHQ4=0,
+        use_VOCFT=False,  # 不使用VOCFT模型以提高速度
+        weight_VOCFT=0,
+        overlap_VOCFT=0,
+        overlap_demucs=0.6  # Demucs仅在4-STEMS模式下使用
     )
