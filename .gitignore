@@ -124,3 +124,5 @@ yt-dlp.zip
 ytdlp_plugins/
 yt-dlp-plugins
 /yuliu/video_processing_results.txt
+/yuliu/main.py
+/yuliu/MVSEP-MDX23-Colab_v2/models/*.ckpt
