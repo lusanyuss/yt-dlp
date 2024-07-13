@@ -4,6 +4,8 @@ import shutil
 
 import psutil
 
+from yuliu.DiskCacheUtil import DiskCacheUtil
+
 
 def print_separator(text='', char='=', length=150):
     """
@@ -134,15 +136,16 @@ def get_file_md5(file_path):
     return hash_md5.hexdigest()
 
 
-def get_keyframes(input_file, split_time, cache_util):
+def get_keyframes(input_file, split_time):
     start_time = time.time()
     print(f"开始处理文件: {input_file}")
 
-    # 计算文件的 MD5 校验和
+    # 计算文件的 MD5 校验和1111
     video_md5 = f'{get_file_md5(input_file)}_{split_time}'
     print(f"文件的 MD5 校验和切割分钟: {video_md5}")
 
     # 如果缓存中存在，直接返回缓存中的关键帧信息
+    cache_util = DiskCacheUtil()
     cached_keyframes = cache_util.get_from_cache(video_md5)
     if cached_keyframes is not None:
         print("从缓存中读取关键帧信息")

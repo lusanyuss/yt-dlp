@@ -468,7 +468,8 @@ def check_images_in_release_dir(release_video_dir, number_covers=1):
 from PIL import Image, ImageDraw, ImageFont
 
 
-def write_big_title(title, subtitle, title_color, subtitle_color, font_path, subtitle_font, font_size, subtitle_font_size, cover_image, border_width=2, border_color='black'):
+def write_big_title(title, subtitle, title_color, subtitle_color, font_path, subtitle_font, font_size, subtitle_font_size, cover_image, border_width=2,
+                    border_color='black'):
     title = convert_simplified_to_traditional(title).strip()
     subtitle = convert_simplified_to_traditional(subtitle).strip()
 
@@ -554,7 +555,7 @@ def process_image(image, cover_path):
         print(f"No optimization needed for {cover_path}")
 
 
-def extract_thumbnail_main(video_path, release_video_dir, number_covers=1, crop_height=100):
+def extract_thumbnail_main(video_path, release_video_dir, cover_title, number_covers=1, crop_height=100):
     # 截取3张没有汉字的截图
     if check_images_in_release_dir(release_video_dir, number_covers):
         return
@@ -582,7 +583,8 @@ def extract_thumbnail_main(video_path, release_video_dir, number_covers=1, crop_
             # 先判断input_img的尺寸是不是宽高比,9:4,不是就切成9:4的宽高
             with Image.open(cover_path) as cover_image:
                 # title = "测试目录测试目录测试"
-                title = os.path.basename(os.path.dirname(video_path))
+                # title = os.path.basename(os.path.dirname(video_path))
+                title = cover_title if cover_title else os.path.basename(os.path.dirname(video_path))
                 subtitle = "全集"
                 title_color = "#FF0000"  # 红色
                 subtitle_color = "#FFFF00"  # 黄色
@@ -633,4 +635,4 @@ if __name__ == "__main__":
 
     delete_matching_images(release_video_dir)
 
-    extract_thumbnail_main(original_video, release_video_dir, 1, 100)
+    extract_thumbnail_main(original_video, release_video_dir,"测试目录测试目录",1, 100)

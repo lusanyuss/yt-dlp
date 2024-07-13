@@ -1,13 +1,12 @@
 import os
 import shutil
 import subprocess
-import sys
 import time
 
 import yt_dlp
 from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, merge_audio_and_video, separate_audio_and_video, \
     generate_md5_filename, close_chrome, get_mp4_duration, get_keyframes, find_split_points, move_file, \
-    process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, extract_first_5_minutes
+    process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 
@@ -212,7 +211,9 @@ def finalize_video_processing(processed_videos, output_video, release_video_dir,
         print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(new_file_path))}")
 
 
-def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, download_only=False, sub_directory=None, video_name=None,number_covers=1,only_image=False):
+def run_main(url=None, cover_title=None, videos=None, split_time_min=15,
+             is_clear_cache=False, download_only=False, sub_directory=None, video_name=None,
+             number_covers=1, only_image=False):
     global download_cache_dir, download_directory_dir, release_video_dir, mvsep_input_dir, mvsep_output_dir
 
     print_separator("初始化路径")
@@ -236,11 +237,10 @@ def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, dow
     ensure_directory_exists(mvsep_output_dir)
 
     if sub_directory and sub_directory == 'mytest':
-        print_separator("mytest - 删除缓存")
         clear_cache()
     if is_clear_cache:
-        print_separator("清理缓存")
         clear_cache()
+
     split_time_ms = minutes_to_milliseconds(split_time_min)
     cache_util = DiskCacheUtil()
     previous_split_time = cache_util.get_from_cache("split_time_ms", 900 * 1000)
@@ -272,12 +272,12 @@ def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, dow
             shutil.copy(videos[0], target_path)
             original_video = target_path
 
-    extract_first_5_minutes(original_video, release_video_dir)
-    extract_thumbnail_main(original_video, release_video_dir, number_covers, 100)
+    # extract_first_5_minutes(original_video, release_video_dir)
+    extract_thumbnail_main(original_video, release_video_dir, cover_title, number_covers, 100)
 
     if only_image:
         return
-    
+
     # print_separator("输入 'y' 继续: ")
     # user_input = input("输入 'y' 继续: ")
     # if user_input.lower() == 'y':
@@ -306,9 +306,11 @@ def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, dow
     finalize_video_processing(processed_videos, output_path, release_video_dir, sub_directory)
 
     print(f"""
-《{sub_directory}》【高清完結合集】
+
+《{convert_simplified_to_traditional(sub_directory)}》【高清完結合集】
 
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持 ！
+
     """
           )
