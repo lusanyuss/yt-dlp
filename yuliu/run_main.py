@@ -213,16 +213,21 @@ import subprocess
 # ffmpeg -i "release_video/aa测试目录/aa测试目录.mp4" -vf "drawtext=fontfile='ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "release_video/aa测试目录/temp_output.mp4"
 # ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
 # ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
+
 def add_watermark_to_video(video_path):
     print_separator("添加水印-开始 " + video_path)
     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
     text = "爽剧风暴"
     temp_output = os.path.join(os.path.dirname(video_path), "temp_output.mp4").replace("\\", "/")
 
+    # 获取视频时长
+    video_duration_ms = get_mp4_duration(video_path)
+    video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
+
     # 构建命令字符串，使用相对路径，并确保格式正确
     command = (
         f'ffmpeg -i "{video_path}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
-        f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,10)\'" '
+        f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
         f'-c:a copy -y "{temp_output}"'
     )
 
@@ -249,7 +254,6 @@ def add_watermark_to_video(video_path):
         return video_path
 
     return video_path
-
 
 def run_main(url=None, cover_title=None, videos=None, split_time_min=15,
              is_clear_cache=False, download_only=False, sub_directory=None, video_name=None,
