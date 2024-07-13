@@ -468,31 +468,27 @@ def check_images_in_release_dir(release_video_dir, number_covers=1):
 from PIL import Image, ImageDraw, ImageFont
 
 
-def write_big_title(title, subtitle, title_color, subtitle_color, font_path, subtitle_font, font_size, subtitle_font_size, cover_image):
+def write_big_title(title, subtitle, title_color, subtitle_color, font_path, subtitle_font, font_size, subtitle_font_size, cover_image, border_width=2, border_color='black'):
     title = convert_simplified_to_traditional(title).strip()
     subtitle = convert_simplified_to_traditional(subtitle).strip()
-    # 打开图像文件
+
     draw = ImageDraw.Draw(cover_image)
     font = ImageFont.truetype(font_path, font_size)
     subtitle_font = ImageFont.truetype(subtitle_font, subtitle_font_size)
 
-    # 指定文本区域的宽度和边距
     margin_left = int(cover_image.width * 0.1)
     margin_right = int(cover_image.width * 0.1)
     margin_bottom = int(cover_image.height * 0.1)
     text_area_width = cover_image.width - margin_left - margin_right
 
-    # 计算每行可以容纳的最大字符数
-    avg_char_width = draw.textbbox((0, 0), '测试', font=font)[2] // 2  # 假设每个字符的平均宽度
+    avg_char_width = draw.textbbox((0, 0), '测试', font=font)[2] // 2
     max_chars_per_line = text_area_width // avg_char_width
 
-    # 计算所需行数
     total_chars = len(title)
     if max_chars_per_line == 0:
         max_chars_per_line = 1
     total_lines = (total_chars + max_chars_per_line - 1) // max_chars_per_line
 
-    # 确保第一行较短，后续行尽量填满
     lines = []
     first_line_length = total_chars - (total_lines - 1) * max_chars_per_line
     if first_line_length > max_chars_per_line:
@@ -506,36 +502,41 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, sub
         lines.append(title[start_idx:start_idx + max_chars_per_line])
         start_idx += max_chars_per_line
 
-    if len(lines) > 1:
-        # 计算文本区域的高度
-        line_spacing = font_size * 0.2  # 设置行间距为字体大小的20%
-        line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
-        total_height = sum(line_heights) + line_spacing * (len(lines) - 1)
+    line_spacing = font_size * 0.2
+    line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
+    total_height = sum(line_heights) + line_spacing * (len(lines) - 1)
 
-        # 绘制文本的位置（底部中间）
-        y_text = cover_image.height - margin_bottom - total_height
+    y_text = cover_image.height - margin_bottom - total_height
 
-        for i, line in enumerate(lines):
-            bbox = draw.textbbox((0, 0), line, font=font)
-            width = bbox[2] - bbox[0]
-            height = line_heights[i]
-            draw.text(((cover_image.width - width) / 2, y_text), line, font=font, fill=title_color)
-            y_text += height + line_spacing
-    else:
-        # 如果只有一行，直接绘制文本
-        bbox = draw.textbbox((0, 0), title, font=font)
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=font)
         width = bbox[2] - bbox[0]
-        height = bbox[3] - bbox[1]
-        y_text = cover_image.height - margin_bottom - height
+        height = line_heights[i]
+        x_text = (cover_image.width - width) / 2
 
-        draw.text(((cover_image.width - width) / 2, y_text), title, font=font, fill=title_color)
+        # 绘制边框
+        for dx in range(-border_width, border_width + 1):
+            for dy in range(-border_width, border_width + 1):
+                if dx != 0 or dy != 0:
+                    draw.text((x_text + dx, y_text + dy), line, font=font, fill=border_color)
 
-    # 绘制右上角的副标题
+        # 绘制文字
+        draw.text((x_text, y_text), line, font=font, fill=title_color)
+        y_text += height + line_spacing
+
     subtitle_margin_top = int(cover_image.height * 0.1)
     subtitle_margin_right = int(cover_image.width * 0.1)
-    draw.text((cover_image.width - subtitle_margin_right - draw.textbbox((0, 0), subtitle, font=subtitle_font)[2],
-               subtitle_margin_top),
-              subtitle, font=subtitle_font, fill=subtitle_color)
+
+    subtitle_bbox = draw.textbbox((0, 0), subtitle, font=subtitle_font)
+    subtitle_x = cover_image.width - subtitle_margin_right - subtitle_bbox[2]
+    subtitle_y = subtitle_margin_top
+
+    for dx in range(-border_width, border_width + 1):
+        for dy in range(-border_width, border_width + 1):
+            if dx != 0 or dy != 0:
+                draw.text((subtitle_x + dx, subtitle_y + dy), subtitle, font=subtitle_font, fill=border_color)
+
+    draw.text((subtitle_x, subtitle_y), subtitle, font=subtitle_font, fill=subtitle_color)
 
     return cover_image
 
