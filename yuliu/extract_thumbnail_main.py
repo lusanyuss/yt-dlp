@@ -468,15 +468,16 @@ def check_images_in_release_dir(release_video_dir, number_covers=1):
 from PIL import Image, ImageDraw, ImageFont
 
 
-def write_big_title(title, text_color, font_path, font_size, cover_image):
+def write_big_title(title, subtitle, title_color, subtitle_color, font_path, font_size, subtitle_font_size, cover_image):
     # 打开图像文件
     draw = ImageDraw.Draw(cover_image)
     font = ImageFont.truetype(font_path, font_size)
+    subtitle_font = ImageFont.truetype(font_path, subtitle_font_size)
 
     # 指定文本区域的宽度和边距
-    margin_left = 16*3
-    margin_right = 16*3
-    margin_bottom = 32*3
+    margin_left = int(cover_image.width * 0.1)
+    margin_right = int(cover_image.width * 0.1)
+    margin_bottom = int(cover_image.height * 0.1)
     text_area_width = cover_image.width - margin_left - margin_right
 
     # 计算每行可以容纳的最大字符数
@@ -516,7 +517,7 @@ def write_big_title(title, text_color, font_path, font_size, cover_image):
             bbox = draw.textbbox((0, 0), line, font=font)
             width = bbox[2] - bbox[0]
             height = line_heights[i]
-            draw.text(((cover_image.width - width) / 2, y_text), line, font=font, fill=text_color)
+            draw.text(((cover_image.width - width) / 2, y_text), line, font=font, fill=title_color)
             y_text += height + line_spacing
     else:
         # 如果只有一行，直接绘制文本
@@ -524,31 +525,15 @@ def write_big_title(title, text_color, font_path, font_size, cover_image):
         width = bbox[2] - bbox[0]
         height = bbox[3] - bbox[1]
         y_text = cover_image.height - margin_bottom - height
-        draw.text(((cover_image.width - width) / 2, y_text), title, font=font, fill=text_color)
+        draw.text(((cover_image.width - width) / 2, y_text), title, font=font, fill=title_color)
+
+    # 绘制右上角的副标题
+    subtitle_margin_top = int(cover_image.height * 0.1)
+    subtitle_margin_right = int(cover_image.width * 0.1)
+    draw.text((cover_image.width - subtitle_margin_right - draw.textbbox((0, 0), subtitle, font=subtitle_font)[2], subtitle_margin_top),
+              subtitle, font=subtitle_font, fill=subtitle_color)
 
     return cover_image
-
-
-def write_big_numbers(text_color, font_path, font_size, cover_image_title, text):
-    width, height = cover_image_title.size
-    draw = ImageDraw.Draw(cover_image_title)
-
-    # 使用指定的字体和大小
-    font = ImageFont.truetype(font_path, font_size)
-
-    # 计算右上角的位置
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
-
-    # 设置右上角的x和y坐标，使文本距离右边和上边都有16px的间距
-    margin = 16*3
-    x = width - text_width - margin
-    y = margin
-
-    # 绘制文本
-    draw.text((x, y), text, font=font, fill=text_color)
-
-    return cover_image_title
 
 
 def process_image(image, cover_path):
@@ -590,24 +575,19 @@ def extract_thumbnail_main(video_path, release_video_dir, number_covers=1, crop_
     for cover_path in cover_images_path:
         if is_resolution_gte_1920x1080(cover_path):
             # 先判断input_img的尺寸是不是宽高比,9:4,不是就切成9:4的宽高
-            title = os.path.basename(os.path.dirname(video_path))
-            title = "测试目录测试目录测试"
-            textColorTitle = "#FFF000"
-            textColor = "#FFF000"
+            with Image.open(cover_path) as cover_image:
+                title = "测试目录测试目录测试"
+                # title = os.path.basename(os.path.dirname(video_path))
+                subtitle = "全集"
+                title_color = "#FF0000"  # 红色
+                subtitle_color = "#FFFF00"  # 黄色
+                font_path = os.path.join('ziti', 'douyin', 'DouyinSansBold.otf')
+                font_size = 80 * 3
+                subtitle_font_size = 60 * 3
 
-            # textColorTitle = "#FFFFFF"
-            # textColor = "#FFFFFF"
+                cover_image = write_big_title(title, subtitle, title_color, subtitle_color, font_path, font_size, subtitle_font_size, cover_image)
+                process_image(cover_image, cover_path)
 
-            font_size = 70*3
-            font_title_size = 70*3
-            font_path = os.path.join('ziti', 'FanThinkGrotesk', 'FanThinkGrotesk-Medium.otf')
-
-            cover_image_title = write_big_title(title, textColorTitle, font_path, font_title_size, Image.open(cover_path))
-            cover_image_title_des = write_big_numbers(textColor, font_path, font_size, cover_image_title, '全集')
-            process_image(cover_image_title_des, cover_path)
-
-            # 移动cover_images, frame_images图片到 release_video 目录中去
-            # 不会覆盖之前的封面
 
     move_images_to_release(cover_images_path, frame_images_path, release_video_dir)
 
