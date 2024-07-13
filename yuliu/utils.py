@@ -297,18 +297,6 @@ def generate_md5_filename(video_list, prefix="video", extension=".mp4", length=8
     return unique_filename
 
 
-def move_file(src, dst_dir):
-    # 确保目标目录存在
-    if not os.path.exists(dst_dir):
-        os.makedirs(dst_dir)
-    # 构建目标文件路径
-    dst = os.path.join(dst_dir, os.path.basename(src))
-    # 如果目标文件存在，先删除它
-    if os.path.exists(dst):
-        os.remove(dst)
-    # 移动文件
-    shutil.move(src, dst)
-
 
 def format_duration(duration_milliseconds):
     hours = duration_milliseconds // 3600000
@@ -457,10 +445,6 @@ def get_ffmpeg_version():
             print(f"错误输出:\n{e.stderr}")
         print(f"返回代码: {e.returncode}")
         return None
-
-
-import os
-import subprocess
 
 
 def run_command(command):
@@ -631,3 +615,24 @@ def log_execution_time(func):
         return result
 
     return wrapper
+
+
+import os
+import subprocess
+
+
+def process_video(video_path):
+    font_file = os.path.join('ziti', 'fengmian', 'gwkt-SC-Black.ttf')
+    text = "爽剧风暴"
+
+    command = [
+        "ffmpeg",
+        "-i", video_path,
+        "-vf", f"drawtext=fontfile='{font_file}':text='{text}':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'",
+        "-c:a", "copy",
+        "-y",
+        video_path
+    ]
+
+    subprocess.run(command, check=True)
+    return video_path

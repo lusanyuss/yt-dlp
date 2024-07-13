@@ -1,4 +1,5 @@
 import io
+import os
 import random
 import shutil
 import subprocess
@@ -542,6 +543,49 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, sub
     return cover_image
 
 
+def calculate_font_size(char_count):
+    reduction_step = 8
+    base_font_size = 80
+    base_subtitle_font_size = 60
+
+    if char_count <= 12:
+        font_size = base_font_size * 3
+        subtitle_font_size = base_subtitle_font_size * 3
+    elif char_count <= 14:
+        font_size = (base_font_size - reduction_step) * 3
+        subtitle_font_size = (base_subtitle_font_size - reduction_step) * 3
+    elif char_count <= 16:
+        font_size = (base_font_size - reduction_step * 2) * 3
+        subtitle_font_size = (base_subtitle_font_size - reduction_step * 2) * 3
+    elif char_count <= 18:
+        font_size = (base_font_size - reduction_step * 3) * 3
+        subtitle_font_size = (base_subtitle_font_size - reduction_step * 3) * 3
+    elif char_count <= 20:
+        font_size = (base_font_size - reduction_step * 4) * 3
+        subtitle_font_size = (base_subtitle_font_size - reduction_step * 4) * 3
+    else:
+        font_size = (base_font_size - reduction_step * 5) * 3
+        subtitle_font_size = (base_subtitle_font_size - reduction_step * 5) * 3
+    return font_size, subtitle_font_size
+
+
+# 示例用法
+
+
+import re
+
+
+def delete_matching_images(directory):
+    # 遍历目录中的所有文件
+    for filename in os.listdir(directory):
+        # 检查文件名是否以 .png 或 .jpg 结尾
+        if filename.endswith('.png') or filename.endswith('.jpg'):
+            file_path = os.path.join(directory, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                print(f"Deleted: {file_path}")
+
+
 def process_image(image, cover_path):
     image.save(cover_path)
 
@@ -553,6 +597,9 @@ def process_image(image, cover_path):
         print(f"Optimization completed for {cover_path}, new size: {file_size:.2f} MB")
     else:
         print(f"No optimization needed for {cover_path}")
+
+
+
 
 
 def extract_thumbnail_main(video_path, release_video_dir, cover_title, number_covers=1, crop_height=100):
@@ -592,29 +639,14 @@ def extract_thumbnail_main(video_path, release_video_dir, cover_title, number_co
                 title_font = os.path.join('ziti', 'fengmian', 'gwkt-SC-Black.ttf')  # 标题
                 subtitle_font = os.path.join('ziti', 'fengmian', 'syst-SourceHanSerifCN-Regular.otf')  # 副标题
 
-                font_size = 80 * 3
-                subtitle_font_size = 60 * 3
+                font_size, subtitle_font_size = calculate_font_size(len(title))
 
                 cover_image = write_big_title(title, subtitle, title_color, subtitle_color, title_font, subtitle_font, font_size, subtitle_font_size,
                                               cover_image)
+
                 process_image(cover_image, cover_path)
 
     move_images_to_release(cover_images_path, frame_images_path, release_video_dir)
-
-
-import os
-import re
-
-
-def delete_matching_images(directory):
-    # 遍历目录中的所有文件
-    for filename in os.listdir(directory):
-        # 检查文件名是否以 .png 或 .jpg 结尾
-        if filename.endswith('.png') or filename.endswith('.jpg'):
-            file_path = os.path.join(directory, filename)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-                print(f"Deleted: {file_path}")
 
 
 if __name__ == "__main__":
@@ -635,4 +667,4 @@ if __name__ == "__main__":
 
     delete_matching_images(release_video_dir)
 
-    extract_thumbnail_main(original_video, release_video_dir,"测试目录测试目录",1, 100)
+    extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目录", 1, 100)

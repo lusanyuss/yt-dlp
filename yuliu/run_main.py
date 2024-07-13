@@ -1,11 +1,9 @@
-import os
 import shutil
-import subprocess
 import time
 
 import yt_dlp
 from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, merge_audio_and_video, separate_audio_and_video, \
-    generate_md5_filename, close_chrome, get_mp4_duration, get_keyframes, find_split_points, move_file, \
+    generate_md5_filename, close_chrome, get_mp4_duration, get_keyframes, find_split_points, \
     process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
@@ -14,10 +12,10 @@ from yuliu.extract_thumbnail_main import extract_thumbnail_main
 # 清除缓存逻辑
 def clear_cache():
     directories_to_clear = [
-        # download_cache,
-        # download_directory_dir,
-        # release_video,
-        # mvsep_input_dir,
+        # download_cache_dir,
+        download_directory_dir,
+        release_video_dir,
+        mvsep_input_dir,
         # mvsep_output_dir
     ]
 
@@ -189,26 +187,68 @@ def ensure_directory_exists(path):
         os.makedirs(path)
 
 
-def rename_file(output_video, new_name):
-    new_file_name = f"{new_name}.mp4"
-    file_directory = os.path.dirname(output_video)
-    new_file_path = os.path.join(file_directory, new_file_name)
-    os.rename(output_video, new_file_path)
-    return new_file_path
+def delete_file(file_path):
+    try:
+        os.remove(file_path)
+        print(f"删除文件: {file_path}")
+    except OSError as e:
+        print(f"删除文件时出错: {e}")
 
 
 def finalize_video_processing(processed_videos, output_video, release_video_dir, new_name):
     if os.path.exists(output_video):
         for file in processed_videos:
-            try:
-                os.remove(file)
-                print(f"删除文件: {file}")
-            except OSError as e:
-                print(f"删除文件时出错: {e}")
+            delete_file(file)
 
-        new_file_path = rename_file(output_video, new_name)
-        move_file(new_file_path, release_video_dir)
-        print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(new_file_path))}")
+        new_file_path = os.path.join(release_video_dir, f"{new_name}.mp4")
+        shutil.move(output_video, new_file_path)
+        result_video = add_watermark_to_video(new_file_path)
+        print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(result_video))}")
+
+
+import os
+import subprocess
+
+
+# ffmpeg -i "release_video/aa测试目录/aa测试目录.mp4" -vf "drawtext=fontfile='ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "release_video/aa测试目录/temp_output.mp4"
+# ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
+# ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
+def add_watermark_to_video(video_path):
+    print_separator("添加水印-开始 " + video_path)
+    font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
+    text = "爽剧风暴"
+    temp_output = os.path.join(os.path.dirname(video_path), "temp_output.mp4").replace("\\", "/")
+
+    # 构建命令字符串，使用相对路径，并确保格式正确
+    command = (
+        f'ffmpeg -i "{video_path}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
+        f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,10)\'" '
+        f'-c:a copy -y "{temp_output}"'
+    )
+
+    # 打印命令以便手动检查
+    print("Running command: ", command)
+
+    try:
+        # 使用 shell=True 执行命令字符串
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
+        result.check_returncode()  # 检查命令是否成功
+        os.replace(temp_output, video_path)  # Replace the original video with the new one
+        print_separator("添加水印-成功")
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred: {e}")
+        print(f"stdout: {e.stdout}")
+        print(f"stderr: {e.stderr}")
+        if os.path.exists(temp_output):
+            os.remove(temp_output)  # Remove the temporary output file if it exists
+        return video_path
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        if os.path.exists(temp_output):
+            os.remove(temp_output)  # Remove the temporary output file if it exists
+        return video_path
+
+    return video_path
 
 
 def run_main(url=None, cover_title=None, videos=None, split_time_min=15,
@@ -288,7 +328,7 @@ def run_main(url=None, cover_title=None, videos=None, split_time_min=15,
 
     print_separator("1.处理视频,切成小块视频,进行处理")
     output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
-    merged_video_name = f"{get_file_only_name(original_video)}_mex23{get_file_only_extension(original_video)}"
+    merged_video_name = f"{sub_directory}_mex23{get_file_only_extension(original_video)}"
     merged_video_path = os.path.join(os.path.dirname(original_video), merged_video_name)
     print(f"\n原始视频路径: {original_video}")
     video_duration = get_mp4_duration(original_video)
@@ -301,7 +341,6 @@ def run_main(url=None, cover_title=None, videos=None, split_time_min=15,
     print_separator("2.对视频人声分离")
     processed_videos, process_video_time = process_video_files(video_clips)
     output_path = merge_videos(processed_videos, merged_video_path)
-
     process_and_save_results(original_video, download_time, process_video_time, result_file_name)
     finalize_video_processing(processed_videos, output_path, release_video_dir, sub_directory)
 
