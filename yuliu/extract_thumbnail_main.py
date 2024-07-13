@@ -576,8 +576,8 @@ def extract_thumbnail_main(video_path, release_video_dir, number_covers=1, crop_
         if is_resolution_gte_1920x1080(cover_path):
             # 先判断input_img的尺寸是不是宽高比,9:4,不是就切成9:4的宽高
             with Image.open(cover_path) as cover_image:
-                title = "测试目录测试目录测试"
-                # title = os.path.basename(os.path.dirname(video_path))
+                # title = "测试目录测试目录测试"
+                title = os.path.basename(os.path.dirname(video_path))
                 subtitle = "全集"
                 title_color = "#FF0000"  # 红色
                 subtitle_color = "#FFFF00"  # 黄色
