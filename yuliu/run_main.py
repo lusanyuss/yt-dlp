@@ -17,8 +17,8 @@ def clear_cache():
         # download_cache,
         # download_directory_dir,
         # release_video,
-        mvsep_input_dir,
-        mvsep_output_dir
+        # mvsep_input_dir,
+        # mvsep_output_dir
     ]
 
     print_separator("clear_cache")
@@ -38,22 +38,9 @@ def clear_cache():
             print(f'目录不存在: {directory}')
 
 
-def clear_directory(directory_path):
-    for filename in os.listdir(directory_path):
-        file_path = os.path.join(directory_path, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print(f"删除 {file_path} 时出错: {e}")
-
-
 def process_audio_with_mvsep_mdx23(audio_file):
     start_time = time.time()
     print(f"\n=========================处理音频文件: {os.path.basename(audio_file)}")
-    # clear_directory(mvsep_input_dir)
     shutil.copy(audio_file, mvsep_input_dir)
     intput_file_audio = os.path.join(mvsep_input_dir, get_file_name_with_extension(audio_file))
 
@@ -202,16 +189,26 @@ def ensure_directory_exists(path):
         os.makedirs(path)
 
 
-def finalize_video_processing(processed_videos, output_path, release_video_dir):
-    if os.path.exists(output_path):
+def rename_file(output_video, new_name):
+    new_file_name = f"{new_name}.mp4"
+    file_directory = os.path.dirname(output_video)
+    new_file_path = os.path.join(file_directory, new_file_name)
+    os.rename(output_video, new_file_path)
+    return new_file_path
+
+
+def finalize_video_processing(processed_videos, output_video, release_video_dir, new_name):
+    if os.path.exists(output_video):
         for file in processed_videos:
             try:
                 os.remove(file)
                 print(f"删除文件: {file}")
             except OSError as e:
                 print(f"删除文件时出错: {e}")
-        move_file(output_path, release_video_dir)
-        print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(output_path))}")
+
+        new_file_path = rename_file(output_video, new_name)
+        move_file(new_file_path, release_video_dir)
+        print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(new_file_path))}")
 
 
 def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, download_only=False, sub_directory=None, video_name=None):
@@ -303,10 +300,10 @@ def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, dow
     output_path = merge_videos(processed_videos, merged_video_path)
 
     process_and_save_results(original_video, download_time, process_video_time, result_file_name)
-    finalize_video_processing(processed_videos, output_path, release_video_dir)
+    finalize_video_processing(processed_videos, output_path, release_video_dir, sub_directory)
 
-    print("""
-    【高清完結合集】
+    print(f"""
+《{sub_directory}》【高清完結合集】
 
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持 ！

@@ -67,8 +67,28 @@ if __name__ == "__main__":
     # check_and_run('九子夺嫡废太子竟是修仙者', 1, 15, is_clear_cache=True)#有3家
     # check_and_run('御龙刀主 举世欠我赊刀债', 1, 15, is_clear_cache=True)#有3家
     #
+    videos = [
+        # '丑女逆袭-被首富大佬缠上了',
+        '我无敌于世间',
+        '傅总您太太真的没死',
+        '逃婚当天我抓了个总裁过日子',
+        '萌宝助攻我帮妈妈改嫁总裁大佬',
+        '分手渣男后她成了女首富',
+        '为王问鼎&择日登基',
+        # '九子夺嫡废太子竟是修仙者',
+        '以我晚星映海川',
+        '工业之光',
+        # '御龙刀主$举世欠我赊刀债',
+        '我的傻父',
+        # '我的老妈是女王',
+        '报告妈咪，爹地是总裁',
+        '极品房东俏房客',
+        '玄门侠女',
+        # '隐秘的婚姻',
+    ]
     # check_and_run('报告妈咪 爹地是总裁', 1, 15, is_clear_cache=True)#有3家
+    for video in videos:
+        check_and_run(video, 1, 15, is_clear_cache=True)
     #
     # check_and_run('工业之光', 1, 15, is_clear_cache=True)#有1家
-
-    check_and_run('aa测试目录', 1, 0.1, is_clear_cache=True)
+    # check_and_run('aa测试目录', 1, 0.1, is_clear_cache=True)

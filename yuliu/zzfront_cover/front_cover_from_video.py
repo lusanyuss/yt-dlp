@@ -253,29 +253,6 @@ def write_big_title(title, text_color, font_path, font_size_title, input_img, ou
         optimized_img.save(output_img, quality=85)
 
 
-def write_big_numbers(text_color, font_path, font_size, input_path, output_path, text):
-    # 打开图片
-    image = Image.open(input_path)
-    width, height = image.size
-    draw = ImageDraw.Draw(image)
-
-    # 使用指定的字体和大小
-    font = ImageFont.truetype(font_path, font_size)
-
-    # 计算右上角的位置
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
-
-    # 设置右上角的x和y坐标，使文本距离右边和上边都有16px的间距
-    margin = 16
-    x = width - text_width - margin * 2
-    y = margin
-
-    # 绘制文本
-    draw.text((x, y), text, font=font, fill=text_color)
-
-    # 保存图像
-    image.save(output_path)
 
 
 # 示例调用方式

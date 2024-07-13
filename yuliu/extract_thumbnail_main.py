@@ -1,7 +1,5 @@
 import io
-import os
 import random
-import re
 import shutil
 import subprocess
 import threading
@@ -10,8 +8,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import numpy as np
-from PIL import Image
-from PIL import ImageDraw, ImageFont
 from paddleocr import PaddleOCR
 
 from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator
@@ -211,72 +207,6 @@ def split_title_into_lines(title, max_chars_per_line):
     if current_line:
         lines.append(current_line)
     return lines
-
-
-def write_big_title(title, text_color, font_path, font_size_title, input_img, max_chars_per_line=7):
-    # 打开图片
-    with Image.open(input_img) as img:
-        draw = ImageDraw.Draw(img)
-        font = ImageFont.truetype(font_path, font_size_title)
-
-        # 将标题拆分成多行，每行最多 max_chars_per_line 个字
-        lines = split_title_into_lines(title, max_chars_per_line)
-
-        # 如果只有两行且总字符数大于 max_chars_per_line
-        if len(lines) == 2 and len(title) > max_chars_per_line:
-            first_line_chars = len(title) % max_chars_per_line
-            if first_line_chars == 0:
-                first_line_chars = max_chars_per_line
-            lines = [title[:first_line_chars]] + [title[first_line_chars:]]
-
-        # 计算每行文本的高度和总文本块的高度
-        line_height = font.getbbox('高')[3] - font.getbbox('高')[1]
-        total_text_height = line_height * len(lines) + 16 * (len(lines) - 1)
-
-        # 计算起始Y坐标，确保文本块底部与图片底部有16px间距
-        y_start = img.height - total_text_height - 96
-
-        # 逐行绘制文本
-        for i, line in enumerate(lines):
-            bbox = font.getbbox(line)
-            text_width = bbox[2] - bbox[0]
-            x = (img.width - text_width) // 2
-            y = y_start + i * (line_height + 16)
-
-            draw.text((x, y), line, font=font, fill=text_color)
-
-        # 在保存前优化图像大小
-        optimized_img = optimize_image_for_size(img)
-
-        # 保存优化后的图像
-        optimized_img.save(input_img, quality=85)
-    return input_img  # 在这里添加返回值
-
-
-def write_big_numbers(text_color, font_path, font_size, input_path, text):
-    # 打开图片
-    image = Image.open(input_path)
-    width, height = image.size
-    draw = ImageDraw.Draw(image)
-
-    # 使用指定的字体和大小
-    font = ImageFont.truetype(font_path, font_size)
-
-    # 计算右上角的位置
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
-
-    # 设置右上角的x和y坐标，使文本距离右边和上边都有16px的间距
-    margin = 16
-    x = width - text_width - margin * 2
-    y = margin * 2
-
-    # 绘制文本
-    draw.text((x, y), text, font=font, fill=text_color)
-
-    # 保存图像
-    image.save(input_path)
-    return input_path
 
 
 # 示例调用方式
@@ -535,6 +465,105 @@ def check_images_in_release_dir(release_video_dir, number_covers=1):
         return False
 
 
+from PIL import Image, ImageDraw, ImageFont
+
+
+def write_big_title(title, text_color, font_path, font_size, cover_image):
+    # 打开图像文件
+    draw = ImageDraw.Draw(cover_image)
+    font = ImageFont.truetype(font_path, font_size)
+
+    # 指定文本区域的宽度和边距
+    margin_left = 16*3
+    margin_right = 16*3
+    margin_bottom = 32*3
+    text_area_width = cover_image.width - margin_left - margin_right
+
+    # 计算每行可以容纳的最大字符数
+    avg_char_width = draw.textbbox((0, 0), '测试', font=font)[2] // 2  # 假设每个字符的平均宽度
+    max_chars_per_line = text_area_width // avg_char_width
+
+    # 计算所需行数
+    total_chars = len(title)
+    if max_chars_per_line == 0:
+        max_chars_per_line = 1
+    total_lines = (total_chars + max_chars_per_line - 1) // max_chars_per_line
+
+    # 确保第一行较短，后续行尽量填满
+    lines = []
+    first_line_length = total_chars - (total_lines - 1) * max_chars_per_line
+    if first_line_length > max_chars_per_line:
+        first_line_length = max_chars_per_line
+    start_idx = 0
+
+    lines.append(title[start_idx:start_idx + first_line_length])
+    start_idx += first_line_length
+
+    while start_idx < total_chars:
+        lines.append(title[start_idx:start_idx + max_chars_per_line])
+        start_idx += max_chars_per_line
+
+    if len(lines) > 1:
+        # 计算文本区域的高度
+        line_spacing = font_size * 0.2  # 设置行间距为字体大小的20%
+        line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
+        total_height = sum(line_heights) + line_spacing * (len(lines) - 1)
+
+        # 绘制文本的位置（底部中间）
+        y_text = cover_image.height - margin_bottom - total_height
+
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0, 0), line, font=font)
+            width = bbox[2] - bbox[0]
+            height = line_heights[i]
+            draw.text(((cover_image.width - width) / 2, y_text), line, font=font, fill=text_color)
+            y_text += height + line_spacing
+    else:
+        # 如果只有一行，直接绘制文本
+        bbox = draw.textbbox((0, 0), title, font=font)
+        width = bbox[2] - bbox[0]
+        height = bbox[3] - bbox[1]
+        y_text = cover_image.height - margin_bottom - height
+        draw.text(((cover_image.width - width) / 2, y_text), title, font=font, fill=text_color)
+
+    return cover_image
+
+
+def write_big_numbers(text_color, font_path, font_size, cover_image_title, text):
+    width, height = cover_image_title.size
+    draw = ImageDraw.Draw(cover_image_title)
+
+    # 使用指定的字体和大小
+    font = ImageFont.truetype(font_path, font_size)
+
+    # 计算右上角的位置
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+    # 设置右上角的x和y坐标，使文本距离右边和上边都有16px的间距
+    margin = 16*3
+    x = width - text_width - margin
+    y = margin
+
+    # 绘制文本
+    draw.text((x, y), text, font=font, fill=text_color)
+
+    return cover_image_title
+
+
+def process_image(image, cover_path):
+    image.save(cover_path)
+
+    if os.path.exists(cover_path) and os.path.getsize(cover_path) > 2 * 1024 * 1024:
+        with Image.open(cover_path) as img:
+            img = img.resize((1280, 720), Image.LANCZOS)
+            img.save(cover_path, optimize=True, quality=85)
+        file_size = os.path.getsize(cover_path) / (1024 * 1024)
+        print(f"Optimization completed for {cover_path}, new size: {file_size:.2f} MB")
+    else:
+        print(f"No optimization needed for {cover_path}")
+
+
 def extract_thumbnail_main(video_path, release_video_dir, number_covers=1, crop_height=100):
     # 截取3张没有汉字的截图
     if check_images_in_release_dir(release_video_dir, number_covers):
@@ -542,70 +571,78 @@ def extract_thumbnail_main(video_path, release_video_dir, number_covers=1, crop_
 
     print_separator("开始制作封面图")
     output_dir = os.path.dirname(video_path)
-    cover_images, frame_images = extract_covers_and_frames(video_path, 3 * number_covers, crop_height)
+    cover_images_path, frame_images_path = extract_covers_and_frames(video_path, 3 * number_covers, crop_height)
     # 示例调用
-    resize_images_if_needed(cover_images)
+    resize_images_if_needed(cover_images_path)
     # 示例调用
-    cover_images = convert_jpeg_to_png(cover_images)
+    cover_images_path = convert_jpeg_to_png(cover_images_path)
 
-    for cover_image in cover_images:
+    for cover_path in cover_images_path:
         try:
-            with Image.open(cover_image) as img:
+            with Image.open(cover_path) as img:
                 width, height = img.size
                 if width < 1920 or height < 1080:
                     img_resized = img.resize((1920, 1080), Image.Resampling.LANCZOS)
-                    img_resized.save(cover_image)
+                    img_resized.save(cover_path)
         except Exception as e:
-            print(f"无法处理图像 {cover_image}。错误信息：{e}")
+            print(f"无法处理图像 {cover_path}。错误信息：{e}")
 
-    for cover_image in cover_images:
-        if is_resolution_gte_1920x1080(cover_image):
-
+    for cover_path in cover_images_path:
+        if is_resolution_gte_1920x1080(cover_path):
             # 先判断input_img的尺寸是不是宽高比,9:4,不是就切成9:4的宽高
             title = os.path.basename(os.path.dirname(video_path))
+            title = "测试目录测试目录测试"
             textColorTitle = "#FFF000"
             textColor = "#FFF000"
 
             # textColorTitle = "#FFFFFF"
             # textColor = "#FFFFFF"
 
-            font_size = 80 * 3 * 1.2
-            font_title_size = 80 * 3 * 1.2
+            font_size = 70*3
+            font_title_size = 70*3
             font_path = os.path.join('ziti', 'FanThinkGrotesk', 'FanThinkGrotesk-Medium.otf')
 
-            # file_path = os.path.join(output_dir, '横屏大图.png')
-            title_img = write_big_title(title, textColorTitle, font_path, font_title_size, cover_image)
-            file_path = write_big_numbers(textColor, font_path, font_size, title_img, '全集')
-
-            # 检查文件是否存在且大于2MB,大于2m的变成1280*720,让所有图片都能上传youtube
-            if os.path.exists(file_path) and os.path.getsize(file_path) > 2 * 1024 * 1024:
-                with Image.open(file_path) as img:
-                    # 优化图像大小
-                    img = img.resize((1280, 720), Image.LANCZOS)
-                    # 保存优化后的图像，保持高质量
-                    img.save(file_path, optimize=True, quality=85)
-                # 获取文件大小
-                file_size = os.path.getsize(file_path) / (1024 * 1024)  # 转换为MB
-                print(f"Optimization completed for {file_path}, new size: {file_size:.2f} MB")
-
-            else:
-                print(f"No optimization needed for {file_path}")
+            cover_image_title = write_big_title(title, textColorTitle, font_path, font_title_size, Image.open(cover_path))
+            cover_image_title_des = write_big_numbers(textColor, font_path, font_size, cover_image_title, '全集')
+            process_image(cover_image_title_des, cover_path)
 
             # 移动cover_images, frame_images图片到 release_video 目录中去
             # 不会覆盖之前的封面
 
-    move_images_to_release(cover_images, frame_images, release_video_dir)
+    move_images_to_release(cover_images_path, frame_images_path, release_video_dir)
+
+
+import os
+import re
+
+
+def delete_matching_images(directory):
+    # 遍历目录中的所有文件
+    for filename in os.listdir(directory):
+        # 检查文件名是否以 .png 或 .jpg 结尾
+        if filename.endswith('.png') or filename.endswith('.jpg'):
+            file_path = os.path.join(directory, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                print(f"Deleted: {file_path}")
 
 
 if __name__ == "__main__":
-    output_dir = os.path.join('download_directory', 'aa测试目录')
+    output_dir = os.path.join('download_directory', 'aa测试目录测试目录')
     os.makedirs(output_dir, exist_ok=True)
     video_path = os.path.join(output_dir, '1.mp4')
     duration = 10
     crop_height = 100
-    num_frames = 6
+    num_frames = 3
     model_path = "ESPCN_x3.pb"
     start_time = time.time()
     frame_paths = get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path)
     end_time = time.time()
     print(f"===================Frame generation completed in {end_time - start_time} seconds.")
+
+    original_video = os.path.join(os.getcwd(), 'download_directory', 'aa测试目录测试目录', '1.mp4')
+    release_video_dir = os.path.join(os.getcwd(), 'release_video', 'aa测试目录测试目录')
+
+    delete_matching_images(release_video_dir)
+
+    extract_thumbnail_main(original_video, release_video_dir, 1, 100)
