@@ -134,7 +134,7 @@ def get_file_md5(file_path):
     return hash_md5.hexdigest()
 
 
-def get_keyframes(input_file, split_time):
+def get_keyframes(input_file, split_time, cache_util):
     start_time = time.time()
     print(f"开始处理文件: {input_file}")
 
@@ -143,9 +143,10 @@ def get_keyframes(input_file, split_time):
     print(f"文件的 MD5 校验和切割分钟: {video_md5}")
 
     # 如果缓存中存在，直接返回缓存中的关键帧信息
-    if video_md5 in keyframe_cache:
+    cached_keyframes = cache_util.get_from_cache(video_md5)
+    if cached_keyframes is not None:
         print("从缓存中读取关键帧信息")
-        return keyframe_cache[video_md5]
+        return cached_keyframes
 
     # 运行 ffprobe 命令获取关键帧信息
     command = [
@@ -162,7 +163,7 @@ def get_keyframes(input_file, split_time):
             keyframes.append(frame["best_effort_timestamp_time"])
 
     # 将结果保存到缓存中
-    keyframe_cache[video_md5] = keyframes
+    cache_util.set_to_cache(video_md5, keyframes)
 
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -457,7 +458,6 @@ def get_ffmpeg_version():
 
 import os
 import subprocess
-import time
 
 
 def run_command(command):
@@ -603,6 +603,17 @@ def extract_first_5_minutes(original_video, release_video_dir):
         return output_path
     else:
         raise FileNotFoundError(f"未能生成视频: {output_path}")
+
+
+from opencc import OpenCC
+
+
+def convert_simplified_to_traditional(text):
+    try:
+        cc = OpenCC('s2t')
+        return cc.convert(text)
+    except Exception:
+        return text
 
 
 import time

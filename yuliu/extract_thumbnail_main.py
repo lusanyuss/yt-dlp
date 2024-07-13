@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from paddleocr import PaddleOCR
 
-from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator
+from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator, convert_simplified_to_traditional
 
 
 def is_resolution_gte_1920x1080(image_path):
@@ -468,11 +468,13 @@ def check_images_in_release_dir(release_video_dir, number_covers=1):
 from PIL import Image, ImageDraw, ImageFont
 
 
-def write_big_title(title, subtitle, title_color, subtitle_color, font_path, font_size, subtitle_font_size, cover_image):
+def write_big_title(title, subtitle, title_color, subtitle_color, font_path, subtitle_font, font_size, subtitle_font_size, cover_image):
+    title = convert_simplified_to_traditional(title).strip()
+    subtitle = convert_simplified_to_traditional(subtitle).strip()
     # 打开图像文件
     draw = ImageDraw.Draw(cover_image)
     font = ImageFont.truetype(font_path, font_size)
-    subtitle_font = ImageFont.truetype(font_path, subtitle_font_size)
+    subtitle_font = ImageFont.truetype(subtitle_font, subtitle_font_size)
 
     # 指定文本区域的宽度和边距
     margin_left = int(cover_image.width * 0.1)
@@ -525,12 +527,14 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, fon
         width = bbox[2] - bbox[0]
         height = bbox[3] - bbox[1]
         y_text = cover_image.height - margin_bottom - height
+
         draw.text(((cover_image.width - width) / 2, y_text), title, font=font, fill=title_color)
 
     # 绘制右上角的副标题
     subtitle_margin_top = int(cover_image.height * 0.1)
     subtitle_margin_right = int(cover_image.width * 0.1)
-    draw.text((cover_image.width - subtitle_margin_right - draw.textbbox((0, 0), subtitle, font=subtitle_font)[2], subtitle_margin_top),
+    draw.text((cover_image.width - subtitle_margin_right - draw.textbbox((0, 0), subtitle, font=subtitle_font)[2],
+               subtitle_margin_top),
               subtitle, font=subtitle_font, fill=subtitle_color)
 
     return cover_image
@@ -581,13 +585,16 @@ def extract_thumbnail_main(video_path, release_video_dir, number_covers=1, crop_
                 subtitle = "全集"
                 title_color = "#FF0000"  # 红色
                 subtitle_color = "#FFFF00"  # 黄色
-                font_path = os.path.join('ziti', 'douyin', 'DouyinSansBold.otf')
+
+                title_font = os.path.join('ziti', 'fengmian', 'gwkt-SC-Black.ttf')  # 标题
+                subtitle_font = os.path.join('ziti', 'fengmian', 'syst-SourceHanSerifCN-Regular.otf')  # 副标题
+
                 font_size = 80 * 3
                 subtitle_font_size = 60 * 3
 
-                cover_image = write_big_title(title, subtitle, title_color, subtitle_color, font_path, font_size, subtitle_font_size, cover_image)
+                cover_image = write_big_title(title, subtitle, title_color, subtitle_color, title_font, subtitle_font, font_size, subtitle_font_size,
+                                              cover_image)
                 process_image(cover_image, cover_path)
-
 
     move_images_to_release(cover_images_path, frame_images_path, release_video_dir)
 

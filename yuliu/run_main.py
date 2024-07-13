@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import time
 
 import yt_dlp
@@ -211,7 +212,7 @@ def finalize_video_processing(processed_videos, output_video, release_video_dir,
         print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(new_file_path))}")
 
 
-def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, download_only=False, sub_directory=None, video_name=None):
+def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, download_only=False, sub_directory=None, video_name=None,number_covers=1,only_image=False):
     global download_cache_dir, download_directory_dir, release_video_dir, mvsep_input_dir, mvsep_output_dir
 
     print_separator("初始化路径")
@@ -272,9 +273,11 @@ def run_main(url=None, videos=None, split_time_min=15, is_clear_cache=False, dow
             original_video = target_path
 
     extract_first_5_minutes(original_video, release_video_dir)
-    extract_thumbnail_main(original_video, release_video_dir, 1, 100)
+    extract_thumbnail_main(original_video, release_video_dir, number_covers, 100)
 
-    # sys.exit()
+    if only_image:
+        return
+    
     # print_separator("输入 'y' 继续: ")
     # user_input = input("输入 'y' 继续: ")
     # if user_input.lower() == 'y':
