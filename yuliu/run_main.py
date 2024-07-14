@@ -212,6 +212,7 @@ def finalize_video_processing(file_path, release_video_dir, new_name):
               )
 
 
+
 import os
 import subprocess
 
@@ -284,6 +285,8 @@ def run_main(url=None,
     mvsep_input_dir = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2", "input")
     mvsep_output_dir = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2", "output")
 
+    cache_util = DiskCacheUtil()
+
     if sub_directory:
         download_cache_dir = os.path.join(download_cache_dir, sub_directory)
         download_directory_dir = os.path.join(download_directory_dir, sub_directory)
@@ -310,7 +313,6 @@ def run_main(url=None,
         clear_cache()
 
     split_time_ms = minutes_to_milliseconds(split_time_min)
-    cache_util = DiskCacheUtil()
     previous_split_time = cache_util.get_from_cache("split_time_ms", 900 * 1000)
     print(f"上次切割时间单位:{previous_split_time}毫秒")
     print(f"当前切割时间单位:{split_time_ms}毫秒")
@@ -351,7 +353,7 @@ def run_main(url=None,
         print(f"\n原始视频路径: {original_video}")
         video_duration = get_mp4_duration(original_video)
         print(f"\n原始视频时长: {video_duration}")
-        keyframe_times = get_keyframes(original_video, split_time_ms)
+        keyframe_times = get_keyframes(original_video, cache_util)
         split_points = find_split_points(keyframe_times, split_time_ms)
         video_clips = segment_video_times(original_video, split_points, output_pattern)
         print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
@@ -362,6 +364,7 @@ def run_main(url=None,
         # delete_processed_videos(result_video, processed_videos)
         process_and_save_results(original_video, download_time, process_video_time, result_file_name)
         finalize_video_processing(result_video, release_video_dir, sub_directory)
+        cache_util.close_cache()
 
 
 def delete_processed_videos(result_video, processed_videos):

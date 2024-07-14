@@ -36,21 +36,3 @@ class DiskCacheUtil:
         self.cache.close()
 
 # 示例用法
-if __name__ == "__main__":
-    cache_util = DiskCacheUtil()
-
-    # 设置永久缓存
-    cache_util.set_to_cache('example_number', 15000)
-
-    # 获取缓存
-    value = cache_util.get_from_cache('example_number')
-    print(value)  # 输出: 15000
-
-    # 删除缓存（如果需要）
-    # cache_util.delete_from_cache('example_number')
-
-    # 清空缓存（如果需要）
-    # cache_util.clear_cache()
-
-    # 关闭缓存
-    cache_util.close_cache()

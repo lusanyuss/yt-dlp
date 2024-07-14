@@ -1,9 +1,21 @@
 import hashlib
 import json
+import time
 
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
+
+
+def execution_time(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()  # 开始时间
+        result = func(*args, **kwargs)
+        end_time = time.time()  # 结束时间
+        print(f"{func.__name__}方法执行时间: {end_time - start_time:.2f} 秒")
+        return result
+
+    return wrapper
 
 
 def print_separator(text='', char='=', length=150):
@@ -127,52 +139,58 @@ def save_cache(cache):
 keyframe_cache = load_cache()
 
 
+@execution_time
 def get_file_md5(file_path):
     hash_md5 = hashlib.md5()
     with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
-    return hash_md5.hexdigest()
+    md5_result = hash_md5.hexdigest()
+    return md5_result
 
 
-def get_keyframes(input_file, split_time):
-    start_time = time.time()
-    print(f"========开始获取关键帧: {input_file}")
 
-    # 计算文件的 MD5 校验和1111
-    video_md5 = f'{get_file_md5(input_file)}_{split_time}'
-    print(f"文件的key MD5校验和切割时长: {video_md5}")
+@execution_time
+def get_keyframes(input_file, cache_util):
+    file_md5 = get_file_md5(input_file)
+    cache_key = f"keyframes_{file_md5}"
+    cached_keyframes = cache_util.get_from_cache(cache_key)
 
-    # 如果缓存中存在，直接返回缓存中的关键帧信息
-    cache_util = DiskCacheUtil()
-    cached_keyframes = cache_util.get_from_cache(video_md5)
     if cached_keyframes is not None:
-        print("从缓存中读取关键帧信息")
+        print("从缓存中获取关键帧信息")
         return cached_keyframes
 
-    # 运行 ffprobe 命令获取关键帧信息
     command = [
-        "ffprobe", "-select_streams", "v:0", "-show_frames", "-show_entries",
-        "frame=pict_type,pkt_pts_time,best_effort_timestamp_time", "-of", "json", input_file
+        "ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+        "frame=best_effort_timestamp_time,pict_type", "-of", "json", input_file
     ]
-    command += ['-loglevel', 'quiet']
-    result = subprocess.run(command, capture_output=True, text=True)
-    frames = json.loads(result.stdout)["frames"]
+    print("Running command: ", ' '.join(command))
+    result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+
+    if result.returncode != 0:
+        print(f"Error output: {result.stderr}")
+        raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout, stderr=result.stderr)
+
+    keyframes_data = json.loads(result.stdout)
+
+    if 'frames' not in keyframes_data:
+        raise ValueError("ffprobe输出不包含帧信息")
 
     keyframes = []
-    for frame in frames:
-        if frame["pict_type"] == "I":
-            keyframes.append(frame["best_effort_timestamp_time"])
+    for frame in keyframes_data['frames']:
+        if frame.get('pict_type') == 'I':
+            timestamp = frame.get('best_effort_timestamp_time')
+            if timestamp is not None:
+                keyframes.append({
+                    "frame": timestamp,
+                    "pkt_pts_time": timestamp
+                })
+            else:
+                print(f"帧信息缺少 'best_effort_timestamp_time': {frame}")
 
-    # 将结果保存到缓存中
-    cache_util.set_to_cache(video_md5, keyframes)
-    print("将结果保存到缓存中")
-
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"========获取关键帧处理完成, 耗时: {elapsed_time:.2f} 秒")
-
+    cache_util.set_to_cache(cache_key, keyframes)
     return keyframes
+
 
 
 def find_split_points(keyframe_times, split_time_ms):
@@ -180,8 +198,8 @@ def find_split_points(keyframe_times, split_time_ms):
     split_points = []
     current_time = 0.0
 
-    # 将 keyframe_times 列表中的每个时间戳转换为浮点数
-    keyframe_times = [float(time) for time in keyframe_times]
+    # 将 keyframe_times 列表中的每个 pkt_pts_time 时间戳转换为浮点数
+    keyframe_times = [float(frame['pkt_pts_time']) for frame in keyframe_times]
 
     for keyframe_time in keyframe_times:
         if keyframe_time - current_time >= split_time and keyframe_time not in (0.0, keyframe_times[-1]):
@@ -614,20 +632,6 @@ def convert_simplified_to_traditional(text):
         return cc.convert(text)
     except Exception:
         return text
-
-
-import time
-
-
-def log_execution_time(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        print(f"{func.__name__} 的执行时间: {end_time - start_time:.4f} 秒")
-        return result
-
-    return wrapper
 
 
 import os
