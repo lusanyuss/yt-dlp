@@ -14,9 +14,9 @@ print(f"关键帧位置: {keyframes}")
 
 # =====================分割视频=====================
 split_time = (50 - 1) * 1000  # 例如，每3秒分割一次
-segment_times = find_split_points(keyframes, split_time)
-print(f"segment_times: {segment_times}")
-video_list = segment_video_times(input_file, segment_times, output_pattern)
+split_points = find_split_points(keyframes, split_time)
+print(f"segment_times: {split_points}")
+video_list = segment_video_times(input_file, split_points, output_pattern)
 
 # =====================合并视频=====================
 merge_videos(video_list, merged_output)  # 合并输出文件（位于当前目录）

@@ -187,7 +187,6 @@ def find_split_points(keyframe_times, split_time_ms):
     for keyframe_time in keyframe_times:
         if keyframe_time - current_time >= split_time and keyframe_time not in (0.0, keyframe_times[-1]):
             split_points.append(keyframe_time)
-            # print(f"Adding split point at {keyframe_time} seconds")
             current_time = keyframe_time
 
     print(f"\n拆分列表split_points:\n{split_points}\n")
@@ -504,12 +503,12 @@ def segment_video_fixed(input_file, segment_time, output_pattern):
     return file_list
 
 
-def segment_video_times(original_video, segment_times, output_pattern):
+def segment_video_times(original_video, split_points, output_pattern):
     start_time = time.time()
 
     print("开始分割视频")
 
-    if not segment_times:
+    if not split_points:
         print("无有效的分割时间点，返回原始文件。")
         output_file = output_pattern.replace('%02d', '00')
         shutil.copyfile(original_video, output_file)
@@ -518,14 +517,14 @@ def segment_video_times(original_video, segment_times, output_pattern):
         return [output_file]
 
     # 将浮点数列表转换为字符串列表
-    times_str = ",".join(map(str, segment_times))
+    times_str = ",".join(map(str, split_points))
     command = f'ffmpeg -i "{original_video}" -f segment -segment_times {times_str} -c copy -map 0 "{output_pattern}" -loglevel quiet'
 
     print(f"执行命令: {command}")
     subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
 
     # 生成输出文件列表
-    num_segments = len(segment_times) + 1  # 分割点数加1
+    num_segments = len(split_points) + 1  # 分割点数加1
     file_list = [output_pattern.replace('%02d', f'{i:02d}') for i in range(num_segments)]
 
     end_time = time.time()
