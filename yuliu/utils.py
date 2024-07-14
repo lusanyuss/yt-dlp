@@ -486,53 +486,48 @@ def run_command(command):
     print(f"命令 '{' '.join(command)}' 执行时间: {elapsed_time:.2f} 秒")
 
 
-def segment_video_fixed(input_file, segment_time, output_pattern):
-    command = [
-        'ffmpeg', '-i', input_file, '-f', 'segment', '-segment_time', segment_time,
-        '-c', 'copy', '-map', '0', output_pattern
-    ]
-    command += ['-loglevel', 'quiet']
-    subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-    # Generate the list of output files
-    # We need to determine the number of segments created, you might need to adjust this based on your exact segment length and video duration
-    file_list = []
-    segment_index = 0
-    while os.path.exists(output_pattern.replace('%02d', f'{segment_index:02d}')):
-        file_list.append(output_pattern.replace('%02d', f'{segment_index:02d}'))
-        segment_index += 1
-    return file_list
-
+def files_exist(file_list):
+    return all(os.path.exists(file) for file in file_list)
 
 def segment_video_times(original_video, split_points, output_pattern):
     start_time = time.time()
-
     print("开始分割视频")
 
-    if not split_points:
-        print("无有效的分割时间点，返回原始文件。")
-        output_file = output_pattern.replace('%02d', '00')
-        shutil.copyfile(original_video, output_file)
-        end_time = time.time()
-        print(f"分割耗时: {end_time - start_time:.2f}秒")
-        return [output_file]
+    cache_util = DiskCacheUtil()
 
-    # 将浮点数列表转换为字符串列表
+    # 计算命令的MD5哈希值
     times_str = ",".join(map(str, split_points))
     command = f'ffmpeg -i "{original_video}" -f segment -segment_times {times_str} -c copy -map 0 "{output_pattern}" -loglevel quiet'
+    command_hash = hashlib.md5(command.encode('utf-8')).hexdigest()
 
-    print(f"执行命令: {command}")
-    subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+    file_list = cache_util.get_from_cache(command_hash)
 
-    # 生成输出文件列表
-    num_segments = len(split_points) + 1  # 分割点数加1
-    file_list = [output_pattern.replace('%02d', f'{i:02d}') for i in range(num_segments)]
+    if file_list and files_exist(file_list):
+        print("使用缓存结果")
+    else:
+        if not split_points:
+            print("无有效的分割时间点，返回原始文件。")
+            output_file = output_pattern.replace('%02d', '00')
+            shutil.copyfile(original_video, output_file)
+            file_list = [output_file]
+        else:
+            print(f"执行命令: {command}")
+            subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+
+            # 生成输出文件列表
+            num_segments = len(split_points) + 1
+            file_list = [output_pattern.replace('%02d', f'{i:02d}') for i in range(num_segments)]
+
+            # 保存结果到缓存
+            cache_util.set_to_cache(command_hash, file_list)
 
     end_time = time.time()
     print(f"生成的文件列表: {file_list}")
     print(f"分割耗时: {end_time - start_time:.2f}秒")
 
-    return file_list
+    cache_util.close_cache()
 
+    return file_list
 
 def minutes_to_milliseconds(minutes):
     return minutes * 60 * 1000
