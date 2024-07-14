@@ -74,18 +74,17 @@ def process_video_files(video_clips_names):
         start_temp_time = time.time()
         processed_video = os.path.splitext(video_file_item)[0] + '_processed.mp4'
         # 如果 processed_video 已经存在，则跳过处理
-        # if os.path.exists(processed_video):
-        #     print(f"{processed_video} 已存在，跳过处理。")
-        #     processed_videos.append(processed_video)
-        #     continue
+        if os.path.exists(processed_video):
+            print(f"{processed_video} 已存在，跳过处理。")
+            processed_videos.append(processed_video)
+            continue
         audio_file, video_file = separate_audio_and_video(video_file_item)
         processed_audio = process_audio_with_mvsep_mdx23(audio_file)
         merge_audio_and_video(video_file, processed_audio, processed_video)
         try:
-            # os.remove(audio_file)
-            # os.remove(video_file)
-            # os.remove(processed_audio)
-
+            os.remove(audio_file)
+            os.remove(video_file)
+            os.remove(processed_audio)
             os.remove(video_file_item)
             print("删除临时文件.")
         except OSError as e:
@@ -196,15 +195,21 @@ def delete_file(file_path):
         print(f"删除文件时出错: {e}")
 
 
-def finalize_video_processing(processed_videos, output_video, release_video_dir, new_name):
-    if os.path.exists(output_video):
-        for file in processed_videos:
-            delete_file(file)
-
-        new_file_path = os.path.join(release_video_dir, f"{new_name}.mp4")
-        shutil.move(output_video, new_file_path)
-        result_video = add_watermark_to_video(new_file_path)
+def finalize_video_processing(file_path, release_video_dir, new_name):
+    if os.path.exists(file_path):
+        # 加水印
+        result_video = add_watermark_to_video(file_path)
         print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(result_video))}")
+
+        print(f"""
+
+    《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
+
+    歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
+    正版授權短劇，感謝大家支持 ！
+
+        """
+              )
 
 
 import os
@@ -335,8 +340,7 @@ def run_main(url=None,
     if is_get_video:
         print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
         output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
-        merged_video_name = f"{sub_directory}_mex23{get_file_only_extension(original_video)}"
-        merged_video_path = os.path.join(os.path.dirname(original_video), merged_video_name)
+        merged_video_path = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
         print(f"\n原始视频路径: {original_video}")
         video_duration = get_mp4_duration(original_video)
         print(f"\n原始视频时长: {video_duration}")
@@ -347,16 +351,13 @@ def run_main(url=None,
 
         print_separator(f"2.对视频人声分离({cover_title})")
         processed_videos, process_video_time = process_video_files(video_clips)
-        output_path = merge_videos(processed_videos, merged_video_path)
+        result_video = merge_videos(processed_videos, merged_video_path)
+        # delete_processed_videos(result_video, processed_videos)
         process_and_save_results(original_video, download_time, process_video_time, result_file_name)
-        finalize_video_processing(processed_videos, output_path, release_video_dir, sub_directory)
+        finalize_video_processing(result_video, release_video_dir, sub_directory)
 
-        print(f"""
 
-    《{convert_simplified_to_traditional(sub_directory)}》【高清完結合集】
-
-    歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
-    正版授權短劇，感謝大家支持 ！
-
-        """
-              )
+def delete_processed_videos(result_video, processed_videos):
+    if os.path.exists(result_video):
+        for file in processed_videos:
+            delete_file(file)

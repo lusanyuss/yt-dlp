@@ -1,6 +1,5 @@
 import hashlib
 import json
-import shutil
 
 import psutil
 
@@ -489,6 +488,7 @@ def run_command(command):
 def files_exist(file_list):
     return all(os.path.exists(file) for file in file_list)
 
+
 def segment_video_times(original_video, split_points, output_pattern):
     start_time = time.time()
     print("开始分割视频")
@@ -529,41 +529,46 @@ def segment_video_times(original_video, split_points, output_pattern):
 
     return file_list
 
+
 def minutes_to_milliseconds(minutes):
     return minutes * 60 * 1000
 
 
+import shutil
+
+
 def merge_videos(file_list, output_file):
+    if os.path.exists(output_file):
+        print(f"{output_file} 已存在，直接返回")
+        return output_file
+
     if len(file_list) == 1:
         print(f"只有一个文件，无需合并，复制 {file_list[0]} 为 {output_file}")
-        # 直接复制文件
         shutil.copy(file_list[0], output_file)
         return output_file
 
-    # 创建一个临时的文件列表
-    with open('filelist.txt', 'w', encoding='utf-8') as f:
-        for file in file_list:
-            f.write(f"file '{file}'\n")
+    try:
+        # 创建一个临时的文件列表
+        with open('filelist.txt', 'w', encoding='utf-8') as f:
+            for file in file_list:
+                f.write(f"file '{file}'\n")
 
-    # 调试信息：打印 filelist.txt 的内容
-    with open('filelist.txt', 'r', encoding='utf-8') as f:
-        print(f"filelist.txt 内容:\n{f.read()}")
+        # 调试信息：打印 filelist.txt 的内容
+        with open('filelist.txt', 'r', encoding='utf-8') as f:
+            print(f"filelist.txt 内容:\n{f.read()}")
 
-    command = [
-        'ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'filelist.txt', '-c', 'copy', output_file
-    ]
-    command += ['-loglevel', 'quiet']
-    result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+        command = [
+            'ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'filelist.txt', '-c', 'copy', output_file,
+            '-loglevel', 'quiet'
+        ]
+        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
 
-    # 调试信息：打印 ffmpeg 输出
-    print(f"ffmpeg 输出:\n{result.stdout}\n{result.stderr}")
+        # 调试信息：打印 ffmpeg 输出
+        print(f"ffmpeg 输出:\n{result.stdout}\n{result.stderr}")
 
-    # 检查 ffmpeg 命令是否成功
-    if result.returncode != 0:
-        raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout, stderr=result.stderr)
-
-    # 清理临时文件
-    os.remove('filelist.txt')
+    finally:
+        # 清理临时文件
+        os.remove('filelist.txt')
 
     return output_file
 

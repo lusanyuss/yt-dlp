@@ -110,17 +110,25 @@ if __name__ == "__main__":
         # '隐秘的婚姻',
         '霸道总裁的刁蛮女友',
     ]
-    for video_name in videos:
-        check_and_run(sub_directory=video_name,
-                      cover_title=video_name,
-                      juji_num=1,
-                      split_time_min=15,
-                      is_clear_cache=True,
+    # for video_name in videos:
+    #     check_and_run(sub_directory=video_name,
+    #                   cover_title=video_name,
+    #                   juji_num=1,
+    #                   split_time_min=15,
+    #                   is_clear_cache=True,
+    #
+    #                   is_get_video=True,
+    #
+    #                   is_get_cover=False,
+    #                   num_of_covers=4
+    #                   )
 
-                      is_get_video=True,
-
-                      is_get_cover=False,
-                      num_of_covers=4
-                      )
-
-    # check_and_run('aa测试目录', "萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬", 1, 0.1, is_clear_cache=True, only_image=False)
+    check_and_run(sub_directory='aa测试目录',
+                  cover_title="萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬",
+                  juji_num=1,
+                  split_time_min=0.1,
+                  is_clear_cache=False,
+                  is_get_video=True,
+                  is_get_cover=False,
+                  num_of_covers=4
+                  )
