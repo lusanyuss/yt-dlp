@@ -53,6 +53,11 @@ def get_file_name_with_extension(file_path):
 
 
 def merge_audio_and_video(video_file, audio_file, result_file):
+    # 如果文件已存在，直接返回
+    if os.path.exists(result_file):
+        print(f"{get_file_only_name(result_file)} 已经存在，直接返回。")
+        return result_file
+
     print(f"\n合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
     start_time = time.time()
     command = [
@@ -64,12 +69,13 @@ def merge_audio_and_video(video_file, audio_file, result_file):
         '-b:a', '192k',  # 设置音频比特率
         '-strict', 'experimental',  # 使用实验性AAC编码器
         '-y',  # 覆盖输出文件
-        result_file
+        result_file,
+        '-loglevel', 'quiet'
     ]
-    command += ['-loglevel', 'quiet']
     subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
     elapsed_time = time.time() - start_time
     print(f"耗时: {elapsed_time:.2f} 秒")
+    return result_file
 
 
 def get_mp4_duration(file_path):
@@ -101,16 +107,19 @@ def separate_audio_and_video(video_path):
     start_time = time.time()
     base, _ = os.path.splitext(video_path)
     audio_output, video_output = f"{base}_audio.mp3", f"{base}_video.mp4"
+
     if not os.path.exists(audio_output):
         command = ['ffmpeg', '-i', video_path, '-vn', '-acodec', 'libmp3lame', audio_output]
         command += ['-loglevel', 'quiet']
         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         print(f"音频提取到: {audio_output}")
+
     if not os.path.exists(video_output):
         command = ['ffmpeg', '-i', video_path, '-an', '-vcodec', 'copy', video_output]
         command += ['-loglevel', 'quiet']
         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         print(f"视频提取到: {video_output}")
+
     elapsed_time = time.time() - start_time
     print(f"耗时: {elapsed_time:.2f} 秒")
     return audio_output, video_output
@@ -147,7 +156,6 @@ def get_file_md5(file_path):
             hash_md5.update(chunk)
     md5_result = hash_md5.hexdigest()
     return md5_result
-
 
 
 @execution_time
@@ -190,7 +198,6 @@ def get_keyframes(input_file, cache_util):
 
     cache_util.set_to_cache(cache_key, keyframes)
     return keyframes
-
 
 
 def find_split_points(keyframe_times, split_time_ms):

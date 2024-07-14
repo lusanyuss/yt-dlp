@@ -52,14 +52,11 @@ def process_audio_with_mvsep_mdx23(audio_file):
         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         os.chdir(original_directory)
 
-    if os.path.exists(output_file_instrum):
-        os.remove(output_file_instrum)
-
     if os.path.exists(output_file_vocals):
         destination = shutil.copy(output_file_vocals, download_directory_dir)
         elapsed_time = time.time() - start_time
         print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
-        return os.path.abspath(destination)
+        return destination, output_file_instrum
     else:
         raise FileNotFoundError("输出目录中未找到 _vocals.wav 文件.")
 
@@ -67,6 +64,11 @@ def process_audio_with_mvsep_mdx23(audio_file):
 def process_video_files(video_clips_names):
     start_time = time.time()
     processed_videos = []
+    audio_file_list = []
+    video_file_list = []
+    processed_audio_list = []
+    video_file_item_list = []
+    processed_audio_instrum_list = []
 
     for video_file_item in video_clips_names:
         print(f"\n开始处理视频: {video_file_item}")
@@ -79,16 +81,15 @@ def process_video_files(video_clips_names):
             processed_videos.append(processed_video)
             continue
         audio_file, video_file = separate_audio_and_video(video_file_item)
-        processed_audio = process_audio_with_mvsep_mdx23(audio_file)
-        merge_audio_and_video(video_file, processed_audio, processed_video)
-        try:
-            os.remove(audio_file)
-            os.remove(video_file)
-            os.remove(processed_audio)
-            os.remove(video_file_item)
-            print("删除临时文件.")
-        except OSError as e:
-            print(f"删除临时文件时出错: {e}")
+
+        processed_audio_vocals, processed_audio_instrum = process_audio_with_mvsep_mdx23(audio_file)
+        processed_video = merge_audio_and_video(video_file, processed_audio_vocals, processed_video)
+
+        audio_file_list.append(audio_file)
+        video_file_list.append(video_file)
+        processed_audio_list.append(processed_audio_vocals)
+        video_file_item_list.append(video_file_item)
+        processed_audio_instrum_list.append(processed_audio_instrum)
 
         print(f"成功合成无背景音乐视频: {processed_video}")
         processed_videos.append(processed_video)
@@ -98,7 +99,7 @@ def process_video_files(video_clips_names):
     end_time = time.time()
     process_video_time = end_time - start_time
     print(f"\nprocess_video_files方法耗时: {process_video_time:.2f} 秒")
-    return processed_videos, process_video_time
+    return processed_videos, audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list, process_video_time
 
 
 def get_video_list(result):
@@ -212,8 +213,6 @@ def finalize_video_processing(file_path, release_video_dir, new_name):
               )
 
 
-
-import os
 import subprocess
 
 
@@ -230,6 +229,8 @@ def add_watermark_to_video(video_path):
     # 获取视频时长
     video_duration_ms = get_mp4_duration(video_path)
     video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
+    # 计算分钟数
+    minutes_needed = video_duration_s / 60/4.3
 
     # 构建命令字符串，使用相对路径，并确保格式正确
     command = (
@@ -240,6 +241,7 @@ def add_watermark_to_video(video_path):
 
     # 打印命令以便手动检查
     print("Running command: ", command)
+    print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
 
     try:
         # 使用 shell=True 执行命令字符串
@@ -359,15 +361,27 @@ def run_main(url=None,
         print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
 
         print_separator(f"2.对视频人声分离({cover_title})")
-        processed_videos, process_video_time = process_video_files(video_clips)
+
+        (processed_videos, audio_file_list,
+         video_file_list, processed_audio_list,
+         video_file_item_list, processed_audio_instrum_list,
+         process_video_time) = process_video_files(video_clips)
+
         result_video = merge_videos(processed_videos, merged_video_path)
-        # delete_processed_videos(result_video, processed_videos)
         process_and_save_results(original_video, download_time, process_video_time, result_file_name)
         finalize_video_processing(result_video, release_video_dir, sub_directory)
+        delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list)
         cache_util.close_cache()
 
 
-def delete_processed_videos(result_video, processed_videos):
-    if os.path.exists(result_video):
-        for file in processed_videos:
-            delete_file(file)
+import os
+
+
+def delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list):
+    all_files = audio_file_list + video_file_list + processed_audio_list + video_file_item_list + processed_audio_instrum_list
+    for file in all_files:
+        try:
+            os.remove(file)
+            print(f"Deleted: {file}")
+        except OSError:
+            print(f"Failed to delete: {file}")
