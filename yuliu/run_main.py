@@ -297,6 +297,13 @@ def run_main(url=None,
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
 
+    dest_video_path = os.path.join(release_video_dir, f"{sub_directory}.mp4")
+    if os.path.exists(dest_video_path):
+        print_separator()
+        print(f"{get_file_name_with_extension(dest_video_path)}              已存在，不需要再处理了,直接返回")
+        print_separator()
+        return
+
     if sub_directory and sub_directory == 'mytest':
         clear_cache()
     if is_clear_cache:
