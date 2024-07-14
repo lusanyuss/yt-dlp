@@ -138,11 +138,11 @@ def get_file_md5(file_path):
 
 def get_keyframes(input_file, split_time):
     start_time = time.time()
-    print(f"开始处理文件: {input_file}")
+    print(f"========开始获取关键帧: {input_file}")
 
     # 计算文件的 MD5 校验和1111
     video_md5 = f'{get_file_md5(input_file)}_{split_time}'
-    print(f"文件的 MD5 校验和切割分钟: {video_md5}")
+    print(f"文件的key MD5校验和切割时长: {video_md5}")
 
     # 如果缓存中存在，直接返回缓存中的关键帧信息
     cache_util = DiskCacheUtil()
@@ -167,10 +167,11 @@ def get_keyframes(input_file, split_time):
 
     # 将结果保存到缓存中
     cache_util.set_to_cache(video_md5, keyframes)
+    print("将结果保存到缓存中")
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"处理完成, 耗时: {elapsed_time:.2f} 秒")
+    print(f"========获取关键帧处理完成, 耗时: {elapsed_time:.2f} 秒")
 
     return keyframes
 
@@ -189,6 +190,7 @@ def find_split_points(keyframe_times, split_time_ms):
             # print(f"Adding split point at {keyframe_time} seconds")
             current_time = keyframe_time
 
+    print(f"\n拆分列表split_points:\n{split_points}\n")
     return split_points
 
 
@@ -295,7 +297,6 @@ def generate_md5_filename(video_list, prefix="video", extension=".mp4", length=8
     # 生成唯一文件名
     unique_filename = f"{prefix}_{short_md5_hash}{extension}"
     return unique_filename
-
 
 
 def format_duration(duration_milliseconds):
@@ -504,20 +505,33 @@ def segment_video_fixed(input_file, segment_time, output_pattern):
 
 
 def segment_video_times(original_video, segment_times, output_pattern):
+    start_time = time.time()
+
+    print("开始分割视频")
+
     if not segment_times:
         print("无有效的分割时间点，返回原始文件。")
         output_file = output_pattern.replace('%02d', '00')
         shutil.copyfile(original_video, output_file)
+        end_time = time.time()
+        print(f"分割耗时: {end_time - start_time:.2f}秒")
         return [output_file]
 
     # 将浮点数列表转换为字符串列表
     times_str = ",".join(map(str, segment_times))
     command = f'ffmpeg -i "{original_video}" -f segment -segment_times {times_str} -c copy -map 0 "{output_pattern}" -loglevel quiet'
+
+    print(f"执行命令: {command}")
     subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
 
     # 生成输出文件列表
     num_segments = len(segment_times) + 1  # 分割点数加1
     file_list = [output_pattern.replace('%02d', f'{i:02d}') for i in range(num_segments)]
+
+    end_time = time.time()
+    print(f"生成的文件列表: {file_list}")
+    print(f"分割耗时: {end_time - start_time:.2f}秒")
+
     return file_list
 
 

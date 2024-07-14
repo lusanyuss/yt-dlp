@@ -52,10 +52,10 @@ def process_audio_with_mvsep_mdx23(audio_file):
         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         os.chdir(original_directory)
 
-    if os.path.isfile(output_file_instrum):
+    if os.path.exists(output_file_instrum):
         os.remove(output_file_instrum)
 
-    if os.path.isfile(output_file_vocals):
+    if os.path.exists(output_file_vocals):
         destination = shutil.copy(output_file_vocals, download_directory_dir)
         elapsed_time = time.time() - start_time
         print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
@@ -82,9 +82,10 @@ def process_video_files(video_clips_names):
         processed_audio = process_audio_with_mvsep_mdx23(audio_file)
         merge_audio_and_video(video_file, processed_audio, processed_video)
         try:
-            os.remove(audio_file)
-            os.remove(video_file)
-            os.remove(processed_audio)
+            # os.remove(audio_file)
+            # os.remove(video_file)
+            # os.remove(processed_audio)
+
             os.remove(video_file_item)
             print("删除临时文件.")
         except OSError as e:
@@ -255,9 +256,20 @@ def add_watermark_to_video(video_path):
 
     return video_path
 
-def run_main(url=None, cover_title=None, videos=None, split_time_min=15,
-             is_clear_cache=False, download_only=False, sub_directory=None, video_name=None,
-             number_covers=1, only_image=False):
+
+def run_main(url=None,
+             videos=None,
+
+             cover_title=None,
+             split_time_min=15,
+             is_clear_cache=False,
+
+             is_only_download=False,
+             sub_directory=None,
+             video_download_name=None,
+             is_get_video=True,
+             num_of_covers=1,
+             is_get_cover=False):
     global download_cache_dir, download_directory_dir, release_video_dir, mvsep_input_dir, mvsep_output_dir
 
     print_separator("初始化路径")
@@ -300,8 +312,8 @@ def run_main(url=None, cover_title=None, videos=None, split_time_min=15,
     download_time = 0
     if url:
         print_separator("下载视频")
-        original_video, download_time = download_video(url, video_name)
-        if download_only:
+        original_video, download_time = download_video(url, video_download_name)
+        if is_only_download:
             print("Download only mode is enabled. Exiting the program after download.")
             exit()
     else:
@@ -316,44 +328,35 @@ def run_main(url=None, cover_title=None, videos=None, split_time_min=15,
             shutil.copy(videos[0], target_path)
             original_video = target_path
 
-    # extract_first_5_minutes(original_video, release_video_dir)
-    extract_thumbnail_main(original_video, release_video_dir, cover_title, number_covers, 100)
-
-    if only_image:
+    if is_get_cover:
+        extract_thumbnail_main(original_video, release_video_dir, cover_title, num_of_covers=num_of_covers, crop_height=100)
         return
 
-    # print_separator("输入 'y' 继续: ")
-    # user_input = input("输入 'y' 继续: ")
-    # if user_input.lower() == 'y':
-    #     pass
-    # else:
-    #     print("操作已取消")
-    #     sys.exit()
+    if is_get_video:
+        print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
+        output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
+        merged_video_name = f"{sub_directory}_mex23{get_file_only_extension(original_video)}"
+        merged_video_path = os.path.join(os.path.dirname(original_video), merged_video_name)
+        print(f"\n原始视频路径: {original_video}")
+        video_duration = get_mp4_duration(original_video)
+        print(f"\n原始视频时长: {video_duration}")
+        keyframe_times = get_keyframes(original_video, split_time_ms)
+        split_points = find_split_points(keyframe_times, split_time_ms)
+        video_clips = segment_video_times(original_video, split_points, output_pattern)
+        print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
 
-    print_separator("1.处理视频,切成小块视频,进行处理")
-    output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
-    merged_video_name = f"{sub_directory}_mex23{get_file_only_extension(original_video)}"
-    merged_video_path = os.path.join(os.path.dirname(original_video), merged_video_name)
-    print(f"\n原始视频路径: {original_video}")
-    video_duration = get_mp4_duration(original_video)
-    print(f"\n原始视频时长: {video_duration}")
-    keyframe_times = get_keyframes(original_video, split_time_ms)
-    split_points = find_split_points(keyframe_times, split_time_ms)
-    video_clips = segment_video_times(original_video, split_points, output_pattern)
-    print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
+        print_separator(f"2.对视频人声分离({cover_title})")
+        processed_videos, process_video_time = process_video_files(video_clips)
+        output_path = merge_videos(processed_videos, merged_video_path)
+        process_and_save_results(original_video, download_time, process_video_time, result_file_name)
+        finalize_video_processing(processed_videos, output_path, release_video_dir, sub_directory)
 
-    print_separator("2.对视频人声分离")
-    processed_videos, process_video_time = process_video_files(video_clips)
-    output_path = merge_videos(processed_videos, merged_video_path)
-    process_and_save_results(original_video, download_time, process_video_time, result_file_name)
-    finalize_video_processing(processed_videos, output_path, release_video_dir, sub_directory)
+        print(f"""
 
-    print(f"""
+    《{convert_simplified_to_traditional(sub_directory)}》【高清完結合集】
 
-《{convert_simplified_to_traditional(sub_directory)}》【高清完結合集】
+    歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
+    正版授權短劇，感謝大家支持 ！
 
-歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
-正版授權短劇，感謝大家支持 ！
-
-    """
-          )
+        """
+              )

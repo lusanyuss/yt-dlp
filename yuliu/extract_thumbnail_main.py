@@ -599,17 +599,14 @@ def process_image(image, cover_path):
         print(f"No optimization needed for {cover_path}")
 
 
-
-
-
-def extract_thumbnail_main(video_path, release_video_dir, cover_title, number_covers=1, crop_height=100):
+def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_of_covers=1, crop_height=100):
     # 截取3张没有汉字的截图
-    if check_images_in_release_dir(release_video_dir, number_covers):
+    if check_images_in_release_dir(release_video_dir, num_of_covers):
         return
 
     print_separator("开始制作封面图")
-    output_dir = os.path.dirname(video_path)
-    cover_images_path, frame_images_path = extract_covers_and_frames(video_path, 3 * number_covers, crop_height)
+    output_dir = os.path.dirname(original_video)
+    cover_images_path, frame_images_path = extract_covers_and_frames(original_video, 3 * num_of_covers, crop_height)
     # 示例调用
     resize_images_if_needed(cover_images_path)
     # 示例调用
@@ -631,7 +628,7 @@ def extract_thumbnail_main(video_path, release_video_dir, cover_title, number_co
             with Image.open(cover_path) as cover_image:
                 # title = "测试目录测试目录测试"
                 # title = os.path.basename(os.path.dirname(video_path))
-                title = cover_title if cover_title else os.path.basename(os.path.dirname(video_path))
+                title = cover_title if cover_title else os.path.basename(os.path.dirname(original_video))
                 subtitle = "全集"
                 title_color = "#FF0000"  # 红色
                 subtitle_color = "#FFFF00"  # 黄色

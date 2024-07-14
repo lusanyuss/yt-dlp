@@ -3,7 +3,8 @@ import os
 from run_main import run_main
 
 
-def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_clear_cache=False, number_covers=1, only_image=False):
+def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_clear_cache=False, is_get_video=True, num_of_covers=1,
+                  is_get_cover=False):
     video_template = '{}.mp4'
     # 生成所有视频文件的路径
     videos = [os.path.join('download_cache', sub_directory, video_template.format(i)) for i in range(1, juji_num + 1)]
@@ -22,16 +23,18 @@ def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_clear
                      cover_title=cover_title,
                      videos=videos,
                      split_time_min=split_time_min,
+                     is_only_download=is_only_download,
                      is_clear_cache=is_clear_cache,
-                     number_covers=number_covers,
-                     only_image=only_image)
+                     is_get_video=is_get_video,
+                     num_of_covers=num_of_covers,
+                     is_get_cover=is_get_cover)
         else:
             print(f"视频文件数量({len(videos)})与指定的剧集数量({juji_num})不相等，无法继续执行。")
 
 
 def download_only_videos(urls, sub_directory):
     for index, url in enumerate(urls, start=1):
-        run_main(sub_directory=sub_directory, video_name=str(index), download_only=True, url=url)
+        run_main(sub_directory=sub_directory, video_download_name=str(index), is_only_download=True, url=url)
 
 
 # 调用方法
@@ -74,27 +77,50 @@ if __name__ == "__main__":
     # check_and_run('御龙刀主 举世欠我赊刀债', 1, 15, is_clear_cache=True)#有3家
     #
 
-    # videos = [
-        # '丑女逆袭-被首富大佬缠上了',
-        # '我无敌于世间',
-        # '傅总您太太真的没死',
-        # '逃婚当天我抓了个总裁过日子',
-        # '萌宝助攻我帮妈妈改嫁总裁大佬',
-        # '分手渣男后她成了女首富',
+    videos = [
+        # '丑女逆袭,被首富大佬缠上了',
         # '为王问鼎,择日登基',
-        # '九子夺嫡废太子竟是修仙者',
         # '以我晚星映海川',
+        # '傅总您太太真的没死',
+        '公主在现代嫁首富了,穿梭世纪来爱你',
+        '分手渣男后她成了女首富',
+        # '剑豪',
+        '只想亏钱奈何遇到一帮老六员工',
+        # '周太太今天太难哄',
+        '天庭聊天群',
+        # '寒窗十年高考后首富爸妈摊牌了',
         # '工业之光',
-        # '御龙刀主$举世欠我赊刀债',
+        # '巾帼修罗',
+        # '当丑女遇上总裁',
+        # '御龙刀主,举世欠我赊刀债',
+        # '我无敌于世间',
         # '我的傻父',
         # '我的老妈是女王',
         # '报告妈咪,爹地是总裁',
+        '摊牌了,我的五个哥哥是大佬',
+        '新版-护国神帅',
+        '新版-至尊仙帝',
         # '极品房东俏房客',
+        '棋圣,胜天半子',
+        # '爱意随风起',
         # '玄门侠女',
+        # '萌宝助攻我帮妈妈改嫁总裁大佬',
+        # '逃婚当天我抓了个总裁过日子',
+        '重启人生我靠败家逆袭',
         # '隐秘的婚姻',
-    # ]
-    # for video_name in videos:
-    #     check_and_run(video_name, video_name, 1, 15, is_clear_cache=True, number_covers=8, only_image=True)
-    #     break
+        '霸道总裁的刁蛮女友',
+    ]
+    for video_name in videos:
+        check_and_run(sub_directory=video_name,
+                      cover_title=video_name,
+                      juji_num=1,
+                      split_time_min=15,
+                      is_clear_cache=True,
 
-    check_and_run('aa测试目录', "萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬", 1, 0.1, is_clear_cache=True, only_image=False)
+                      is_get_video=True,
+
+                      is_get_cover=False,
+                      num_of_covers=4
+                      )
+
+    # check_and_run('aa测试目录', "萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬", 1, 0.1, is_clear_cache=True, only_image=False)

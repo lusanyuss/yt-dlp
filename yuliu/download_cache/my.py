@@ -40,7 +40,7 @@ def get_filtered_folders(base_dir):
 
     for folder in os.listdir(base_dir):
         folder_path = os.path.join(base_dir, folder)
-        if os.path.isdir(folder_path) and folder != 'src' and 'test' not in folder:
+        if os.path.isdir(folder_path) and folder != 'src' and '测试' not in folder:
             filtered_folders.append(folder)
 
     return filtered_folders
