@@ -59,7 +59,7 @@ def main():
     folders = get_filtered_folders(base_dir)
     print("Filtered folders:")
     for folder in folders:
-        print(f"'{folder}',")
+        print(f"\'{folder}\',")
 
 if __name__ == "__main__":
     main()

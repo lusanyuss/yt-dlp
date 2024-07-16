@@ -85,5 +85,5 @@ if __name__ == '__main__':
         print("\n下载缓存文件夹对应的发布文件夹为空的数据:")
         print("-" * col_width)
         for item in empty_release_data:
-            print(f"{item:<{col_width}}")
+            print(f"\'{item}\',")
         print("-" * col_width)

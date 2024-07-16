@@ -674,7 +674,7 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_o
     return frame_image_list
 
 if __name__ == "__main__":
-    output_dir = os.path.join('download_directory', 'aa测试目录测试目录')
+    output_dir = os.path.join('download_directory', 'aa测试目录')
     os.makedirs(output_dir, exist_ok=True)
     video_path = os.path.join(output_dir, '1.mp4')
     duration = 10
@@ -686,8 +686,8 @@ if __name__ == "__main__":
     end_time = time.time()
     print(f"===================Frame generation completed in {end_time - start_time} seconds.")
 
-    original_video = os.path.join(os.getcwd(), 'download_directory', 'aa测试目录测试目录', '1.mp4')
-    release_video_dir = os.path.join(os.getcwd(), 'release_video', 'aa测试目录测试目录')
+    original_video = os.path.join(os.getcwd(), 'download_directory', 'aa测试目录', '1.mp4')
+    release_video_dir = os.path.join(os.getcwd(), 'release_video', 'aa测试目录')
 
     delete_matching_images(release_video_dir)
 
