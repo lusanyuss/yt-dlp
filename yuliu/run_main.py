@@ -203,15 +203,17 @@ def finalize_video_processing(file_path, release_video_dir, new_name):
         result_video = add_watermark_to_video(file_path)
         print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(result_video))}")
 
-        print(f"""
+        # 保存标题和描述
+        
+        content = f"""
+        《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
 
-    《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
-
-    歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
-    正版授權短劇，感謝大家支持 ！
-
+        歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
+        正版授權短劇，感謝大家支持 ！
         """
-              )
+        file_path = f"{release_video_dir}/{convert_simplified_to_traditional(new_name)}.txt"
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(content)
 
 
 import subprocess
