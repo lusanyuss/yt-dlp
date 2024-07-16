@@ -226,10 +226,19 @@ def finalize_video_processing(file_path, release_video_dir, new_name):
         # 保存标题和描述
 
         content = f"""
-《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
+
+GPT指令(便于用gpt-4生成描述和标题):
+
+请根据以下标题生成适合搜索和吸引点击的标题和说明描述，使用中文繁体字，并且在说明描述中包含用 | 分割的相关标签。标题需要便于搜索，足够接地气，容易出现在搜索列表中，并且富有吸引力，让人感兴趣，使人立即点击观看。说明描述的第一个段落一定是：
 
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
-正版授權短劇，感謝大家支持 ！
+正版授權短劇，感謝大家支持！
+
+标题：《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
+
+
+《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
+
         """
         file_path = f"{release_video_dir}/{convert_simplified_to_traditional(new_name)}.txt"
         with open(file_path, 'w', encoding='utf-8') as file:
