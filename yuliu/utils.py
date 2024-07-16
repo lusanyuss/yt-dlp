@@ -1,8 +1,5 @@
 import hashlib
 import json
-import os
-import subprocess
-import time
 
 import psutil
 
@@ -43,6 +40,37 @@ def get_file_only_extension(file_path):
 def get_file_name_with_extension(file_path):
     import os
     return os.path.basename(file_path)
+
+
+
+
+def merge_audio_and_video_list(video_files, audio_files, result_files):
+    if len(video_files) != len(audio_files) or len(audio_files) != len(result_files):
+        raise ValueError("视频、音频和结果文件的列表长度必须一致")
+    start_time = time.time()
+    for video_file, audio_file, result_file in zip(video_files, audio_files, result_files):
+        # 如果文件已存在，直接返回
+        if os.path.exists(result_file):
+            print(f"{get_file_only_name(result_file)} 已经存在，直接返回。")
+            continue
+        print(f"\n合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
+        command = [
+            'ffmpeg',
+            '-i', video_file,
+            '-i', audio_file,
+            '-c:v', 'copy',  # 视频流不重新编码，直接复制
+            '-c:a', 'aac',  # 将音频流编码为AAC格式
+            '-b:a', '192k',  # 设置音频比特率
+            '-strict', 'experimental',  # 使用实验性AAC编码器
+            '-y',  # 覆盖输出文件
+            result_file,
+            '-loglevel', 'quiet'
+        ]
+        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+
+    elapsed_time = time.time() - start_time
+    print(f"耗时: {elapsed_time:.2f} 秒\n")
+    return result_files
 
 
 def merge_audio_and_video(video_file, audio_file, result_file):
@@ -95,22 +123,61 @@ def get_mp4_duration(file_path):
         raise RuntimeError(f"ffprobe 错误: {e.stderr}")
 
 
+def separate_audio_and_video_list(video_paths):
+    audio_outputs = []
+    video_outputs = []
+
+    for video_path in video_paths:
+        print(f"\n从视频中分离音频和视频: {video_path}")
+        start_time = time.time()
+        base, _ = os.path.splitext(video_path)
+        audio_output, video_output = f"{base}_audio.mp3", f"{base}_video.mp4"
+
+        if not os.path.exists(audio_output) or not os.path.exists(video_output):
+            command = [
+                'ffmpeg', '-i', video_path,
+                '-map', '0:a', '-acodec', 'libmp3lame', audio_output,
+                '-map', '0:v', '-vcodec', 'copy', video_output,
+                '-y', '-loglevel', 'quiet'
+            ]
+            subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+            print(f"音频提取到: {audio_output}")
+            print(f"视频提取到: {video_output}")
+
+        elapsed_time = time.time() - start_time
+        print(f"耗时: {elapsed_time:.2f} 秒")
+
+        audio_outputs.append(audio_output)
+        video_outputs.append(video_output)
+
+    return audio_outputs, video_outputs
+
+
+# 调用示例
+# video_files = ["path/to/your/video1.mp4", "path/to/your/video2.mp4"]
+# separate_audio_and_video(video_files)
+
+
+import os
+import subprocess
+import time
+
+
 def separate_audio_and_video(video_path):
     print(f"\n从视频中分离音频和视频: {video_path}")
     start_time = time.time()
     base, _ = os.path.splitext(video_path)
     audio_output, video_output = f"{base}_audio.mp3", f"{base}_video.mp4"
 
-    if not os.path.exists(audio_output):
-        command = ['ffmpeg', '-i', video_path, '-vn', '-acodec', 'libmp3lame', audio_output]
+    if not os.path.exists(audio_output) or not os.path.exists(video_output):
+        command = [
+            'ffmpeg', '-i', video_path,
+            '-map', '0:a', '-acodec', 'libmp3lame', audio_output,
+            '-map', '0:v', '-vcodec', 'copy', video_output
+        ]
         command += ['-loglevel', 'quiet']
         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         print(f"音频提取到: {audio_output}")
-
-    if not os.path.exists(video_output):
-        command = ['ffmpeg', '-i', video_path, '-an', '-vcodec', 'copy', video_output]
-        command += ['-loglevel', 'quiet']
-        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         print(f"视频提取到: {video_output}")
 
     elapsed_time = time.time() - start_time

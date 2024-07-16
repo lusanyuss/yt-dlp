@@ -1,13 +1,33 @@
+import os
 import shutil
 import time
 
+from torchvision.datasets.utils import calculate_md5
+
 import yt_dlp
-from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, merge_audio_and_video, separate_audio_and_video, \
-    generate_md5_filename, close_chrome, get_mp4_duration, find_split_points, \
-    process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional
+from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
+    find_split_points, \
+    process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
+    separate_audio_and_video_list, merge_audio_and_video_list
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
+
+
+def clear_directory_contents(directory):
+    if os.path.exists(directory):
+        for filename in os.listdir(directory):
+            file_path = os.path.join(directory, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f'删除 {file_path} 时出错: {e}')
+        print(f'已清空目录: {directory}')
+    else:
+        print(f'目录不存在: {directory}')
 
 
 # 清除缓存逻辑
@@ -19,108 +39,179 @@ def clear_cache():
         mvsep_input_dir,
         # mvsep_output_dir
     ]
-
     print_separator("clear_cache")
     for directory in directories_to_clear:
-        if os.path.exists(directory):
-            for filename in os.listdir(directory):
-                file_path = os.path.join(directory, filename)
-                try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)
-                except Exception as e:
-                    print(f'删除 {file_path} 时出错: {e}')
-            print(f'已清空目录: {directory}')
-        else:
-            print(f'目录不存在: {directory}')
+        clear_directory_contents(directory)
 
 
-def process_audio_with_mvsep_mdx23(audio_file):
+# def process_audio_with_mvsep_mdx23(audio_file):
+#     start_time = time.time()
+#     print(f"\n========================================处理音频文件: {os.path.basename(audio_file)}")
+#     shutil.copy(audio_file, mvsep_output_dir)
+#     intput_file_audio = os.path.join(mvsep_output_dir, get_file_name_with_extension(audio_file))
+#
+#     output_file_vocals = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
+#     output_file_instrum = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_instrum.wav")
+#
+#     if not os.path.exists(output_file_vocals):
+#         try:
+#             original_directory = os.getcwd()
+#             os.chdir(os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2"))
+#             command = ['python', 'mvsep_main.py', '--input', intput_file_audio, '--output', mvsep_output_dir]
+#             subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+#             os.chdir(original_directory)
+#         except Exception as e:
+#             # 如果这两个文件存在就删除掉
+#             print(f"处理音频文件时发生错误: {e}")
+#             print(f"删除残缺文件: \n{output_file_vocals}\n{output_file_vocals}\n")
+#             if os.path.exists(output_file_vocals):
+#                 os.remove(output_file_vocals)
+#             if os.path.exists(output_file_instrum):
+#                 os.remove(output_file_instrum)
+#
+#     if os.path.exists(output_file_vocals):
+#         destination = shutil.copy(output_file_vocals, download_directory_dir)
+#         elapsed_time = time.time() - start_time
+#         print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
+#         return destination, output_file_instrum
+#     else:
+#         raise FileNotFoundError("输出目录中未找到 _vocals.wav 文件.")
+
+
+def process_audio_with_mvsep_mdx23_list(audio_files):
     start_time = time.time()
-    print(f"\n========================================处理音频文件: {os.path.basename(audio_file)}")
-    shutil.copy(audio_file, mvsep_input_dir)
-    intput_file_audio = os.path.join(mvsep_input_dir, get_file_name_with_extension(audio_file))
+    print(f"\n========================================处理音频文件")
+    # files_directory = os.path.basename(os.path.dirname(audio_files[0]))
+    # mvsep_input_dir = os.path.join(os.getcwd(), 'MVSEP-MDX23-Colab_v2', 'input', files_directory)
+    # mvsep_output_dir = os.path.join(os.getcwd(), 'MVSEP-MDX23-Colab_v2', 'output', files_directory)
+    # os.makedirs(mvsep_input_dir, exist_ok=True)
+    # os.makedirs(mvsep_output_dir, exist_ok=True)
 
-    output_file_vocals = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
-    output_file_instrum = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_instrum.wav")
+    # 输出文件列表定义
+    output_file_vocals_list = []
+    output_file_instrum_list = []
+    destination_list = []
 
-    if not os.path.exists(output_file_vocals):
+    # 输出文件定义
+    for audio_file in audio_files:
+        output_file_vocals = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
+        output_file_instrum = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_instrum.wav")
+        output_file_vocals_list.append(output_file_vocals)
+        output_file_instrum_list.append(output_file_instrum)
+
+    # 输入文件处理
+    clear_directory_contents(mvsep_input_dir)
+
+    for audio_file in audio_files:
+        shutil.copy(audio_file, mvsep_input_dir)
+
+    if not all(os.path.exists(file) for file in output_file_vocals_list):
+        print("并不所有文件都存在。")
+        clear_directory_contents(mvsep_output_dir)
         try:
             original_directory = os.getcwd()
             os.chdir(os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2"))
-            command = ['python', 'mvsep_main.py', '--input', intput_file_audio, '--output', mvsep_output_dir]
+            command = ['python', 'mvsep_main.py', '--input', mvsep_input_dir, '--output', mvsep_output_dir]
             subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
             os.chdir(original_directory)
         except Exception as e:
-            # 如果这两个文件存在就删除掉
             print(f"处理音频文件时发生错误: {e}")
-            print(f"删除残缺文件: \n{output_file_vocals}\n{output_file_vocals}\n")
-            if os.path.exists(output_file_vocals):
-                os.remove(output_file_vocals)
-            if os.path.exists(output_file_instrum):
-                os.remove(output_file_instrum)
-
-    if os.path.exists(output_file_vocals):
-        destination = shutil.copy(output_file_vocals, download_directory_dir)
-        elapsed_time = time.time() - start_time
-        print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
-
-        # video_duration_min = get_mp4_duration(video_file_item) / 1000 / 60
-        # speed = (end_temp_time - start_temp_time) / video_duration_min
-        # print(f"\n结束处理{os.path.basename(video_file_item)}耗时: {end_temp_time - start_temp_time:.2f} 秒,速度: {speed:.2f} /秒")
-
-        return destination, output_file_instrum
     else:
-        raise FileNotFoundError("输出目录中未找到 _vocals.wav 文件.")
+        print("所有文件都存在。")
+    elapsed_time = time.time() - start_time
+    print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
+
+    for output_file_vocals in output_file_vocals_list:
+        if os.path.exists(output_file_vocals):
+            destination = shutil.copy(output_file_vocals, download_directory_dir)
+            destination_list.append(destination)
+    return destination_list, output_file_instrum_list
 
 
-def process_video_files(video_clips_names):
+def are_files_same(audio_files, output_dir):
+    mvsep_files = [os.path.join(audio_files, file) for file in os.listdir(audio_files) if os.path.isfile(os.path.join(audio_files, file))]
+
+    # 比较文件数量
+    if len(audio_files) != len(mvsep_files):
+        return False
+
+    # 比较文件名
+    audio_files_names = sorted([os.path.basename(file) for file in audio_files])
+    mvsep_files_names = sorted([os.path.basename(file) for file in mvsep_files])
+
+    if audio_files_names != mvsep_files_names:
+        return False
+
+    # 比较文件 MD5
+    for audio_file in audio_files:
+        corresponding_mvsep_file = os.path.join(output_dir, os.path.basename(audio_file))
+        if not os.path.exists(corresponding_mvsep_file):
+            return False
+        if calculate_md5(audio_file) != calculate_md5(corresponding_mvsep_file):
+            return False
+
+    return True
+
+
+def process_video_files_list(video_clips_names):
     start_time = time.time()
-    processed_videos = []
-    audio_file_list = []
-    video_file_list = []
-    processed_audio_list = []
-    video_file_item_list = []
-    processed_audio_instrum_list = []
-    total_videos = len(video_clips_names)
-
+    processed_video_list = []
+    audio_file_list, video_file_list = separate_audio_and_video_list(video_clips_names)
+    processed_audio_list, processed_audio_instrum_list = process_audio_with_mvsep_mdx23_list(audio_file_list)
     for index, video_file_item in enumerate(video_clips_names, start=1):
-        print(f"\n开始处理视频 ({index}/{total_videos}): {video_file_item}")
-        # 确定 processed_video 的路径
-        start_temp_time = time.time()
         processed_video = os.path.splitext(video_file_item)[0] + '_processed.mp4'
-        # 如果 processed_video 已经存在，则跳过处理
-        if os.path.exists(processed_video):
-            print(f"{processed_video} 已存在，跳过处理。")
-            processed_videos.append(processed_video)
-            continue
-        audio_file, video_file = separate_audio_and_video(video_file_item)
-
-        processed_audio_vocals, processed_audio_instrum = process_audio_with_mvsep_mdx23(audio_file)
-        processed_video = merge_audio_and_video(video_file, processed_audio_vocals, processed_video)
-
-        audio_file_list.append(audio_file)
-        video_file_list.append(video_file)
-        processed_audio_list.append(processed_audio_vocals)
-        video_file_item_list.append(video_file_item)
-        processed_audio_instrum_list.append(processed_audio_instrum)
-
-        print(f"成功合成无背景音乐视频: {processed_video}")
-        processed_videos.append(processed_video)
-        end_temp_time = time.time()
-
-        # 解析速度打印
-        video_duration_min = get_mp4_duration(video_file_item) / 1000 / 60
-        speed = (end_temp_time - start_temp_time) / video_duration_min
-        print(
-            f"\n结束处理{os.path.basename(video_file_item)}耗时(包含,片段的,分解->处理->合成,总时长):\n {end_temp_time - start_temp_time:.2f} 秒,速度: {speed:.2f} / 每分钟视频")
-
+        processed_video_list.append(processed_video)
+    processed_video_list = merge_audio_and_video_list(video_file_list, processed_audio_list, processed_video_list)
     end_time = time.time()
     process_video_time = end_time - start_time
-    print(f"\nprocess_video_files方法耗时: {process_video_time:.2f} 秒")
-    return processed_videos, audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list, process_video_time
+    return processed_video_list, audio_file_list, video_file_list, processed_audio_list, video_clips_names, processed_audio_instrum_list, process_video_time
+
+
+# def process_video_files(video_clips_names):
+#     start_time = time.time()
+#     processed_videos = []
+#     audio_file_list = []
+#     video_file_list = []
+#     processed_audio_list = []
+#     video_file_item_list = []
+#     processed_audio_instrum_list = []
+#     total_videos = len(video_clips_names)
+#
+#     for index, video_file_item in enumerate(video_clips_names, start=1):
+#         print(f"\n开始处理视频 ({index}/{total_videos}): {video_file_item}")
+#         # 确定 processed_video 的路径
+#         start_temp_time = time.time()
+#         processed_video = os.path.splitext(video_file_item)[0] + '_processed.mp4'
+#         # 如果 processed_video 已经存在，则跳过处理
+#         if os.path.exists(processed_video):
+#             print(f"{processed_video} 已存在，跳过处理。")
+#             processed_videos.append(processed_video)
+#             continue
+#         audio_file, video_file = separate_audio_and_video(video_file_item)
+#
+#         processed_audio_vocals, processed_audio_instrum = process_audio_with_mvsep_mdx23(audio_file)
+#         processed_video = merge_audio_and_video(video_file, processed_audio_vocals, processed_video)
+#
+#         audio_file_list.append(audio_file)
+#         video_file_list.append(video_file)
+#         processed_audio_list.append(processed_audio_vocals)
+#         video_file_item_list.append(video_file_item)
+#         processed_audio_instrum_list.append(processed_audio_instrum)
+#
+#         print(f"成功合成无背景音乐视频: {processed_video}")
+#         processed_videos.append(processed_video)
+#         end_temp_time = time.time()
+#
+#         # 解析速度打印
+#         video_duration_min = get_mp4_duration(video_file_item) / 1000 / 60
+#         speed = (end_temp_time - start_temp_time) / video_duration_min
+#         print(
+#             f"\n结束处理{os.path.basename(video_file_item)}耗时(包含,片段的,分解->处理->合成,总时长):\n {end_temp_time - start_temp_time:.2f} 秒,速度: {speed:.2f} / 每分钟视频")
+#
+#     end_time = time.time()
+#     process_video_time = end_time - start_time
+#     print(f"\nprocess_video_files方法耗时: {process_video_time:.2f} 秒")
+#     return processed_videos, audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list, process_video_time
 
 
 def get_video_list(result):
@@ -227,17 +318,12 @@ def finalize_video_processing(file_path, release_video_dir, new_name):
 
         content = f"""
 
-GPT指令(便于用gpt-4生成描述和标题):
-
-请根据以下标题生成适合搜索和吸引点击的标题和说明描述，使用中文繁体字，并且在说明描述中包含用 | 分割的相关标签。标题需要便于搜索，足够接地气，容易出现在搜索列表中，并且富有吸引力，让人感兴趣，使人立即点击观看。说明描述的第一个段落一定是：
+请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，使用中文繁体字，主标题和副标题写一起组合成整个标题,用|分开, 在说明描述中包含用 | 分割的相关标签。整个标题需要便于搜索，足够接地气，容易出现在搜索列表中，并且富有吸引力，让人感兴趣，使人立即点击观看。说明描述的第一个段落一定是：
 
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持！
 
-标题：《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
-
-
-《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
+主标题：\n《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
 
         """
         file_path = f"{release_video_dir}/{convert_simplified_to_traditional(new_name)}.txt"
@@ -401,16 +487,13 @@ def run_main(url=None,
         (processed_videos, audio_file_list,
          video_file_list, processed_audio_list,
          video_file_item_list, processed_audio_instrum_list,
-         process_video_time) = process_video_files(video_clips)
-
+         process_video_time) = process_video_files_list(video_clips)
         result_video = merge_videos(processed_videos, merged_video_path)
+
         process_and_save_results(original_video, download_time, process_video_time, result_file_name)
         finalize_video_processing(result_video, release_video_dir, sub_directory)
         delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list)
         cache_util.close_cache()
-
-
-import os
 
 
 def delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list):
