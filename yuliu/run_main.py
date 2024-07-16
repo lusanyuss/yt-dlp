@@ -44,54 +44,13 @@ def clear_cache():
         clear_directory_contents(directory)
 
 
-# def process_audio_with_mvsep_mdx23(audio_file):
-#     start_time = time.time()
-#     print(f"\n========================================处理音频文件: {os.path.basename(audio_file)}")
-#     shutil.copy(audio_file, mvsep_output_dir)
-#     intput_file_audio = os.path.join(mvsep_output_dir, get_file_name_with_extension(audio_file))
-#
-#     output_file_vocals = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
-#     output_file_instrum = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_instrum.wav")
-#
-#     if not os.path.exists(output_file_vocals):
-#         try:
-#             original_directory = os.getcwd()
-#             os.chdir(os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2"))
-#             command = ['python', 'mvsep_main.py', '--input', intput_file_audio, '--output', mvsep_output_dir]
-#             subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-#             os.chdir(original_directory)
-#         except Exception as e:
-#             # 如果这两个文件存在就删除掉
-#             print(f"处理音频文件时发生错误: {e}")
-#             print(f"删除残缺文件: \n{output_file_vocals}\n{output_file_vocals}\n")
-#             if os.path.exists(output_file_vocals):
-#                 os.remove(output_file_vocals)
-#             if os.path.exists(output_file_instrum):
-#                 os.remove(output_file_instrum)
-#
-#     if os.path.exists(output_file_vocals):
-#         destination = shutil.copy(output_file_vocals, download_directory_dir)
-#         elapsed_time = time.time() - start_time
-#         print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
-#         return destination, output_file_instrum
-#     else:
-#         raise FileNotFoundError("输出目录中未找到 _vocals.wav 文件.")
-
-
 def process_audio_with_mvsep_mdx23_list(audio_files):
     start_time = time.time()
     print(f"\n========================================处理音频文件")
-    # files_directory = os.path.basename(os.path.dirname(audio_files[0]))
-    # mvsep_input_dir = os.path.join(os.getcwd(), 'MVSEP-MDX23-Colab_v2', 'input', files_directory)
-    # mvsep_output_dir = os.path.join(os.getcwd(), 'MVSEP-MDX23-Colab_v2', 'output', files_directory)
-    # os.makedirs(mvsep_input_dir, exist_ok=True)
-    # os.makedirs(mvsep_output_dir, exist_ok=True)
-
     # 输出文件列表定义
     output_file_vocals_list = []
     output_file_instrum_list = []
     destination_list = []
-
     # 输出文件定义
     for audio_file in audio_files:
         output_file_vocals = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
@@ -101,7 +60,6 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
 
     # 输入文件处理
     clear_directory_contents(mvsep_input_dir)
-
     for audio_file in audio_files:
         shutil.copy(audio_file, mvsep_input_dir)
 
@@ -165,53 +123,6 @@ def process_video_files_list(video_clips_names):
     end_time = time.time()
     process_video_time = end_time - start_time
     return processed_video_list, audio_file_list, video_file_list, processed_audio_list, video_clips_names, processed_audio_instrum_list, process_video_time
-
-
-# def process_video_files(video_clips_names):
-#     start_time = time.time()
-#     processed_videos = []
-#     audio_file_list = []
-#     video_file_list = []
-#     processed_audio_list = []
-#     video_file_item_list = []
-#     processed_audio_instrum_list = []
-#     total_videos = len(video_clips_names)
-#
-#     for index, video_file_item in enumerate(video_clips_names, start=1):
-#         print(f"\n开始处理视频 ({index}/{total_videos}): {video_file_item}")
-#         # 确定 processed_video 的路径
-#         start_temp_time = time.time()
-#         processed_video = os.path.splitext(video_file_item)[0] + '_processed.mp4'
-#         # 如果 processed_video 已经存在，则跳过处理
-#         if os.path.exists(processed_video):
-#             print(f"{processed_video} 已存在，跳过处理。")
-#             processed_videos.append(processed_video)
-#             continue
-#         audio_file, video_file = separate_audio_and_video(video_file_item)
-#
-#         processed_audio_vocals, processed_audio_instrum = process_audio_with_mvsep_mdx23(audio_file)
-#         processed_video = merge_audio_and_video(video_file, processed_audio_vocals, processed_video)
-#
-#         audio_file_list.append(audio_file)
-#         video_file_list.append(video_file)
-#         processed_audio_list.append(processed_audio_vocals)
-#         video_file_item_list.append(video_file_item)
-#         processed_audio_instrum_list.append(processed_audio_instrum)
-#
-#         print(f"成功合成无背景音乐视频: {processed_video}")
-#         processed_videos.append(processed_video)
-#         end_temp_time = time.time()
-#
-#         # 解析速度打印
-#         video_duration_min = get_mp4_duration(video_file_item) / 1000 / 60
-#         speed = (end_temp_time - start_temp_time) / video_duration_min
-#         print(
-#             f"\n结束处理{os.path.basename(video_file_item)}耗时(包含,片段的,分解->处理->合成,总时长):\n {end_temp_time - start_temp_time:.2f} 秒,速度: {speed:.2f} / 每分钟视频")
-#
-#     end_time = time.time()
-#     process_video_time = end_time - start_time
-#     print(f"\nprocess_video_files方法耗时: {process_video_time:.2f} 秒")
-#     return processed_videos, audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list, process_video_time
 
 
 def get_video_list(result):
@@ -461,7 +372,7 @@ def run_main(url=None,
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
-        # return
+
 
     if is_get_video:
         if os.path.exists(dest_video_path):

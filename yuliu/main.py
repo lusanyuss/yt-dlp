@@ -79,6 +79,7 @@ if __name__ == "__main__":
 
 
     videos = [
+        ################### 已经部分 #######################
         # '丑女逆袭,被首富大佬缠上了',
         # '傅总您太太真的没死',
         # '公主在现代嫁首富了,穿梭世纪来爱你',
@@ -93,13 +94,14 @@ if __name__ == "__main__":
         # '萌宝助攻我帮妈妈改嫁总裁大佬',
         # '逃婚当天我抓了个总裁过日子',
         # '隐秘的婚姻',
-        '战无不胜',
+        # '战无不胜',
+        # '周太太今天太难哄',
+        # '寒窗十年高考后首富爸妈摊牌了',
+        ################### 未传部分 #######################
         # '新版-至尊仙帝',
         # '为王问鼎,择日登基',
         # '以我晚星映海川',
         # '剑豪',
-        '周太太今天太难哄',
-        '寒窗十年高考后首富爸妈摊牌了',
         # '工业之光',
         # '巾帼修罗',
         # '当丑女遇上总裁',
@@ -111,18 +113,21 @@ if __name__ == "__main__":
         # '重启人生我靠败家逆袭',
         # '霸道总裁的刁蛮女友',
     ]
-    for video_name in videos:
-        check_and_run(sub_directory=video_name,
-                      cover_title=video_name,
-                      juji_num=1,
-                      split_time_min=15,
-                      # is_clear_cache=True,
 
-                      is_get_video=True,
 
-                      is_get_cover=True,
-                      num_of_covers=8
-                      )
+    # for video_name in videos:
+    #     check_and_run(sub_directory=video_name,
+    #                   cover_title=video_name,
+    #                   juji_num=1,
+    #                   split_time_min=15,
+    #                   # is_clear_cache=True,
+    #
+    #                   is_get_video=True,
+    #
+    #                   is_get_cover=True,
+    #                   num_of_covers=8
+    #                   )
+
 
     # video_name="只想亏钱奈何遇到一帮老六员工"
     # check_and_run(sub_directory=video_name,
@@ -137,12 +142,13 @@ if __name__ == "__main__":
     #               num_of_covers=4
     #               )
 
-    # check_and_run(sub_directory='aa测试目录',
-    #               cover_title="萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬",
-    #               juji_num=1,
-    #               split_time_min=0.1,
-    #               is_clear_cache=False,
-    #               is_get_video=True,
-    #               is_get_cover=False,
-    #               num_of_covers=4
-    #               )
+    check_and_run(sub_directory='aa测试目录',
+                  cover_title="萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬",
+                  juji_num=1,
+                  split_time_min=0.1,
+
+                  is_clear_cache=False,
+                  is_get_video=True,
+                  is_get_cover=True,
+                  num_of_covers=4
+                  )

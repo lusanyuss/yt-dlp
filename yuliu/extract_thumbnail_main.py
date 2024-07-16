@@ -426,6 +426,18 @@ def get_unique_path(dst_path):
     return unique_path
 
 
+def delete_files(file_paths):
+    for file_path in file_paths:
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"已删除文件: {file_path}")
+            else:
+                print(f"文件不存在: {file_path}")
+        except Exception as e:
+            print(f"删除 {file_path} 时出错: {e}")
+
+
 def move_images_to_release(cover_images, frame_images, release_video_dir):
     """移动cover_images和frame_images中的图片到release_video目录"""
     # 确保输出目录存在
@@ -441,13 +453,14 @@ def move_images_to_release(cover_images, frame_images, release_video_dir):
             print(f"移动文件: {src_path} 到 {unique_dst_path}")
 
     # 移动frame_images中的图片
-    for src_path in frame_images:
-        if os.path.exists(src_path) and os.path.isfile(src_path):
-            filename = os.path.basename(src_path)
-            dst_path = os.path.join(release_video_dir, filename)
-            unique_dst_path = get_unique_path(dst_path)
-            shutil.move(src_path, unique_dst_path)
-            print(f"移动文件: {src_path} 到 {unique_dst_path}")
+    delete_files(frame_images)
+    # for src_path in frame_images:
+    #     if os.path.exists(src_path) and os.path.isfile(src_path):
+    #         filename = os.path.basename(src_path)
+    #         dst_path = os.path.join(release_video_dir, filename)
+    #         unique_dst_path = get_unique_path(dst_path)
+    #         shutil.move(src_path, unique_dst_path)
+    #         print(f"移动文件: {src_path} 到 {unique_dst_path}")
 
 
 def check_images_in_release_dir(release_video_dir, number_covers=1):
