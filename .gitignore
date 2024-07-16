@@ -132,3 +132,4 @@ yt-dlp-plugins
 /yuliu/pretrained_models/2stems/model.data-00000-of-00001
 /yuliu/pretrained_models/2stems/model.index
 /yuliu/keyframe_cache.json
+/yuliu/release_video/**/*.txt

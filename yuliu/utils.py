@@ -67,7 +67,7 @@ def merge_audio_and_video(video_file, audio_file, result_file):
     ]
     subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
     elapsed_time = time.time() - start_time
-    print(f"耗时: {elapsed_time:.2f} 秒")
+    print(f"耗时: {elapsed_time:.2f} 秒\n")
     return result_file
 
 

@@ -39,7 +39,7 @@ def clear_cache():
 
 def process_audio_with_mvsep_mdx23(audio_file):
     start_time = time.time()
-    print(f"\n=========================处理音频文件: {os.path.basename(audio_file)}")
+    print(f"\n========================================处理音频文件: {os.path.basename(audio_file)}")
     shutil.copy(audio_file, mvsep_input_dir)
     intput_file_audio = os.path.join(mvsep_input_dir, get_file_name_with_extension(audio_file))
 
@@ -66,6 +66,11 @@ def process_audio_with_mvsep_mdx23(audio_file):
         destination = shutil.copy(output_file_vocals, download_directory_dir)
         elapsed_time = time.time() - start_time
         print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
+
+        # video_duration_min = get_mp4_duration(video_file_item) / 1000 / 60
+        # speed = (end_temp_time - start_temp_time) / video_duration_min
+        # print(f"\n结束处理{os.path.basename(video_file_item)}耗时: {end_temp_time - start_temp_time:.2f} 秒,速度: {speed:.2f} /秒")
+
         return destination, output_file_instrum
     else:
         raise FileNotFoundError("输出目录中未找到 _vocals.wav 文件.")
@@ -79,9 +84,10 @@ def process_video_files(video_clips_names):
     processed_audio_list = []
     video_file_item_list = []
     processed_audio_instrum_list = []
+    total_videos = len(video_clips_names)
 
-    for video_file_item in video_clips_names:
-        print(f"\n开始处理视频: {video_file_item}")
+    for index, video_file_item in enumerate(video_clips_names, start=1):
+        print(f"\n开始处理视频 ({index}/{total_videos}): {video_file_item}")
         # 确定 processed_video 的路径
         start_temp_time = time.time()
         processed_video = os.path.splitext(video_file_item)[0] + '_processed.mp4'
@@ -104,7 +110,12 @@ def process_video_files(video_clips_names):
         print(f"成功合成无背景音乐视频: {processed_video}")
         processed_videos.append(processed_video)
         end_temp_time = time.time()
-        print(f"\n结束处理{os.path.basename(video_file_item)}耗时: {end_temp_time - start_temp_time:.2f} 秒")
+
+        # 解析速度打印
+        video_duration_min = get_mp4_duration(video_file_item) / 1000 / 60
+        speed = (end_temp_time - start_temp_time) / video_duration_min
+        print(
+            f"\n结束处理{os.path.basename(video_file_item)}耗时(包含,片段的,分解->处理->合成,总时长):\n {end_temp_time - start_temp_time:.2f} 秒,速度: {speed:.2f} /秒")
 
     end_time = time.time()
     process_video_time = end_time - start_time
@@ -215,10 +226,10 @@ def finalize_video_processing(file_path, release_video_dir, new_name):
         # 保存标题和描述
 
         content = f"""
-        《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
+《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
 
-        歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
-        正版授權短劇，感謝大家支持 ！
+歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
+正版授權短劇，感謝大家支持 ！
         """
         file_path = f"{release_video_dir}/{convert_simplified_to_traditional(new_name)}.txt"
         with open(file_path, 'w', encoding='utf-8') as file:
@@ -252,7 +263,7 @@ def add_watermark_to_video(video_path):
     )
 
     # 打印命令以便手动检查
-    print("Running command: ", command)
+    print("Running command: \n", command)
     print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
 
     try:
@@ -349,11 +360,15 @@ def run_main(url=None,
             original_video = target_path
 
     if is_get_cover:
+        # 记录开始时间
+        start_time = time.time()
         extract_thumbnail_main(original_video, release_video_dir, cover_title, num_of_covers=num_of_covers, crop_height=100)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
         # return
 
     if is_get_video:
-
         if os.path.exists(dest_video_path):
             print_separator()
             print(f"{get_file_name_with_extension(dest_video_path)}              已存在，不需要再处理了,直接返回")
