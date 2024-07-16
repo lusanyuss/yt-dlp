@@ -332,9 +332,6 @@ def run_main(url=None,
 
     cache_util = DiskCacheUtil()
 
-    # if is_clear_cache:
-    #     clear_cache()
-
     split_time_ms = minutes_to_milliseconds(split_time_min)
     previous_split_time = cache_util.get_from_cache("split_time_ms", 900 * 1000)
     print(f"上次切割时间单位:{previous_split_time}毫秒")
@@ -372,7 +369,6 @@ def run_main(url=None,
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
-
 
     if is_get_video:
         if os.path.exists(dest_video_path):

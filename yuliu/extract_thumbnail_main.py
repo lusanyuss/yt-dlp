@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait, TimeoutError
 
 import cv2
 import numpy as np
@@ -315,7 +315,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
             print(f"Failed to generate frame at {output_path}")
 
 
-def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path):
+def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path, timeout_duration):
     frame_paths = [None] * num_frames
     lock = threading.Lock()
 
@@ -324,8 +324,16 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, 
             executor.submit(generate_frame, i, video_path, duration, output_dir, crop_height, model_path, frame_paths, lock)
             for i in range(num_frames)
         ]
-        for future in futures:
-            future.result()
+        try:
+            # 等待所有任务完成，设置超时时间
+            done, not_done = wait(futures, timeout=timeout_duration)
+            # 如果有未完成的任务，取消它们
+            for future in not_done:
+                future.cancel()
+            if not_done:
+                print(f"在 {timeout_duration} 秒内未能完成所有任务，有 {len(not_done)} 个任务被取消。")
+        except TimeoutError:
+            print(f"在 {timeout_duration} 秒内未能完成所有任务。")
 
     return frame_paths
 
@@ -341,9 +349,9 @@ def extract_covers_and_frames(video_path, num_frames=3 * 1, crop_height=0):
 
     # Model path for super resolution
     model_path = "ESPCN_x3.pb"
-
+    timeout_duration = num_frames * 50
     # 截图列表
-    frame_images = get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path)
+    frame_images = get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path, timeout_duration)
     # 封面图列表
     cover_images = get_cover_images(frame_images, output_dir)
 
