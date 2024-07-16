@@ -38,7 +38,6 @@ def download_only_videos(urls, sub_directory):
 
 
 # 调用方法
-
 if __name__ == "__main__":
     # 单视频
     # run_command(['python', 'run.py', '--url', url])
@@ -96,8 +95,10 @@ if __name__ == "__main__":
         # '战无不胜',
         # '周太太今天太难哄',
         # '寒窗十年高考后首富爸妈摊牌了',
-        ################### 未传部分 #######################
+        # '极品房东俏房客',
         # '新版-至尊仙帝',
+        # '棋圣,胜天半子',
+        ################### 未传部分 #######################
         # '为王问鼎,择日登基',
         # '以我晚星映海川',
         # '剑豪',
@@ -106,15 +107,13 @@ if __name__ == "__main__":
         # '当丑女遇上总裁',
         # '我的傻父',
         # '摊牌了,我的五个哥哥是大佬',
-        '极品房东俏房客',
-        '棋圣,胜天半子',
         # '爱意随风起',
         # '重启人生我靠败家逆袭',
         # '霸道总裁的刁蛮女友',
     ]
 
-    # isTest = False
-    isTest = True
+    isTest = False
+    # isTest = True
 
     if not isTest:
         for video_name in videos:
@@ -140,16 +139,3 @@ if __name__ == "__main__":
                       is_get_cover=True,
                       num_of_covers=4
                       )
-
-    # video_name="只想亏钱奈何遇到一帮老六员工"
-    # check_and_run(sub_directory=video_name,
-    #               cover_title=video_name,
-    #               juji_num=1,
-    #               split_time_min=15,
-    #               is_clear_cache=True,
-    #
-    #               is_get_video=True,
-    #
-    #               is_get_cover=False,
-    #               num_of_covers=4
-    #               )

@@ -64,7 +64,7 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
         shutil.copy(audio_file, mvsep_input_dir)
 
     if not all(os.path.exists(file) for file in output_file_vocals_list):
-        print("并不所有文件都存在。")
+        print(f"并不所有文件都存在。清空目录{mvsep_output_dir}")
         clear_directory_contents(mvsep_output_dir)
         try:
             original_directory = os.getcwd()
@@ -278,13 +278,6 @@ def add_watermark_to_video(video_path):
         result.check_returncode()  # 检查命令是否成功
         os.replace(temp_output, video_path)  # Replace the original video with the new one
         print_separator("添加水印-成功")
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred: {e}")
-        print(f"stdout: {e.stdout}")
-        print(f"stderr: {e.stderr}")
-        if os.path.exists(temp_output):
-            os.remove(temp_output)  # Remove the temporary output file if it exists
-        return video_path
     except Exception as e:
         print(f"Error occurred: {e}")
         if os.path.exists(temp_output):
@@ -362,10 +355,15 @@ def run_main(url=None,
             shutil.copy(videos[0], target_path)
             original_video = target_path
 
+    frame_image_list = []
     if is_get_cover:
         # 记录开始时间
         start_time = time.time()
-        extract_thumbnail_main(original_video, release_video_dir, cover_title, num_of_covers=num_of_covers, crop_height=100)
+        frame_image_list = extract_thumbnail_main(original_video, release_video_dir,
+                                                  cover_title, num_of_covers=num_of_covers,
+                                                  crop_height=100)
+
+        delete_files_by_list(frame_image_list)
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
@@ -397,14 +395,23 @@ def run_main(url=None,
          process_video_time) = process_video_files_list(video_clips)
         result_video = merge_videos(processed_videos, merged_video_path)
 
-        process_and_save_results(original_video, download_time, process_video_time, result_file_name)
+        process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
         finalize_video_processing(result_video, release_video_dir, sub_directory)
-        delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list)
+        delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list, frame_image_list)
         cache_util.close_cache()
 
 
-def delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list):
-    all_files = audio_file_list + video_file_list + processed_audio_list + video_file_item_list + processed_audio_instrum_list
+def delete_files_by_list(frame_image_list):
+    for file in frame_image_list:
+        try:
+            os.remove(file)
+            print(f"Deleted: {file}")
+        except OSError:
+            print(f"Failed to delete: {file}")
+
+
+def delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list, frame_image_list):
+    all_files = audio_file_list + video_file_list + processed_audio_list + video_file_item_list + processed_audio_instrum_list + frame_image_list
     for file in all_files:
         try:
             os.remove(file)

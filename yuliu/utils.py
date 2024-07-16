@@ -1,5 +1,6 @@
 import hashlib
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 import psutil
 
@@ -42,45 +43,13 @@ def get_file_name_with_extension(file_path):
     return os.path.basename(file_path)
 
 
-
-
-def merge_audio_and_video_list(video_files, audio_files, result_files):
-    if len(video_files) != len(audio_files) or len(audio_files) != len(result_files):
-        raise ValueError("视频、音频和结果文件的列表长度必须一致")
-    start_time = time.time()
-    for video_file, audio_file, result_file in zip(video_files, audio_files, result_files):
-        # 如果文件已存在，直接返回
-        if os.path.exists(result_file):
-            print(f"{get_file_only_name(result_file)} 已经存在，直接返回。")
-            continue
-        print(f"\n合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
-        command = [
-            'ffmpeg',
-            '-i', video_file,
-            '-i', audio_file,
-            '-c:v', 'copy',  # 视频流不重新编码，直接复制
-            '-c:a', 'aac',  # 将音频流编码为AAC格式
-            '-b:a', '192k',  # 设置音频比特率
-            '-strict', 'experimental',  # 使用实验性AAC编码器
-            '-y',  # 覆盖输出文件
-            result_file,
-            '-loglevel', 'quiet'
-        ]
-        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-
-    elapsed_time = time.time() - start_time
-    print(f"耗时: {elapsed_time:.2f} 秒\n")
-    return result_files
-
-
-def merge_audio_and_video(video_file, audio_file, result_file):
+def merge_single_audio_video(video_file, audio_file, result_file):
     # 如果文件已存在，直接返回
     if os.path.exists(result_file):
         print(f"{get_file_only_name(result_file)} 已经存在，直接返回。")
         return result_file
 
     print(f"\n合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
-    start_time = time.time()
     command = [
         'ffmpeg',
         '-i', video_file,
@@ -94,9 +63,19 @@ def merge_audio_and_video(video_file, audio_file, result_file):
         '-loglevel', 'quiet'
     ]
     subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+    return result_file
+
+
+def merge_audio_and_video_list(video_files, audio_files, result_files):
+    if len(video_files) != len(audio_files) or len(audio_files) != len(result_files):
+        raise ValueError("视频、音频和结果文件的列表长度必须一致")
+    start_time = time.time()
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(merge_single_audio_video, v, a, r) for v, a, r in zip(video_files, audio_files, result_files)]
+        result_files = [future.result() for future in futures]
     elapsed_time = time.time() - start_time
     print(f"耗时: {elapsed_time:.2f} 秒\n")
-    return result_file
+    return result_files
 
 
 def get_mp4_duration(file_path):
@@ -358,7 +337,7 @@ def save_unknown_duration_result(file_name, download_time, process_time, result_
         file.write(f"{file_name} : 未知时长 : 下载-{download_time:.2f}秒 : {process_time:.2f}秒\n")
 
 
-def process_and_save_results(original_video, download_time, process_video_time, result_file_name):
+def process_and_save_results(original_video, download_time, process_video_time, result_file_name, video_name):
     video_duration = get_mp4_duration(original_video)
 
     if video_duration:
@@ -370,12 +349,12 @@ def process_and_save_results(original_video, download_time, process_video_time, 
         video_duration_minutes = None
         ratio_value = None
 
-    file_name = os.path.basename(original_video).replace('.mp4', '')
+    # file_name = os.path.basename(original_video).replace('.mp4', '')
     if video_duration_minutes is not None and ratio_value is not None:
         if ratio_value > 10:
-            save_result(file_name, duration_seconds, download_time, process_video_time, ratio_value, result_file_name)
+            save_result(video_name, duration_seconds, download_time, process_video_time, ratio_value, result_file_name)
     else:
-        save_unknown_duration_result(file_name, download_time, process_video_time, result_file_name)
+        save_unknown_duration_result(video_name, download_time, process_video_time, result_file_name)
 
     print(f"结果保存到文件: {result_file_name}")
 
@@ -605,14 +584,10 @@ def merge_videos(file_list, output_file):
             '-loglevel', 'quiet'
         ]
         result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
-
         # 调试信息：打印 ffmpeg 输出
-        print(f"ffmpeg 输出:\n{result.stdout}\n{result.stderr}")
-
     finally:
         # 清理临时文件
         os.remove('filelist.txt')
-
     return output_file
 
 

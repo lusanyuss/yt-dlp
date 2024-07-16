@@ -451,6 +451,8 @@ def move_images_to_release(cover_images, frame_images, release_video_dir):
     # 确保输出目录存在
     os.makedirs(release_video_dir, exist_ok=True)
 
+    cover_image_list = []
+    frame_image_list = []
     # 移动cover_images中的图片
     for src_path in cover_images:
         if os.path.exists(src_path) and os.path.isfile(src_path):
@@ -458,17 +460,21 @@ def move_images_to_release(cover_images, frame_images, release_video_dir):
             dst_path = os.path.join(release_video_dir, filename)
             unique_dst_path = get_unique_path(dst_path)
             shutil.move(src_path, unique_dst_path)
+            cover_image_list.append(unique_dst_path)
             print(f"移动文件: {src_path} 到 {unique_dst_path}")
 
     # 移动frame_images中的图片
-    delete_files(frame_images)
-    # for src_path in frame_images:
-    #     if os.path.exists(src_path) and os.path.isfile(src_path):
-    #         filename = os.path.basename(src_path)
-    #         dst_path = os.path.join(release_video_dir, filename)
-    #         unique_dst_path = get_unique_path(dst_path)
-    #         shutil.move(src_path, unique_dst_path)
-    #         print(f"移动文件: {src_path} 到 {unique_dst_path}")
+    # delete_files(frame_images)
+    for src_path in frame_images:
+        if os.path.exists(src_path) and os.path.isfile(src_path):
+            filename = os.path.basename(src_path)
+            dst_path = os.path.join(release_video_dir, filename)
+            unique_dst_path = get_unique_path(dst_path)
+            shutil.move(src_path, unique_dst_path)
+            frame_image_list.append(unique_dst_path)
+            print(f"移动文件: {src_path} 到 {unique_dst_path}")
+
+    return frame_image_list
 
 
 def check_images_in_release_dir(release_video_dir, number_covers=1):
@@ -622,11 +628,11 @@ def process_image(image, cover_path):
 
 def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_of_covers=1, crop_height=100):
     # 截取3张没有汉字的截图
+    frame_image_list = []
     if check_images_in_release_dir(release_video_dir, num_of_covers):
-        return
+        return frame_image_list
 
     print_separator("开始制作封面图")
-    output_dir = os.path.dirname(original_video)
     cover_images_path, frame_images_path = extract_covers_and_frames(original_video, 3 * num_of_covers, crop_height)
     # 示例调用
     resize_images_if_needed(cover_images_path)
@@ -664,8 +670,8 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_o
 
                 process_image(cover_image, cover_path)
 
-    move_images_to_release(cover_images_path, frame_images_path, release_video_dir)
-
+    frame_image_list = move_images_to_release(cover_images_path, frame_images_path, release_video_dir)
+    return frame_image_list
 
 if __name__ == "__main__":
     output_dir = os.path.join('download_directory', 'aa测试目录测试目录')
@@ -685,4 +691,4 @@ if __name__ == "__main__":
 
     delete_matching_images(release_video_dir)
 
-    extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目录", 1, 100)
+    frame_image_list = extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目录", 1, 100)
