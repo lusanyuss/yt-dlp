@@ -1,1 +1,0 @@
-ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\download_cache\aa测试目录\1.mp4" -vf "drawtext=fontfile='C:/yuliu/workspace/yt-dlp/yuliu/ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,20)'" -c:a copy -y "C:/yuliu/workspace/yt-dlp/yuliu/download_cache/aa测试目录/1_test.mp4"
