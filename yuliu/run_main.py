@@ -3,10 +3,11 @@ import time
 
 import yt_dlp
 from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, merge_audio_and_video, separate_audio_and_video, \
-    generate_md5_filename, close_chrome, get_mp4_duration, get_keyframes, find_split_points, \
+    generate_md5_filename, close_chrome, get_mp4_duration, find_split_points, \
     process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
+from yuliu.keyframe_extractor import KeyFrameExtractor
 
 
 # 清除缓存逻辑
@@ -230,7 +231,7 @@ def add_watermark_to_video(video_path):
     video_duration_ms = get_mp4_duration(video_path)
     video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
     # 计算分钟数
-    minutes_needed = video_duration_s / 60/4.3
+    minutes_needed = video_duration_s / 60 / 4.3
 
     # 构建命令字符串，使用相对路径，并确保格式正确
     command = (
@@ -265,6 +266,13 @@ def add_watermark_to_video(video_path):
     return video_path
 
 
+def get_dir(base_dir, sub_directory=None):
+    dir_path = os.path.join(os.getcwd(), base_dir)
+    if sub_directory:
+        dir_path = os.path.join(dir_path, sub_directory)
+    return dir_path
+
+
 def run_main(url=None,
              videos=None,
 
@@ -281,38 +289,23 @@ def run_main(url=None,
     global download_cache_dir, download_directory_dir, release_video_dir, mvsep_input_dir, mvsep_output_dir
 
     print_separator("初始化路径")
-    download_cache_dir = os.path.join(os.getcwd(), "download_cache")
-    download_directory_dir = os.path.join(os.getcwd(), "download_directory")
-    release_video_dir = os.path.join(os.getcwd(), "release_video")
-    mvsep_input_dir = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2", "input")
-    mvsep_output_dir = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2", "output")
 
-    cache_util = DiskCacheUtil()
-
-    if sub_directory:
-        download_cache_dir = os.path.join(download_cache_dir, sub_directory)
-        download_directory_dir = os.path.join(download_directory_dir, sub_directory)
-        release_video_dir = os.path.join(release_video_dir, sub_directory)
-        mvsep_input_dir = os.path.join(mvsep_input_dir, sub_directory)
-        mvsep_output_dir = os.path.join(mvsep_output_dir, sub_directory)
-
+    download_cache_dir = get_dir("download_cache", sub_directory)
+    download_directory_dir = get_dir("download_directory", sub_directory)
+    release_video_dir = get_dir("release_video", sub_directory)
+    mvsep_input_dir = get_dir(os.path.join("MVSEP-MDX23-Colab_v2", "input"), sub_directory)
+    mvsep_output_dir = get_dir(os.path.join("MVSEP-MDX23-Colab_v2", "output"), sub_directory)
     ensure_directory_exists(download_cache_dir)
     ensure_directory_exists(download_directory_dir)
     ensure_directory_exists(release_video_dir)
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
-
     dest_video_path = os.path.join(release_video_dir, f"{sub_directory}.mp4")
-    if os.path.exists(dest_video_path):
-        print_separator()
-        print(f"{get_file_name_with_extension(dest_video_path)}              已存在，不需要再处理了,直接返回")
-        print_separator()
-        return
 
-    if sub_directory and sub_directory == 'mytest':
-        clear_cache()
-    if is_clear_cache:
-        clear_cache()
+    cache_util = DiskCacheUtil()
+
+    # if is_clear_cache:
+    #     clear_cache()
 
     split_time_ms = minutes_to_milliseconds(split_time_min)
     previous_split_time = cache_util.get_from_cache("split_time_ms", 900 * 1000)
@@ -346,16 +339,24 @@ def run_main(url=None,
 
     if is_get_cover:
         extract_thumbnail_main(original_video, release_video_dir, cover_title, num_of_covers=num_of_covers, crop_height=100)
-        return
+        # return
 
     if is_get_video:
+
+        if os.path.exists(dest_video_path):
+            print_separator()
+            print(f"{get_file_name_with_extension(dest_video_path)}              已存在，不需要再处理了,直接返回")
+            print_separator()
+            return
+
         print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
         output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
         merged_video_path = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
         print(f"\n原始视频路径: {original_video}")
         video_duration = get_mp4_duration(original_video)
         print(f"\n原始视频时长: {video_duration}")
-        keyframe_times = get_keyframes(original_video, cache_util)
+        keyframeextractor = KeyFrameExtractor(original_video, cache_util)
+        keyframe_times = keyframeextractor.extract_keyframes()
         split_points = find_split_points(keyframe_times, split_time_ms)
         video_clips = segment_video_times(original_video, split_points, output_pattern)
         print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")

@@ -1,22 +1,37 @@
-import os.path
+# 创建一个VideoData类
+from yuliu.DiskCacheUtil import DiskCacheUtil
 
-from yuliu.utils import get_keyframes, segment_video_times, merge_videos, find_split_points
 
-# Example usage
-baseDir = os.path.join("download_cache", "mytest")
-input_file = os.path.join(baseDir, '1.mp4')
-output_pattern = os.path.join(baseDir, 'out_times_%02d.mp4')
-merged_output = os.path.join(baseDir, 'merged_output.mp4')
+class VideoData:
+    def __init__(self, md5, title, description, cover_image):
+        self.md5 = md5
+        self.title = title
+        self.description = description
+        self.cover_image = cover_image
 
-# 获取关键帧位置
-keyframes = get_keyframes(input_file)
-print(f"关键帧位置: {keyframes}")
+    def __repr__(self):
+        return f"VideoData(md5={self.md5}, title={self.title}, description={self.description}, cover_image={self.cover_image})"
 
-# =====================分割视频=====================
-split_time = (50 - 1) * 1000  # 例如，每3秒分割一次
-split_points = find_split_points(keyframes, split_time)
-print(f"segment_times: {split_points}")
-video_list = segment_video_times(input_file, split_points, output_pattern)
 
-# =====================合并视频=====================
-merge_videos(video_list, merged_output)  # 合并输出文件（位于当前目录）
+# 示例用法
+if __name__ == "__main__":
+    cache_util = DiskCacheUtil()
+
+    # 创建视频对象
+    video = VideoData(
+        md5='example_md5_hash',
+        title='示例视频标题',
+        description='这是一个示例视频的描述',
+        cover_image='cover_image_url_or_path'
+    )
+
+    # 设置缓存
+    cache_util.set_to_cache('video_key', video)
+    cache_util.set_to_cache('video_key', video)
+
+    # 获取缓存
+    cached_video = cache_util.get_from_cache('video_key')
+    print(f'缓存的对象: {cached_video}')
+
+    # 关闭缓存
+    cache_util.close_cache()

@@ -45,11 +45,11 @@ if __name__ == "__main__":
     # url = "https://shls.mcloud.139.com/hls/KL04634eef94ee6f611ce5276a01f3f53a/playlist.m3u8?ci=1111aEx6R1E804320240509175614mlo"
     # run_command(['python', 'run.py','--sub_directory', sub_directory, '--download-only', '--url', url])
     # urls = [
-    #     # "https://shls.mcloud.139.com/hls/KL58ba7aa8bdd015ac572e35461f5a9886/playlist.m3u8?ci=1111aEx6R1E807420240711185644tin&fileSize=227692005&usersiteid=usersite-s",
-    #     # "https://shls.mcloud.139.com/hls/KM129f246108a117d9b9d40c33a5407a4b/playlist.m3u8?ci=1111aEx6R1E807420240711185644tin",
-    #     "https://shls.mcloud.139.com/hls/KLb4389cb4ea454acb02ff8c96466293c3/playlist.m3u8?ci=1111aEx6R1E80422024071118591106o&fileSize=54882704&usersiteid=usersite-s"
+    #     'https://shls.mcloud.139.com/hls/KL15668689ee757b65eb517805cc48ee7d/playlist.m3u8?ci=1111aEx6R1E804220240714143631urm&fileSize=853582047&usersiteid=usersite-s',
+    #     'https://shls.mcloud.139.com/hls/KLb40acbe2c8db4dd8599ea61202e1b65a/playlist.m3u8?ci=1111aEx6R1E804520240714143922uig&fileSize=916181923&usersiteid=usersite-s',
+    #     'https://shls.mcloud.139.com/hls/KLb1990dec9f5d44b5d6898eac2a08337d/playlist.m3u8?ci=1111aEx6R1E80442024071414420124a&fileSize=844196078&usersiteid=usersite-s'
     # ]
-    # download_only_videos(urls, "丑女逆袭-被首富大佬缠上了")
+    # download_only_videos(urls, "战无不胜")
 
     # check_and_run("武神太子归来", 3)
     # url = "https://shls.mcloud.139.com/hls/KL65a6914914be588034a5e8f6b02eed00/playlist.m3u8?ci=1111aEx6R1E807320240509175854swm"
@@ -77,50 +77,51 @@ if __name__ == "__main__":
     # check_and_run('御龙刀主 举世欠我赊刀债', 1, 15, is_clear_cache=True)#有3家
     #
 
+
     videos = [
         # '丑女逆袭,被首富大佬缠上了',
-        # '为王问鼎,择日登基',
-        # '以我晚星映海川',
         # '傅总您太太真的没死',
-        '公主在现代嫁首富了,穿梭世纪来爱你',
-        '分手渣男后她成了女首富',
-        # '剑豪',
-        '只想亏钱奈何遇到一帮老六员工',
-        # '周太太今天太难哄',
-        '天庭聊天群',
-        # '寒窗十年高考后首富爸妈摊牌了',
-        # '工业之光',
-        # '巾帼修罗',
-        # '当丑女遇上总裁',
+        # '公主在现代嫁首富了,穿梭世纪来爱你',
+        # '分手渣男后她成了女首富',
+        # '只想亏钱奈何遇到一帮老六员工',
+        # '天庭聊天群',
         # '御龙刀主,举世欠我赊刀债',
         # '我无敌于世间',
-        # '我的傻父',
         # '我的老妈是女王',
         # '报告妈咪,爹地是总裁',
-        '摊牌了,我的五个哥哥是大佬',
-        '新版-护国神帅',
-        '新版-至尊仙帝',
-        # '极品房东俏房客',
-        '棋圣,胜天半子',
-        # '爱意随风起',
         # '玄门侠女',
         # '萌宝助攻我帮妈妈改嫁总裁大佬',
         # '逃婚当天我抓了个总裁过日子',
-        '重启人生我靠败家逆袭',
         # '隐秘的婚姻',
-        '霸道总裁的刁蛮女友',
+        '战无不胜',
+        # '新版-至尊仙帝',
+        # '为王问鼎,择日登基',
+        # '以我晚星映海川',
+        # '剑豪',
+        '周太太今天太难哄',
+        '寒窗十年高考后首富爸妈摊牌了',
+        # '工业之光',
+        # '巾帼修罗',
+        # '当丑女遇上总裁',
+        # '我的傻父',
+        # '摊牌了,我的五个哥哥是大佬',
+        '极品房东俏房客',
+        '棋圣,胜天半子',
+        # '爱意随风起',
+        # '重启人生我靠败家逆袭',
+        # '霸道总裁的刁蛮女友',
     ]
     for video_name in videos:
         check_and_run(sub_directory=video_name,
                       cover_title=video_name,
                       juji_num=1,
                       split_time_min=15,
-                      is_clear_cache=True,
+                      # is_clear_cache=True,
 
                       is_get_video=True,
 
-                      is_get_cover=False,
-                      num_of_covers=4
+                      is_get_cover=True,
+                      num_of_covers=8
                       )
 
     # video_name="只想亏钱奈何遇到一帮老六员工"
@@ -135,7 +136,6 @@ if __name__ == "__main__":
     #               is_get_cover=False,
     #               num_of_covers=4
     #               )
-
 
     # check_and_run(sub_directory='aa测试目录',
     #               cover_title="萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬",

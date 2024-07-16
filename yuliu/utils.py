@@ -1,21 +1,12 @@
 import hashlib
 import json
+import os
+import subprocess
 import time
 
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
-
-
-def execution_time(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()  # 开始时间
-        result = func(*args, **kwargs)
-        end_time = time.time()  # 结束时间
-        print(f"{func.__name__}方法执行时间: {end_time - start_time:.2f} 秒")
-        return result
-
-    return wrapper
 
 
 def print_separator(text='', char='=', length=150):
@@ -45,10 +36,12 @@ def get_file_only_name(file_path):
 
 
 def get_file_only_extension(file_path):
+    import os
     return os.path.splitext(file_path)[1]
 
 
 def get_file_name_with_extension(file_path):
+    import os
     return os.path.basename(file_path)
 
 
@@ -148,7 +141,6 @@ def save_cache(cache):
 keyframe_cache = load_cache()
 
 
-@execution_time
 def get_file_md5(file_path):
     hash_md5 = hashlib.md5()
     with open(file_path, "rb") as f:
@@ -156,48 +148,6 @@ def get_file_md5(file_path):
             hash_md5.update(chunk)
     md5_result = hash_md5.hexdigest()
     return md5_result
-
-
-@execution_time
-def get_keyframes(input_file, cache_util):
-    file_md5 = get_file_md5(input_file)
-    cache_key = f"keyframes_{file_md5}"
-    cached_keyframes = cache_util.get_from_cache(cache_key)
-
-    if cached_keyframes is not None:
-        print("从缓存中获取关键帧信息")
-        return cached_keyframes
-
-    command = [
-        "ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
-        "frame=best_effort_timestamp_time,pict_type", "-of", "json", input_file
-    ]
-    print("Running command: ", ' '.join(command))
-    result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
-
-    if result.returncode != 0:
-        print(f"Error output: {result.stderr}")
-        raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout, stderr=result.stderr)
-
-    keyframes_data = json.loads(result.stdout)
-
-    if 'frames' not in keyframes_data:
-        raise ValueError("ffprobe输出不包含帧信息")
-
-    keyframes = []
-    for frame in keyframes_data['frames']:
-        if frame.get('pict_type') == 'I':
-            timestamp = frame.get('best_effort_timestamp_time')
-            if timestamp is not None:
-                keyframes.append({
-                    "frame": timestamp,
-                    "pkt_pts_time": timestamp
-                })
-            else:
-                print(f"帧信息缺少 'best_effort_timestamp_time': {frame}")
-
-    cache_util.set_to_cache(cache_key, keyframes)
-    return keyframes
 
 
 def find_split_points(keyframe_times, split_time_ms):
@@ -639,24 +589,3 @@ def convert_simplified_to_traditional(text):
         return cc.convert(text)
     except Exception:
         return text
-
-
-import os
-import subprocess
-
-
-def process_video(video_path):
-    font_file = os.path.join('ziti', 'fengmian', 'gwkt-SC-Black.ttf')
-    text = "爽剧风暴"
-
-    command = [
-        "ffmpeg",
-        "-i", video_path,
-        "-vf", f"drawtext=fontfile='{font_file}':text='{text}':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'",
-        "-c:a", "copy",
-        "-y",
-        video_path
-    ]
-
-    subprocess.run(command, check=True)
-    return video_path

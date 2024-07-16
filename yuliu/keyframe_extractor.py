@@ -3,45 +3,9 @@ import json
 import struct
 import subprocess
 import time
-import os
 
-def execution_time(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        print(f"Execution time for {func.__name__}: {end_time - start_time} seconds")
-        return result
-    return wrapper
+from yuliu.DiskCacheUtil import DiskCacheUtil
 
-class DiskCacheUtil:
-    def __init__(self, cache_file_path='keyframe_cache.json'):
-        self.cache_file_path = cache_file_path
-        self.cache = self.load_cache()
-
-    def load_cache(self):
-        if os.path.exists(self.cache_file_path):
-            with open(self.cache_file_path, 'r') as f:
-                return json.load(f)
-        return {}
-
-    def get_from_cache(self, key):
-        return self.cache.get(key)
-
-    def set_to_cache(self, key, value):
-        self.cache[key] = value
-        self.save_cache()
-
-    def delete_from_cache(self, key):
-        if key in self.cache:
-            del self.cache[key]
-            self.save_cache()
-            return True
-        return False
-
-    def save_cache(self):
-        with open(self.cache_file_path, 'w') as f:
-            json.dump(self.cache, f, indent=4)
 
 class KeyFrameExtractor:
     def __init__(self, video_path, cache_util):
@@ -86,19 +50,11 @@ class KeyFrameExtractor:
             size -= box_size
         return keyframes_indices
 
-    def _indices_to_times(self, indices):
-        # 根据帧率计算时间戳
-        times = []
-        frame_interval = 1.0 / self.frame_rate
-        for index in indices:
-            time_in_seconds = (index - 1) * frame_interval  # 调整索引从1开始
-            times.append({
-                "frame": str(index - 1),  # 调整索引从0开始
-                "pkt_pts_time": f"{time_in_seconds:.6f}"
-            })
-        return times
+    def _indices_to_times(self, indices, frame_rate):
+        # 计算每个index对应的时间间隔（秒）
+        time_interval = 1 / frame_rate
+        return [index * time_interval for index in indices]
 
-    @execution_time
     def extract_keyframes(self):
         try:
             with open(self.video_path, 'rb') as f:
@@ -106,13 +62,13 @@ class KeyFrameExtractor:
                 f.seek(0)  # Reset to the start of the file
                 keyframes_indices = KeyFrameExtractor.parse_box(f, file_size)
                 print(f"Extracted keyframe indices: {keyframes_indices}")
-                keyframes_times = self._indices_to_times(keyframes_indices)
-                return keyframes_times
+                keyframes_times = self._indices_to_times(keyframes_indices, self.frame_rate)
+                keyframes = [{"frame": str(index - 1), "pkt_pts_time": f"{time:.6f}"} for index, time in zip(keyframes_indices, keyframes_times)]
+                return keyframes
         except Exception as e:
             print(f"Error: {e}")
         return None
 
-    @execution_time
     def get_keyframes(self):
         file_md5 = self.get_file_md5(self.video_path)
         cache_key = f"keyframes_{file_md5}_time"
@@ -132,7 +88,7 @@ class KeyFrameExtractor:
 
         if result.returncode != 0:
             print(f"Error output: {result.stderr}")
-            raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout, stderr=result.stderr)
+            raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout)
 
         keyframes_data = json.loads(result.stdout)
 
@@ -155,7 +111,6 @@ class KeyFrameExtractor:
         return keyframes
 
     @staticmethod
-    @execution_time
     def get_file_md5(file_path):
         hash_md5 = hashlib.md5()
         with open(file_path, "rb") as f:
@@ -183,13 +138,47 @@ class KeyFrameExtractor:
         num, denom = map(int, r_frame_rate.split('/'))
         return num / denom
 
+    def get_video_info(self):
+        command = [
+            "ffprobe", "-v", "error", "-show_entries",
+            "format=duration", "-of", "json", self.video_path
+        ]
+        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+
+        if result.returncode != 0:
+            print(f"Error output: {result.stderr}")
+            raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout)
+
+        video_info = json.loads(result.stdout)
+        duration = float(video_info['format']['duration'])
+        return duration
+
+
 if __name__ == "__main__":
     # 使用示例
-    video_path = './download_directory/aa测试目录/out_times_00.mp4'
+    video_path = './download_directory/aa测试目录/1.mp4'
     cache_util = DiskCacheUtil()
     extractor = KeyFrameExtractor(video_path, cache_util)
+
+    # 打印视频基本信息
+    video_duration = extractor.get_video_info()
+    print(f"Video duration: {video_duration} seconds")
+
+    # 测试 extract_keyframes 方法
+    start_time = time.time()
     keyframes = extractor.extract_keyframes()
-    keyframes1 = extractor.get_keyframes()
+    end_time = time.time()
+    extract_keyframes_time = end_time - start_time
 
     print(f"Extracted keyframes: {keyframes}")
+    print(f"Time taken by extract_keyframes: {extract_keyframes_time} seconds")
+
+    print('================================================')
+    # 测试 get_keyframes 方法
+    start_time = time.time()
+    keyframes1 = extractor.get_keyframes()
+    end_time = time.time()
+    get_keyframes_time = end_time - start_time
+
     print(f"Extracted keyframes1: {keyframes1}")
+    print(f"Time taken by get_keyframes: {get_keyframes_time} seconds")
