@@ -42,47 +42,48 @@ def get_filtered_output_directories(base_directory, exclude_dirs):
     return filtered_dirs
 
 
-download_cache = os.path.join(os.getcwd(), 'download_cache')
-release_video = os.path.join(os.getcwd(), 'release_video')
-exclude_dirs = {'src', 'aa测试目录'}
-# 获取过滤后的文件夹列表
-download_cache_directories = get_filtered_input_directories(download_cache, exclude_dirs)
-release_video_directories = get_filtered_output_directories(release_video, exclude_dirs)
+if __name__ == '__main__':
+    download_cache = os.path.join(os.getcwd(), 'download_cache')
+    release_video = os.path.join(os.getcwd(), 'release_video')
+    exclude_dirs = {'src', 'aa测试目录'}
+    # 获取过滤后的文件夹列表
+    download_cache_directories = get_filtered_input_directories(download_cache, exclude_dirs)
+    release_video_directories = get_filtered_output_directories(release_video, exclude_dirs)
 
-# Create a set for faster lookup
-release_set = set(release_video_directories)
+    # Create a set for faster lookup
+    release_set = set(release_video_directories)
 
-# Prepare data for tabulation
-data = []
-for item in download_cache_directories:
-    release_item = item if item in release_set else ""
-    data.append([item, release_item])
+    # Prepare data for tabulation
+    data = []
+    for item in download_cache_directories:
+        release_item = item if item in release_set else ""
+        data.append([item, release_item])
 
-# Add release_video_directories items that are not in download_cache_directories
-for item in release_video_directories:
-    if item not in download_cache_directories:
-        data.append(["", item])
+    # Add release_video_directories items that are not in download_cache_directories
+    for item in release_video_directories:
+        if item not in download_cache_directories:
+            data.append(["", item])
 
-# Define fixed column width
-col_width = 40
+    # Define fixed column width
+    col_width = 40
 
-# Print header for the main table
-header = f"{'源头视频':<{col_width}}\t{'发布视频':<{col_width}}"
-separator = "-" * (col_width * 2 + 8)
-print(header)
-print(separator)
+    # Print header for the main table
+    header = f"{'源头视频':<{col_width}}\t{'发布视频':<{col_width}}"
+    separator = "-" * (col_width * 2 + 8)
+    print(header)
+    print(separator)
 
-# Print rows for the main table
-for row in data:
-    print(f"{row[0]:<{col_width}}\t{row[1]:<{col_width}}")
+    # Print rows for the main table
+    for row in data:
+        print(f"{row[0]:<{col_width}}\t{row[1]:<{col_width}}")
 
-# Prepare data for the secondary table (items with empty release directory)
-empty_release_data = [row[0] for row in data if row[1] == ""]
+    # Prepare data for the secondary table (items with empty release directory)
+    empty_release_data = [row[0] for row in data if row[1] == ""]
 
-if empty_release_data:
-    # Print header for the secondary table
-    print("\n下载缓存文件夹对应的发布文件夹为空的数据:")
-    print("-" * col_width)
-    for item in empty_release_data:
-        print(f"{item:<{col_width}}")
-    print("-" * col_width)
+    if empty_release_data:
+        # Print header for the secondary table
+        print("\n下载缓存文件夹对应的发布文件夹为空的数据:")
+        print("-" * col_width)
+        for item in empty_release_data:
+            print(f"{item:<{col_width}}")
+        print("-" * col_width)
