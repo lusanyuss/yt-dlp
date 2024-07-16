@@ -115,7 +115,7 @@ def process_video_files(video_clips_names):
         video_duration_min = get_mp4_duration(video_file_item) / 1000 / 60
         speed = (end_temp_time - start_temp_time) / video_duration_min
         print(
-            f"\n结束处理{os.path.basename(video_file_item)}耗时(包含,片段的,分解->处理->合成,总时长):\n {end_temp_time - start_temp_time:.2f} 秒,速度: {speed:.2f} /秒")
+            f"\n结束处理{os.path.basename(video_file_item)}耗时(包含,片段的,分解->处理->合成,总时长):\n {end_temp_time - start_temp_time:.2f} 秒,速度: {speed:.2f} / 每分钟视频")
 
     end_time = time.time()
     process_video_time = end_time - start_time
