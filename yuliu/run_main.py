@@ -47,11 +47,20 @@ def process_audio_with_mvsep_mdx23(audio_file):
     output_file_instrum = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_instrum.wav")
 
     if not os.path.exists(output_file_vocals):
-        original_directory = os.getcwd()
-        os.chdir(os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2"))
-        command = ['python', 'mvsep_main.py', '--input', intput_file_audio, '--output', mvsep_output_dir]
-        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-        os.chdir(original_directory)
+        try:
+            original_directory = os.getcwd()
+            os.chdir(os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2"))
+            command = ['python', 'mvsep_main.py', '--input', intput_file_audio, '--output', mvsep_output_dir]
+            subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+            os.chdir(original_directory)
+        except Exception as e:
+            # 如果这两个文件存在就删除掉
+            print(f"处理音频文件时发生错误: {e}")
+            print(f"删除残缺文件: \n{output_file_vocals}\n{output_file_vocals}\n")
+            if os.path.exists(output_file_vocals):
+                os.remove(output_file_vocals)
+            if os.path.exists(output_file_instrum):
+                os.remove(output_file_instrum)
 
     if os.path.exists(output_file_vocals):
         destination = shutil.copy(output_file_vocals, download_directory_dir)
@@ -204,7 +213,7 @@ def finalize_video_processing(file_path, release_video_dir, new_name):
         print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(result_video))}")
 
         # 保存标题和描述
-        
+
         content = f"""
         《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
 

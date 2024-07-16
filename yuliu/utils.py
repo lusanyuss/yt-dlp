@@ -305,7 +305,8 @@ def process_and_save_results(original_video, download_time, process_video_time, 
 
     file_name = os.path.basename(original_video).replace('.mp4', '')
     if video_duration_minutes is not None and ratio_value is not None:
-        save_result(file_name, duration_seconds, download_time, process_video_time, ratio_value, result_file_name)
+        if ratio_value > 10:
+            save_result(file_name, duration_seconds, download_time, process_video_time, ratio_value, result_file_name)
     else:
         save_unknown_duration_result(file_name, download_time, process_video_time, result_file_name)
 
