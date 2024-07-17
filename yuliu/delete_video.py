@@ -25,6 +25,7 @@ if __name__ == '__main__':
         '逃婚当天我抓了个总裁过日子',
         '隐秘的婚姻',
         '我无敌于世间',
+        '当丑女遇上总裁'
     ]
     base_dirs = ["download_cache", "download_directory", "release_video",
                  os.path.join("MVSEP-MDX23-Colab_v2", "input"),

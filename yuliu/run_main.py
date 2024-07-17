@@ -46,7 +46,7 @@ def clear_cache():
 
 def process_audio_with_mvsep_mdx23_list(audio_files):
     start_time = time.time()
-    print(f"\n========================================处理音频文件")
+    print(f"\n========================================处理音频文件(去除背景音乐)")
     # 输出文件列表定义
     output_file_vocals_list = []
     output_file_instrum_list = []

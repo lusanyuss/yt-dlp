@@ -4,8 +4,7 @@ import random
 import shutil
 import subprocess
 import threading
-import time
-from concurrent.futures import ThreadPoolExecutor, wait, TimeoutError
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import cv2
 import numpy as np
@@ -319,21 +318,28 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, 
     frame_paths = [None] * num_frames
     lock = threading.Lock()
 
+    def timeout_handler():
+        print(f"在 {timeout_duration} 秒内未能完成所有任务，返回空的数据。")
+        nonlocal frame_paths
+        frame_paths = [None] * num_frames
+        # 取消所有正在进行的任务
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    timer = threading.Timer(timeout_duration, timeout_handler)
+    timer.start()
+
     with ThreadPoolExecutor(max_workers=num_frames) as executor:
         futures = [
             executor.submit(generate_frame, i, video_path, duration, output_dir, crop_height, model_path, frame_paths, lock)
             for i in range(num_frames)
         ]
         try:
-            # 等待所有任务完成，设置超时时间
-            done, not_done = wait(futures, timeout=timeout_duration)
-            # 如果有未完成的任务，取消它们
-            for future in not_done:
-                future.cancel()
-            if not_done:
-                print(f"在 {timeout_duration} 秒内未能完成所有任务，有 {len(not_done)} 个任务被取消。")
-        except TimeoutError:
-            print(f"在 {timeout_duration} 秒内未能完成所有任务。")
+            for future in as_completed(futures):
+                future.result()  # 处理可能的异常
+        except Exception as e:
+            print(f"任务执行过程中出现异常: {e}")
+        finally:
+            timer.cancel()  # 如果任务在超时前完成，取消定时器
 
     return frame_paths
 
@@ -353,8 +359,12 @@ def extract_covers_and_frames(video_path, num_frames=3 * 1, crop_height=0):
     # 截图列表
     frame_images = get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path, timeout_duration)
     # 封面图列表
-    cover_images = get_cover_images(frame_images, output_dir)
-
+    cover_images = []
+    if len(frame_images) == num_frames:
+        cover_images = get_cover_images(frame_images, output_dir)
+    else:
+        delete_files(frame_images)
+        frame_images = []
     return cover_images, frame_images
 
 
@@ -505,9 +515,10 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, sub
     font = ImageFont.truetype(font_path, font_size)
     subtitle_font = ImageFont.truetype(subtitle_font, subtitle_font_size)
 
-    margin_left = int(cover_image.width * 0.1)
-    margin_right = int(cover_image.width * 0.1)
-    margin_bottom = int(cover_image.height * 0.1)
+    beilv = 0.05
+    margin_left = int(cover_image.width * beilv)
+    margin_right = int(cover_image.width * beilv)
+    margin_bottom = int(cover_image.height * beilv)
     text_area_width = cover_image.width - margin_left - margin_right
 
     avg_char_width = draw.textbbox((0, 0), '测试', font=font)[2] // 2
@@ -553,8 +564,8 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, sub
         draw.text((x_text, y_text), line, font=font, fill=title_color)
         y_text += height + line_spacing
 
-    subtitle_margin_top = int(cover_image.height * 0.1)
-    subtitle_margin_right = int(cover_image.width * 0.1)
+    subtitle_margin_top = int(cover_image.height * beilv)
+    subtitle_margin_right = int(cover_image.width * beilv)
 
     subtitle_bbox = draw.textbbox((0, 0), subtitle, font=subtitle_font)
     subtitle_x = cover_image.width - subtitle_margin_right - subtitle_bbox[2]
@@ -568,32 +579,6 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, sub
     draw.text((subtitle_x, subtitle_y), subtitle, font=subtitle_font, fill=subtitle_color)
 
     return cover_image
-
-
-def calculate_font_size(char_count):
-    reduction_step = 8
-    base_font_size = 80
-    base_subtitle_font_size = 60
-
-    if char_count <= 12:
-        font_size = base_font_size * 3
-        subtitle_font_size = base_subtitle_font_size * 3
-    elif char_count <= 14:
-        font_size = (base_font_size - reduction_step) * 3
-        subtitle_font_size = (base_subtitle_font_size - reduction_step) * 3
-    elif char_count <= 16:
-        font_size = (base_font_size - reduction_step * 2) * 3
-        subtitle_font_size = (base_subtitle_font_size - reduction_step * 2) * 3
-    elif char_count <= 18:
-        font_size = (base_font_size - reduction_step * 3) * 3
-        subtitle_font_size = (base_subtitle_font_size - reduction_step * 3) * 3
-    elif char_count <= 20:
-        font_size = (base_font_size - reduction_step * 4) * 3
-        subtitle_font_size = (base_subtitle_font_size - reduction_step * 4) * 3
-    else:
-        font_size = (base_font_size - reduction_step * 5) * 3
-        subtitle_font_size = (base_subtitle_font_size - reduction_step * 5) * 3
-    return font_size, subtitle_font_size
 
 
 # 示例用法
@@ -626,6 +611,22 @@ def process_image(image, cover_path):
         print(f"No optimization needed for {cover_path}")
 
 
+def adjust_title(title, kongge='　'):
+    title_len = len(title)
+
+    if title_len == 2:
+        # Insert 2 kongge strings in the middle of the title
+        adjusted_title = title[0] + kongge * 2 + title[1]
+    elif title_len == 3:
+        # Insert 1 kongge string between each character of the title
+        adjusted_title = title[0] + kongge + title[1] + kongge + title[2]
+    else:
+        # No adjustment needed for titles with other lengths
+        adjusted_title = title
+
+    return adjusted_title
+
+
 def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_of_covers=1, crop_height=100):
     # 截取3张没有汉字的截图
     frame_image_list = []
@@ -633,13 +634,16 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_o
         return frame_image_list
 
     print_separator("开始制作封面图")
-    cover_images_path, frame_images_path = extract_covers_and_frames(original_video, 3 * num_of_covers, crop_height)
+    cover_images_list, frame_images_list = extract_covers_and_frames(original_video, 3 * num_of_covers, crop_height)
+    if len(cover_images_list) != num_of_covers:
+        print_separator("制作封面图超过设定时间，退出不获取了")
+        return frame_image_list
     # 示例调用
-    resize_images_if_needed(cover_images_path)
+    resize_images_if_needed(cover_images_list)
     # 示例调用
-    cover_images_path = convert_jpeg_to_png(cover_images_path)
+    cover_images_list = convert_jpeg_to_png(cover_images_list)
 
-    for cover_path in cover_images_path:
+    for cover_path in cover_images_list:
         try:
             with Image.open(cover_path) as img:
                 width, height = img.size
@@ -649,29 +653,75 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_o
         except Exception as e:
             print(f"无法处理图像 {cover_path}。错误信息：{e}")
 
-    for cover_path in cover_images_path:
+    for cover_path in cover_images_list:
         if is_resolution_gte_1920x1080(cover_path):
             # 先判断input_img的尺寸是不是宽高比,9:4,不是就切成9:4的宽高
             with Image.open(cover_path) as cover_image:
                 # title = "测试目录测试目录测试"
                 # title = os.path.basename(os.path.dirname(video_path))
                 title = cover_title if cover_title else os.path.basename(os.path.dirname(original_video))
+                title = adjust_title(title)
+
                 subtitle = "全集"
                 title_color = "#FF0000"  # 红色
                 subtitle_color = "#FFFF00"  # 黄色
 
                 title_font = os.path.join('ziti', 'fengmian', 'gwkt-SC-Black.ttf')  # 标题
                 subtitle_font = os.path.join('ziti', 'fengmian', 'syst-SourceHanSerifCN-Regular.otf')  # 副标题
-
                 font_size, subtitle_font_size = calculate_font_size(len(title))
 
-                cover_image = write_big_title(title, subtitle, title_color, subtitle_color, title_font, subtitle_font, font_size, subtitle_font_size,
-                                              cover_image)
+                cover_image = write_big_title(title, subtitle, title_color,
+                                              subtitle_color, title_font, subtitle_font,
+                                              font_size, subtitle_font_size, cover_image)
 
                 process_image(cover_image, cover_path)
 
-    frame_image_list = move_images_to_release(cover_images_path, frame_images_path, release_video_dir)
+    frame_image_list = move_images_to_release(cover_images_list, frame_images_list, release_video_dir)
     return frame_image_list
+
+
+def calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, num_pages):
+    font_size = (base_font_size - reduction_step * num_pages) * 3
+    subtitle_font_size = (base_subtitle_font_size - reduction_step * num_pages) * 3
+    return font_size, subtitle_font_size
+
+
+def calculate_font_size(char_count):
+    reduction_step = 8
+    base_font_size = 80
+    base_subtitle_font_size = 60
+
+    if char_count <= 5:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 0)
+    elif char_count <= 7:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 0)
+    elif char_count <= 10:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 3)
+
+    elif char_count <= 11:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
+    elif char_count <= 12:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
+
+    elif char_count <= 13:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
+    elif char_count <= 14:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 2)
+    elif char_count <= 15:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 3)
+    elif char_count <= 16:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 4)
+    elif char_count <= 17:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 4)
+    elif char_count <= 18:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 4)
+    elif char_count <= 20:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 5)
+    else:
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 6)
+
+    return font_size, subtitle_font_size
+
 
 if __name__ == "__main__":
     output_dir = os.path.join('download_directory', 'aa测试目录')
@@ -681,14 +731,27 @@ if __name__ == "__main__":
     crop_height = 100
     num_frames = 3
     model_path = "ESPCN_x3.pb"
-    start_time = time.time()
-    frame_paths = get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path)
-    end_time = time.time()
-    print(f"===================Frame generation completed in {end_time - start_time} seconds.")
 
     original_video = os.path.join(os.getcwd(), 'download_directory', 'aa测试目录', '1.mp4')
     release_video_dir = os.path.join(os.getcwd(), 'release_video', 'aa测试目录')
 
     delete_matching_images(release_video_dir)
-
-    frame_image_list = extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目录", 1, 100)
+    extract_thumbnail_main(original_video, release_video_dir, "目录", 5, 100)
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目", 1, 100)
+    # extract_thumbnail_main(original_video, release_video_dir, "录测试目", 1, 100)
+    # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", 1, 100)
+    # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", 1, 100)
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", 1, 100)
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目", 1, 100)
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目", 1, 100)
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目", 1, 100)#10
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目", 1, 100)#11
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目", 1, 100)#12
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目", 1, 100)#13
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目", 1, 100)#14
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目", 1, 100)#15
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目", 1, 100)#16
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目", 1, 100)#17
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目", 1, 100)#18
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目", 1, 100)#19
+    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目目", 1, 100)#20
