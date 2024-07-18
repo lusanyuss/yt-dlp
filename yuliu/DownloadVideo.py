@@ -82,10 +82,9 @@ class PostProcessPP(yt_dlp.postprocessor.PostProcessor):
 
         video = VideoFileClip(new_video_path)
         width, height = video.size
-
-        if not (480 <= height <= 1080 and 854 <= width <= 1920):
+        if not ((480 <= height <= 1080 and 854 <= width <= 1920) or (480 <= width <= 1080 and 854 <= height <= 1920)):
             self.to_screen(f'视频分辨率 {width}x{height} 不在 480p 到 1080p 范围内')
-            os.remove(new_video_path)
+            # os.remove(new_video_path)
         else:
             self.valid_videos.append(new_video_path)
 
@@ -98,10 +97,14 @@ class PostProcessPP(yt_dlp.postprocessor.PostProcessor):
 
 def download_videos(urls, dir_name):
     valid_videos = []
+
     for idx, url in enumerate(urls):
         ydl_opts = {
-            'format': format_selector,
             'outtmpl': '%(title)s.%(ext)s',
+            'format': 'bv*+ba/b',
+            'ignoreerrors': True,
+            # 'cookiesfrombrowser': ('chrome', None),
+            'progress_hooks': [my_hook],
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.add_post_processor(PreProcessPP(ydl, f'download_cache/{dir_name}'), when='pre_process')

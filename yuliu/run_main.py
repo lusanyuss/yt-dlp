@@ -359,9 +359,12 @@ def run_main(url=None,
     if is_get_cover:
         # 记录开始时间
         start_time = time.time()
+        title_font = os.path.join('ziti', 'ShouShuTi', 'ShouShuTi.ttf')  # 标题
+        subtitle_font = os.path.join('ziti', 'douyin', 'DouyinSansBold.otf')  # 副标题
         frame_image_list = extract_thumbnail_main(original_video, release_video_dir,
-                                                  cover_title, num_of_covers=num_of_covers,
-                                                  crop_height=100)
+                                                  cover_title, title_font, subtitle_font,
+                                                  num_of_covers=num_of_covers,
+                                                  crop_height=100, isTest=False)
 
         delete_files_by_list(frame_image_list)
         end_time = time.time()

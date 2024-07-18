@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from paddleocr import PaddleOCR
 
-from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator, convert_simplified_to_traditional
+from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator
 
 
 def is_resolution_gte_1920x1080(image_path):
@@ -468,8 +468,9 @@ def move_images_to_release(cover_images, frame_images, release_video_dir):
         if os.path.exists(src_path) and os.path.isfile(src_path):
             filename = os.path.basename(src_path)
             dst_path = os.path.join(release_video_dir, filename)
-            unique_dst_path = get_unique_path(dst_path)
-            shutil.move(src_path, unique_dst_path)
+            # unique_dst_path = get_unique_path(dst_path)
+            unique_dst_path = dst_path
+            shutil.copy(src_path, unique_dst_path)
             cover_image_list.append(unique_dst_path)
             print(f"移动文件: {src_path} 到 {unique_dst_path}")
 
@@ -479,8 +480,9 @@ def move_images_to_release(cover_images, frame_images, release_video_dir):
         if os.path.exists(src_path) and os.path.isfile(src_path):
             filename = os.path.basename(src_path)
             dst_path = os.path.join(release_video_dir, filename)
-            unique_dst_path = get_unique_path(dst_path)
-            shutil.move(src_path, unique_dst_path)
+            # unique_dst_path = get_unique_path(dst_path)
+            unique_dst_path = dst_path
+            shutil.copy(src_path, unique_dst_path)
             frame_image_list.append(unique_dst_path)
             print(f"移动文件: {src_path} 到 {unique_dst_path}")
 
@@ -508,8 +510,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 def write_big_title(title, subtitle, title_color, subtitle_color, font_path, subtitle_font, font_size, subtitle_font_size, cover_image, border_width=2,
                     border_color='black'):
-    title = convert_simplified_to_traditional(title).strip()
-    subtitle = convert_simplified_to_traditional(subtitle).strip()
+    title = title.strip()
+    subtitle = subtitle.strip()
 
     draw = ImageDraw.Draw(cover_image)
     font = ImageFont.truetype(font_path, font_size)
@@ -613,25 +615,22 @@ def process_image(image, cover_path):
 
 def adjust_title(title, kongge='　'):
     title_len = len(title)
-
     if title_len == 2:
-        # Insert 2 kongge strings in the middle of the title
         adjusted_title = title[0] + kongge * 2 + title[1]
     elif title_len == 3:
-        # Insert 1 kongge string between each character of the title
         adjusted_title = title[0] + kongge + title[1] + kongge + title[2]
     else:
-        # No adjustment needed for titles with other lengths
         adjusted_title = title
-
     return adjusted_title
 
 
-def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_of_covers=1, crop_height=100):
+def extract_thumbnail_main(original_video, release_video_dir, cover_title, title_font, subtitle_font, num_of_covers=1, crop_height=100, isTest=False):
     # 截取3张没有汉字的截图
     frame_image_list = []
-    if check_images_in_release_dir(release_video_dir, num_of_covers):
-        return frame_image_list
+    cover_images_list = []
+    # if not isTest:
+    #     if check_images_in_release_dir(release_video_dir, num_of_covers):
+    #         return frame_image_list
 
     print_separator("开始制作封面图")
     cover_images_list, frame_images_list = extract_covers_and_frames(original_video, 3 * num_of_covers, crop_height)
@@ -662,12 +661,16 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, num_o
                 title = cover_title if cover_title else os.path.basename(os.path.dirname(original_video))
                 title = adjust_title(title)
 
-                subtitle = "全集"
-                title_color = "#FF0000"  # 红色
+                subtitle = "EP1-120"
+                # title_color = "#FF0000"  # 红色
+                # subtitle_color = "#FFFF00"  # 黄色
+
+                title_color = "#FFFF00"  # 黄色
                 subtitle_color = "#FFFF00"  # 黄色
 
-                title_font = os.path.join('ziti', 'fengmian', 'gwkt-SC-Black.ttf')  # 标题
-                subtitle_font = os.path.join('ziti', 'fengmian', 'syst-SourceHanSerifCN-Regular.otf')  # 副标题
+                # title_color = "#FFFFFF"  # 白色
+                # subtitle_color = "#FFFFFF"  # 白色
+
                 font_size, subtitle_font_size = calculate_font_size(len(title))
 
                 cover_image = write_big_title(title, subtitle, title_color,
@@ -702,7 +705,6 @@ def calculate_font_size(char_count):
         font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
     elif char_count <= 12:
         font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
-
     elif char_count <= 13:
         font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
     elif char_count <= 14:
@@ -735,23 +737,37 @@ if __name__ == "__main__":
     original_video = os.path.join(os.getcwd(), 'download_directory', 'aa测试目录', '1.mp4')
     release_video_dir = os.path.join(os.getcwd(), 'release_video', 'aa测试目录')
 
-    delete_matching_images(release_video_dir)
-    extract_thumbnail_main(original_video, release_video_dir, "目录", 5, 100)
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目", 1, 100)
-    # extract_thumbnail_main(original_video, release_video_dir, "录测试目", 1, 100)
-    # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", 1, 100)
-    # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", 1, 100)
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", 1, 100)
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目", 1, 100)
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目", 1, 100)
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目", 1, 100)#10
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目", 1, 100)#11
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目", 1, 100)#12
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目", 1, 100)#13
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目", 1, 100)#14
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目", 1, 100)#15
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目", 1, 100)#16
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目", 1, 100)#17
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目", 1, 100)#18
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目", 1, 100)#19
-    # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目目", 1, 100)#20
+    # delete_matching_images(release_video_dir)
+
+    fontts = [
+        # ['douyin', 'DouyinSansBold.otf'],
+        # ['FanThinkGrotesk', 'FanThinkGrotesk-Medium.otf'],
+        # ['fengmian', 'gwkt-SC-Black.ttf'],
+        # ['fengmian', 'syst-SourceHanSerifCN-Regular.otf'],
+        # ['MonuTitl', 'MonuTitl-0.95CnMd.ttf'],
+        # ['ShouShuTi', 'ShouShuTi.ttf'],
+        # ['slideyouran', 'slideyouran_regular.ttf'],
+        # ['woff', 'ChillRoundGothic_Normal.woff'],
+        ['hongleibanshu', 'hongleibanshu.ttf'],
+    ]
+
+    for fooo in fontts:
+        title_font = os.path.join('ziti', fooo[0], fooo[1])  # 标题
+        subtitle_font = os.path.join('ziti', fooo[0], fooo[1])  # 副标题
+        extract_thumbnail_main(original_video, release_video_dir, "录测试目", title_font, subtitle_font, 1, 100, True)
+        # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", title_font, subtitle_font, 1, 100, True)
+        # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", title_font, subtitle_font, 1, 100, True)
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", title_font, subtitle_font, 1, 100, True)
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目", title_font, subtitle_font, 1, 100, True)
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目", title_font, subtitle_font, 1, 100, True)
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目", title_font, subtitle_font, 1, 100, True)  # 10
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目", title_font, subtitle_font, 1, 100, True)  # 11
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目", title_font, subtitle_font, 1, 100, True)  # 12
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 13
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 14
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 15
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 16
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 17
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 18
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 19
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 20

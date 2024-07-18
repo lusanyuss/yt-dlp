@@ -213,36 +213,6 @@ def find_split_points(keyframe_times, split_time_ms):
     return split_points
 
 
-# def split_video_by_keyframes(input_video, split_points):
-#     video_clips = []
-#     input_video_name = os.path.splitext(os.path.basename(input_video))[0]
-#     input_video_ext = os.path.splitext(input_video)[1]
-#
-#     for i in range(len(split_points) - 1):
-#         start_time = split_points[i]
-#         end_time = split_points[i + 1]
-#         segment_duration = end_time - start_time
-#         output_video = os.path.join(os.path.dirname(input_video), f"{input_video_name}_{i + 1}{input_video_ext}")
-#
-#         # 检查输出文件是否已存在
-#         if os.path.exists(output_video):
-#             print(f"{output_video} already exists. Skipping.")
-#             video_clips.append(output_video)
-#             continue
-#
-#         # 切割视频
-#         cmd = [
-#             "ffmpeg", '-loglevel', 'quiet', "-ss", f"{start_time}", "-i", input_video, "-t", f"{segment_duration}",
-#             "-c:v", "copy", "-c:a", "copy", "-y", output_video
-#         ]
-#         print(f"Splitting from {start_time} to {end_time} (duration {segment_duration} seconds) into {output_video}")
-#         subprocess.run(cmd, check=True)
-#
-#         video_clips.append(output_video)
-#
-#     return video_clips
-
-
 def concatenate_videos(video_list, merged_output):
     print(f"\n拼接视频文件列表: {video_list}")
     print(f"\n拼接完成的视频 merged_output: {merged_output}")
