@@ -43,12 +43,10 @@ if __name__ == "__main__":
     # run_command(['python', 'run.py', '--url', url])
     # url = "https://shls.mcloud.139.com/hls/KL04634eef94ee6f611ce5276a01f3f53a/playlist.m3u8?ci=1111aEx6R1E804320240509175614mlo"
     # run_command(['python', 'run.py','--sub_directory', sub_directory, '--download-only', '--url', url])
-    # urls = [
-    #     'https://shls.mcloud.139.com/hls/KL15668689ee757b65eb517805cc48ee7d/playlist.m3u8?ci=1111aEx6R1E804220240714143631urm&fileSize=853582047&usersiteid=usersite-s',
-    #     'https://shls.mcloud.139.com/hls/KLb40acbe2c8db4dd8599ea61202e1b65a/playlist.m3u8?ci=1111aEx6R1E804520240714143922uig&fileSize=916181923&usersiteid=usersite-s',
-    #     'https://shls.mcloud.139.com/hls/KLb1990dec9f5d44b5d6898eac2a08337d/playlist.m3u8?ci=1111aEx6R1E80442024071414420124a&fileSize=844196078&usersiteid=usersite-s'
-    # ]
-    # download_only_videos(urls, "战无不胜")
+    urls = [
+        'https://shls.mcloud.139.com/hls/KP13b99d5ef390acb347d1046488c8b56e/playlist.m3u8?ci=1111aEx6R1E8042202407172027081nu&amp;fileSize=240841414&amp;usersiteid=usersite-s',
+    ]
+    download_only_videos(urls, "我的女儿是至尊")
 
     # check_and_run("武神太子归来", 3)
     # url = "https://shls.mcloud.139.com/hls/KL65a6914914be588034a5e8f6b02eed00/playlist.m3u8?ci=1111aEx6R1E807320240509175854swm"
@@ -75,6 +73,7 @@ if __name__ == "__main__":
     # check_and_run('九子夺嫡废太子竟是修仙者', 1, 15, is_clear_cache=True)#有3家
     # check_and_run('御龙刀主 举世欠我赊刀债', 1, 15, is_clear_cache=True)#有3家
     #
+    # exit()
 
     videos = [
         ################### 已经部分 #######################
@@ -107,6 +106,7 @@ if __name__ == "__main__":
         # '偏偏对你心动',
 
         '霸道总裁的刁蛮女友',
+        '我的女儿是至尊',
         # '隐婚后,我的下属老公掉马甲了',
         # '闪婚对象竟是豪门大佬',
         # '浪子回头,浪子回头金不换',
@@ -144,10 +144,8 @@ if __name__ == "__main__":
         # '我们都要活下去',
         # '我的傻父',
     ]
-
     isTest = False
     # isTest = True
-
     if not isTest:
         for video_name in videos:
             check_and_run(sub_directory=video_name,
@@ -158,7 +156,7 @@ if __name__ == "__main__":
 
                           is_get_video=True,
 
-                          is_get_cover=True,
+                          is_get_cover=False,
                           num_of_covers=8
                           )
     else:

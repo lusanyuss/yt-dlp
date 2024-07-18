@@ -3,8 +3,6 @@ import yt_dlp
 
 class MyLogger:
     def debug(self, msg):
-        # For compatibility with youtube-dl, both debug and info are passed into debug
-        # You can distinguish them by the prefix '[debug] '
         if msg.startswith('[debug] '):
             pass
         else:
@@ -26,13 +24,17 @@ def my_hook(d):
 
 
 if __name__ == '__main__':
-    URLS = ['https://www.bilibili.com/video/BV1sc411D7kp/?spm_id_from=333.337.search-card.all.click&vd_source=34c946526337005bdabd03a6e52e4632']
+    URLS = ['https://www.bilibili.com/video/BV1h1421k7Mh/?spm_id_from=333.1007.tianma.1-2-2.click']
 
+    video_path = './download_cache/src/1.mp4'
     ydl_opts = {
+        'outtmpl': video_path,
         'logger': MyLogger(),
+        # 'format': 'bv*+ba/b',
         'format': 'bestvideo[height<=1080]+bestaudio/best',
+        'cookiesfrombrowser': ('chrome', None),
         'ffmpeg_location': 'D:\\ffmpeg\\bin\\ffmpeg.exe',
-        'outtmpl': f'%(id)s.%(ext)s',
+        # 'outtmpl': f'%(id)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4',

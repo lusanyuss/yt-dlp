@@ -1,5 +1,6 @@
 import diskcache as dc
 
+
 class DiskCacheUtil:
     def __init__(self, cache_dir='tmp/cache'):
         self.cache = dc.Cache(cache_dir)
@@ -34,5 +35,3 @@ class DiskCacheUtil:
     def close_cache(self):
         """关闭缓存"""
         self.cache.close()
-
-# 示例用法

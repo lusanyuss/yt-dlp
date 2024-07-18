@@ -35,7 +35,6 @@ class DirectoryManager:
     def modify_file(self, directory_name, file_name, new_content):
         self.add_file(directory_name, file_name, new_content)
 
-
     def search_file(self, directory_name, file_name):
         path = self.get_directory(directory_name)
         if path is None:
@@ -47,16 +46,3 @@ class DirectoryManager:
         path = self.get_directory(directory_name)
         file_path = os.path.join(path, file_name)
         return file_path
-#
-# # 使用示例：
-# dm = DirectoryManager()
-# # 添加文件
-# dm.add_file("utils", "example.txt", "Hello, World!")
-# # 查询文件是否存在
-# print(dm.search_file("utils", "example.txt"))  # 输出 True
-# # 修改文件内容
-# dm.modify_file("utils", "example.txt", "Modified content")
-# # 删除文件
-# dm.delete_file("utils", "example.txt")
-# # 再次查询文件是否存在
-# print(dm.search_file("utils", "example.txt"))  # 输出 False
