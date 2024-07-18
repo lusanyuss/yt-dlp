@@ -119,5 +119,10 @@ def download_videos(urls, dir_name):
 
 
 if __name__ == '__main__':
-    URLS = ['https://www.youtube.com/watch?v=BaW_jenozKc', 'https://www.youtube.com/watch?v=BaW_jenozKc']
-    download_videos(URLS, 'aaa吃独食')
+    URLS = [
+        'https://shls.mcloud.139.com/hls/KO4e94a6007e6d7a5bc8a005a28b348139/playlist.m3u8?ci=1111aEx6R1E80452024071720284539i&amp;fileSize=609616159&amp;usersiteid=usersite-s&amp;isForce=1',
+        'https://shls.mcloud.139.com/hls/KO77430406544fb413804c75041f3fb257/playlist.m3u8?ci=1111aEx6R1E8045202407172030403fj&fileSize=558123588&usersiteid=usersite-s',
+        'https://shls.mcloud.139.com/hls/KP36dc428a8d1cf889af6ee3034996f1d5/playlist.m3u8?ci=1111aEx6R1E8044202407172032237dy&amp;fileSize=678036871&amp;usersiteid=usersite-s'
+
+    ]
+    download_videos(URLS, '下山后我成了包租公')
