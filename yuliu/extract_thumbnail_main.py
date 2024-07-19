@@ -344,9 +344,7 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, 
     return frame_paths
 
 
-def extract_covers_and_frames(video_path, num_frames=3 * 1, crop_height=0):
-    output_dir = os.path.dirname(video_path)
-
+def extract_covers_and_frames(video_path, release_video_dir, num_frames=3 * 1, crop_height=0):
     # Get video duration
     command = ['ffprobe', '-v', 'quiet', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', video_path]
     command += ['-loglevel', 'quiet']
@@ -357,11 +355,11 @@ def extract_covers_and_frames(video_path, num_frames=3 * 1, crop_height=0):
     model_path = "ESPCN_x3.pb"
     timeout_duration = num_frames * 50
     # 截图列表
-    frame_images = get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path, timeout_duration)
+    frame_images = get_frame_images(num_frames, video_path, duration, release_video_dir, crop_height, model_path, timeout_duration)
     # 封面图列表
     cover_images = []
     if len(frame_images) == num_frames:
-        cover_images = get_cover_images(frame_images, output_dir)
+        cover_images = get_cover_images(frame_images, release_video_dir)
     else:
         delete_files(frame_images)
         frame_images = []
@@ -461,32 +459,28 @@ def move_images_to_release(cover_images, frame_images, release_video_dir):
     # 确保输出目录存在
     os.makedirs(release_video_dir, exist_ok=True)
 
-    cover_image_list = []
-    frame_image_list = []
+    # cover_image_list = []
+    # frame_image_list = []
     # 移动cover_images中的图片
-    for src_path in cover_images:
-        if os.path.exists(src_path) and os.path.isfile(src_path):
-            filename = os.path.basename(src_path)
-            dst_path = os.path.join(release_video_dir, filename)
-            # unique_dst_path = get_unique_path(dst_path)
-            unique_dst_path = dst_path
-            shutil.copy(src_path, unique_dst_path)
-            cover_image_list.append(unique_dst_path)
-            print(f"移动文件: {src_path} 到 {unique_dst_path}")
-
+    # for src_path in cover_images:
+    #     if os.path.exists(src_path) and os.path.isfile(src_path):
+    #         filename = os.path.basename(src_path)
+    #         dst_path = os.path.join(release_video_dir, filename)
+    #         unique_dst_path = dst_path
+    #         shutil.copy(src_path, unique_dst_path)
+    #         cover_image_list.append(unique_dst_path)
+    #         print(f"移动文件: {src_path} 到 {unique_dst_path}")
     # 移动frame_images中的图片
-    # delete_files(frame_images)
-    for src_path in frame_images:
-        if os.path.exists(src_path) and os.path.isfile(src_path):
-            filename = os.path.basename(src_path)
-            dst_path = os.path.join(release_video_dir, filename)
-            # unique_dst_path = get_unique_path(dst_path)
-            unique_dst_path = dst_path
-            shutil.copy(src_path, unique_dst_path)
-            frame_image_list.append(unique_dst_path)
-            print(f"移动文件: {src_path} 到 {unique_dst_path}")
+    # for src_path in frame_images:
+    #     if os.path.exists(src_path) and os.path.isfile(src_path):
+    #         filename = os.path.basename(src_path)
+    #         dst_path = os.path.join(release_video_dir, filename)
+    #         unique_dst_path = dst_path
+    #         shutil.copy(src_path, unique_dst_path)
+    #         frame_image_list.append(unique_dst_path)
+    #         print(f"移动文件: {src_path} 到 {unique_dst_path}")
 
-    return frame_image_list
+    return frame_images
 
 
 def check_images_in_release_dir(release_video_dir, number_covers=1):
@@ -633,7 +627,7 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
     #         return frame_image_list
 
     print_separator("开始制作封面图")
-    cover_images_list, frame_images_list = extract_covers_and_frames(original_video, 3 * num_of_covers, crop_height)
+    cover_images_list, frame_images_list = extract_covers_and_frames(original_video, release_video_dir, 3 * num_of_covers, crop_height)
     if len(cover_images_list) != num_of_covers:
         print_separator("制作封面图超过设定时间，退出不获取了")
         return frame_image_list
