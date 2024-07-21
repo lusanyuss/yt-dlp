@@ -12,6 +12,7 @@ from utils import get_file_name_with_extension, get_file_only_name, get_file_onl
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
+from yuliu.transcribe_video import process_video
 
 
 def clear_directory_contents(directory):
@@ -322,6 +323,7 @@ def run_main(url=None,
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
     dest_video_path = os.path.join(release_video_dir, f"{sub_directory}.mp4")
+    target_languages = ["en", "es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
 
     cache_util = DiskCacheUtil()
 
@@ -366,7 +368,7 @@ def run_main(url=None,
                                                   num_of_covers=num_of_covers,
                                                   crop_height=100, isTest=False)
 
-        delete_files_by_list(frame_image_list)
+        # delete_files_by_list(frame_image_list)
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
@@ -375,6 +377,11 @@ def run_main(url=None,
         if os.path.exists(dest_video_path):
             print_separator()
             print(f"{get_file_name_with_extension(dest_video_path)}              已存在，不需要再处理了,直接返回")
+
+            subtitle_paths, video_path = process_video(dest_video_path, target_languages)
+            print("字幕文件路径:", subtitle_paths)
+            print("生成的视频文件路径:", video_path)
+
             print_separator()
             return
 
@@ -397,6 +404,11 @@ def run_main(url=None,
          video_file_item_list, processed_audio_instrum_list,
          process_video_time) = process_video_files_list(video_clips)
         result_video = merge_videos(processed_videos, merged_video_path)
+
+        # 调用封装的方法
+        subtitle_paths, video_path = process_video(result_video, target_languages)
+        print("字幕文件路径:", subtitle_paths)
+        print("生成的视频文件路径:", video_path)
 
         process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
         finalize_video_processing(result_video, release_video_dir, sub_directory)
