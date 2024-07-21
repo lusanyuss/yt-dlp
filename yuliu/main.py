@@ -2,7 +2,7 @@ import os
 
 from run_main import run_main
 
-
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_clear_cache=False, is_get_video=True, num_of_covers=1,
                   is_get_cover=False):
     video_template = '{}.mp4'
@@ -43,10 +43,10 @@ if __name__ == "__main__":
     # run_command(['python', 'run.py', '--url', url])
     # url = "https://shls.mcloud.139.com/hls/KL04634eef94ee6f611ce5276a01f3f53a/playlist.m3u8?ci=1111aEx6R1E804320240509175614mlo"
     # run_command(['python', 'run.py','--sub_directory', sub_directory, '--download-only', '--url', url])
-    urls = [
-        'https://shls.mcloud.139.com/hls/KP13b99d5ef390acb347d1046488c8b56e/playlist.m3u8?ci=1111aEx6R1E8042202407172027081nu&amp;fileSize=240841414&amp;usersiteid=usersite-s',
-    ]
-    download_only_videos(urls, "我的女儿是至尊")
+    # urls = [
+    #     'https://shls.mcloud.139.com/hls/KP13b99d5ef390acb347d1046488c8b56e/playlist.m3u8?ci=1111aEx6R1E8042202407172027081nu&amp;fileSize=240841414&amp;usersiteid=usersite-s',
+    # ]
+    # download_only_videos(urls, "我的女儿是至尊")
 
     # check_and_run("武神太子归来", 3)
     # url = "https://shls.mcloud.139.com/hls/KL65a6914914be588034a5e8f6b02eed00/playlist.m3u8?ci=1111aEx6R1E807320240509175854swm"
@@ -144,8 +144,8 @@ if __name__ == "__main__":
         # '我们都要活下去',
         # '我的傻父',
     ]
-    isTest = False
-    # isTest = True
+    # isTest = False
+    isTest = True
     if not isTest:
         for video_name in videos:
             check_and_run(sub_directory=video_name,
@@ -163,10 +163,10 @@ if __name__ == "__main__":
         check_and_run(sub_directory='aa测试目录',
                       cover_title="萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬",
                       juji_num=1,
-                      split_time_min=0.1,
+                      split_time_min=1,
 
                       is_clear_cache=False,
                       is_get_video=True,
                       is_get_cover=True,
-                      num_of_covers=4
+                      num_of_covers=1
                       )
