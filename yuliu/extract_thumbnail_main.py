@@ -24,9 +24,9 @@ def delete_files_if_exist(files_list):
     for file_name in files_list:
         if os.path.exists(file_name):
             os.remove(file_name)
-            print(f"Deleted {file_name}")
+            print(f"删除文件: {file_name}")
         else:
-            print(f"{file_name} does not exist")
+            print(f"{file_name} 不存在")
 
 
 def get_image_dimensions(image_path):

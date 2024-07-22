@@ -20,8 +20,8 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # 指定 ImageMagick 的路径
 change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
+
 # 设置字体路径
-FONT_PATH = r"C:\Windows\Fonts\arial.ttf"  # 请确保该路径正确
 
 
 def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="cuda", compute_type="float16"):
@@ -137,7 +137,6 @@ def translate_text(text, source_lang='zh', target_lang='en'):
 
 
 def translate_srt(srt_path, translated_srt_path, target_lang='en'):
-
     print(f"\n=========翻译字幕: {translated_srt_path}\n")
 
     if os.path.exists(translated_srt_path):
@@ -189,6 +188,9 @@ def add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_rat
     subtitle_width = video_width * subtitle_width_ratio
     max_chars_per_line = int(subtitle_width // 20)
 
+    font_path = "Impact"  # 使用系统中的 Impact 字体
+    # font_path = r"C:\Windows\Fonts\arialbd.ttf"
+
     for subtitle in subtitles:
         start_time = subtitle.start.total_seconds()
         end_time = subtitle.end.total_seconds()
@@ -197,14 +199,21 @@ def add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_rat
         wrapped_text = "\n".join(textwrap.wrap(text, width=max_chars_per_line))
 
         try:
-            txt_clip = (TextClip(wrapped_text, fontsize=12, color='white', font=FONT_PATH, size=(subtitle_width, None))
-                        .on_color(color=(0, 0, 0), col_opacity=0.3)
-                        .set_position(('center', video_height - subtitle_y_position))
-                        .set_start(start_time)
-                        .set_duration(end_time - start_time))
+            txt_clip = TextClip(
+                wrapped_text,
+                fontsize=48,
+                color='yellow',
+                font=font_path,
+                size=(subtitle_width, 150),  # 设置固定高度为 140
+                stroke_color='black',  # 添加黑色边框
+                stroke_width=2
+            )
+            txt_clip = txt_clip.on_color(color=(0, 0, 0), col_opacity=0)
+            txt_clip = txt_clip.set_position(('center', video_height - subtitle_y_position))
+            txt_clip = txt_clip.set_start(start_time)
+            txt_clip = txt_clip.set_duration(end_time - start_time)
 
-            print(f"创建字幕: '{wrapped_text}' 从 {start_time} 到 {end_time}, 位置: bottom")
-            print(f"字幕文本剪辑: {txt_clip}")
+            print(f"创建字幕: '{wrapped_text}' 为： {video_path}")
 
             clips.append(txt_clip)
         except Exception as e:
@@ -228,8 +237,8 @@ def generate_subtitles(zh_zimu, language):
     return translated_srt_path
 
 
-def generate_video_with_subtitles(video_path, srt_path, output_path):
-    return add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_ratio=0.80, subtitle_y_position=220)
+def generate_video_with_subtitles(video_path, srt_path, output_path, subtitle_width_ratio, subtitle_y_position):
+    return add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_ratio, subtitle_y_position)
 
 
 def wait_for_input(prompt, timeout):
@@ -289,7 +298,7 @@ if __name__ == '__main__':
     for en_srt_path in result_en["en"]:
         audio_path = en_srt_path.replace('_en.srt', '.mp4')
         output_video_path = audio_path.replace('.mp4', '_en.mp4')
-        video_path = generate_video_with_subtitles(audio_path, en_srt_path, output_video_path)
+        video_path = generate_video_with_subtitles(audio_path, en_srt_path, output_video_path, subtitle_width_ratio=0.90, subtitle_y_position=220)
         en_video_path.append(video_path)
     print("生成的视频文件:", en_video_path)
     print("==========================================")

@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     videos = [
         ################### 已经部分 #######################
-        '丑女逆袭,被首富大佬缠上了',
+        # '丑女逆袭,被首富大佬缠上了',
         # '傅总您太太真的没死',
         # '公主在现代嫁首富了,穿梭世纪来爱你',
         # '分手渣男后她成了女首富',
@@ -168,7 +168,7 @@ if __name__ == "__main__":
         check_and_run(sub_directory='aa测试目录',
                       cover_title="天龙八部",
                       juji_num=1,
-                      split_time_min=1,
+                      split_time_min=0.5,
 
                       is_clear_cache=False,
                       is_get_video=True,

@@ -3,7 +3,6 @@ import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor
 
-import ffmpeg
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
@@ -201,6 +200,15 @@ def save_cache(cache):
 keyframe_cache = load_cache()
 
 
+def calculate_md5(file_path):
+    """计算文件的MD5值"""
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+
 def get_file_md5(file_path):
     hash_md5 = hashlib.md5()
     with open(file_path, "rb") as f:
@@ -208,6 +216,16 @@ def get_file_md5(file_path):
             hash_md5.update(chunk)
     md5_result = hash_md5.hexdigest()
     return md5_result
+
+
+def generate_unique_key(file_path):
+    """生成唯一key值"""
+    if not os.path.isfile(file_path):
+        raise ValueError(f"文件不存在: {file_path}")
+
+    file_md5 = calculate_md5(file_path)
+    unique_key = f"{file_path}_{file_md5}"
+    return unique_key
 
 
 def find_split_points(keyframe_times, split_time_ms):

@@ -21,6 +21,24 @@ class DiskCacheUtil:
         """
         return self.cache.get(key, default=default)
 
+    def set_bool_to_cache(self, key, value, expire=None):
+        """设置布尔值缓存
+        :param key: 缓存的键
+        :param value: 布尔值
+        :param expire: 过期时间（秒），可选
+        """
+        if not isinstance(value, bool):
+            raise ValueError("value 必须是布尔值")
+        self.cache.set(key, str(value), expire=expire)
+
+    def get_bool_from_cache(self, key):
+        """获取布尔值缓存
+        :param key: 缓存的键
+        :return: 布尔值，如果缓存不存在，返回 False
+        """
+        value = self.cache.get(key, default="False")
+        return value == "True"
+
     def delete_from_cache(self, key):
         """删除缓存
         :param key: 缓存的键

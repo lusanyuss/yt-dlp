@@ -9,7 +9,7 @@ import yt_dlp
 from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
     find_split_points, \
     process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list
+    separate_audio_and_video_list, merge_audio_and_video_list, generate_unique_key
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
@@ -257,6 +257,13 @@ import subprocess
 # ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
 
 def add_watermark_to_video(video_path):
+    cache_util = DiskCacheUtil()
+    unique_key = generate_unique_key(video_path) + "_is_added_watermark"
+    if os.path.exists(video_path) and cache_util.get_bool_from_cache(unique_key):
+        print(f"文件已存在且已添加水印: {video_path}")
+        cache_util.close_cache()
+        return video_path
+
     print_separator("添加水印-开始 " + video_path)
     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
     text = "爽剧风暴"
@@ -284,12 +291,15 @@ def add_watermark_to_video(video_path):
         result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
         result.check_returncode()  # 检查命令是否成功
         os.replace(temp_output, video_path)  # Replace the original video with the new one
+        cache_util.set_bool_to_cache(unique_key, True)
         print_separator("添加水印-成功")
     except Exception as e:
         print(f"Error occurred: {e}")
         if os.path.exists(temp_output):
             os.remove(temp_output)  # Remove the temporary output file if it exists
         return video_path
+    finally:
+        cache_util.close_cache()
 
     return video_path
 
@@ -433,16 +443,22 @@ def run_main(url=None,
         result_en_srt = process_videos(zh_cn_zimi_list, en_languages)
         en_video_path = []
         #  en字幕加到视频上
+        print("英文视频字幕顺序:", result_en_srt["en"])
         for en_srt_path in result_en_srt["en"]:
             audio_path = en_srt_path.replace('_en.srt', '.mp4')
             output_video_path = audio_path.replace('.mp4', '_en.mp4')
-            video_path = generate_video_with_subtitles(audio_path, en_srt_path, output_video_path)
+            print("en_srt_path:", en_srt_path)
+            print("audio_path:", audio_path)
+            print("output_video_path:", output_video_path)
+
+            video_path = generate_video_with_subtitles(audio_path, en_srt_path, output_video_path,
+                                                       subtitle_width_ratio=0.90, subtitle_y_position=220)
             en_video_path.append(video_path)
         print("生成的视频文件:", en_video_path)
 
-        target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
-        results_other_srt = process_videos(zh_cn_zimi_list, target_languages)
-        print(f"其他地区字幕翻译：{results_other_srt}")
+        # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
+        # results_other_srt = process_videos(zh_cn_zimi_list, target_languages)
+        # print(f"其他地区字幕翻译：{results_other_srt}")
 
         #  目标视频变成有因为的视频，字幕加到视频上
         delete_files_by_list(video_dest_list)
@@ -453,7 +469,7 @@ def run_main(url=None,
         process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
         finalize_video_processing(video_dest_result, release_video_dir, sub_directory)
         # delete_files(audio_file_list, video_file_list, audio_vocals_list, video_file_item_list, processed_audio_instrum_list, frame_image_list)
-        delete_files(audio_origin_list, video_origin_list, video_origin_clips, audio_instrum_list, frame_image_list)
+        # delete_files(audio_origin_list, video_origin_list, video_origin_clips, audio_instrum_list, frame_image_list)
         cache_util.close_cache()
 
 
