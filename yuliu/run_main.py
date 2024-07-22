@@ -258,11 +258,14 @@ import subprocess
 
 def add_watermark_to_video(video_path):
     cache_util = DiskCacheUtil()
-    unique_key = generate_unique_key(video_path) + "_is_added_watermark"
-    if os.path.exists(video_path) and cache_util.get_bool_from_cache(unique_key):
-        print(f"文件已存在且已添加水印: {video_path}")
-        cache_util.close_cache()
-        return video_path
+    unique_key = None
+
+    if os.path.exists(video_path):
+        unique_key = generate_unique_key(video_path) + "_is_added_watermark"
+        if cache_util.get_bool_from_cache(unique_key):
+            print(f"文件已存在且已添加水印: {video_path}")
+            cache_util.close_cache()
+            return video_path
 
     print_separator("添加水印-开始 " + video_path)
     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
@@ -291,6 +294,7 @@ def add_watermark_to_video(video_path):
         result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
         result.check_returncode()  # 检查命令是否成功
         os.replace(temp_output, video_path)  # Replace the original video with the new one
+        unique_key = generate_unique_key(video_path) + "_is_added_watermark"
         cache_util.set_bool_to_cache(unique_key, True)
         print_separator("添加水印-成功")
     except Exception as e:
@@ -383,8 +387,8 @@ def run_main(url=None,
     if is_get_cover:
         # 记录开始时间
         start_time = time.time()
-        title_font = os.path.join('ziti', 'ShouShuTi', 'ShouShuTi.ttf')  # 标题
-        subtitle_font = os.path.join('ziti', 'douyin', 'DouyinSansBold.otf')  # 副标题
+        title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
+        subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
         frame_image_list = extract_thumbnail_main(original_video, release_video_dir,
                                                   cover_title, title_font, subtitle_font,
                                                   num_of_covers=num_of_covers,
@@ -396,20 +400,18 @@ def run_main(url=None,
 
     if is_get_video:
         # if os.path.exists(dest_video_path):
-        # print_separator()
-        # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
-        # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
-        # print_separator("字幕转录")
-        # audio_paths = get_sorted_vocals_wav_files(download_directory_dir)
-        # print_separator("字幕翻译")
-        # output_zh_srt_path = transcribe_audio_to_srts(audio_paths)
+        #     unique_key = generate_unique_key(dest_video_path) + "_is_added_watermark"
+        #     if cache_util.get_bool_from_cache(unique_key):
+        #         print(f"文件已存在且已添加水印: {dest_video_path}")
+        #         # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
+        #         # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
+        #         # audio_paths = get_sorted_vocals_wav_files(download_directory_dir)
+        #         # output_zh_srt_path = transcribe_audio_to_srts(audio_paths)
+        #         # subtitle_paths, video_path = process_videos(dest_video_path, ["en"])
+        #         # print_separator()
+        #         cache_util.close_cache()
+        #         return
 
-        # subtitle_paths, video_path = process_videos(audio_paths, ["en"])
-        # print("字幕文件路径:", subtitle_paths)
-        # print("生成的视频文件路径:", video_path)
-
-        # print_separator()
-        # return
 
         print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
         output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')

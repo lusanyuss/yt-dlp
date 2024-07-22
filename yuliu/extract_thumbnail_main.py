@@ -1,7 +1,6 @@
 import io
 import os
 import random
-import shutil
 import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -485,17 +484,21 @@ def move_images_to_release(cover_images, frame_images, release_video_dir):
 
 def check_images_in_release_dir(release_video_dir, number_covers=1):
     # 定义匹配文件名的正则表达式
-    pattern = re.compile(r'^input_img\d+\.png$')
+    input_img_pattern = re.compile(r'^input_img\d+\.png$')
+    frame_pattern = re.compile(r'^frame_\d+\.jpg$')
     # 获取目录中的所有文件
     files = os.listdir(release_video_dir)
     # 过滤出符合条件的文件
-    matched_files = [file for file in files if pattern.match(file)]
-    # 检查是否满足number_covers的数量
-    if len(matched_files) >= number_covers:
-        print(f"目录中已存在 {number_covers} 张满足条件的图片文件，退出方法。")
+    input_img_files = [file for file in files if input_img_pattern.match(file)]
+    frame_files = [file for file in files if frame_pattern.match(file)]
+
+    # 检查是否满足条件
+    if len(input_img_files) >= number_covers and len(frame_files) >= 3 * number_covers:
+        print(f"目录中已存在 {number_covers} 张满足条件的 input_img 文件和 {3 * number_covers} 张 frame 文件，退出方法。")
         return True
     else:
-        print(f"目录中没有找到足够的图片文件，需要 {number_covers} 张，但仅找到 {len(matched_files)} 张。")
+        print(
+            f"目录中没有找到足够的图片文件，需要 {number_covers} 张 input_img 文件和 {3 * number_covers} 张 frame 文件，但仅找到 {len(input_img_files)} 张 input_img 文件和 {len(frame_files)} 张 frame 文件。")
         return False
 
 
@@ -622,9 +625,10 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
     # 截取3张没有汉字的截图
     frame_image_list = []
     cover_images_list = []
-    # if not isTest:
-    #     if check_images_in_release_dir(release_video_dir, num_of_covers):
-    #         return frame_image_list
+
+    if not isTest:
+        if check_images_in_release_dir(release_video_dir, num_of_covers):
+            return frame_image_list
 
     print_separator("开始制作封面图")
 
