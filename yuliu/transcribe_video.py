@@ -3,9 +3,11 @@ import html
 import os
 import textwrap
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 
+import pysrt
 import requests
 import srt
 from faster_whisper import WhisperModel
@@ -13,6 +15,9 @@ from googletrans import Translator
 from moviepy.config import change_settings
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from requests.exceptions import JSONDecodeError
+
+from yuliu.DiskCacheUtil import DiskCacheUtil
+from yuliu.utils import generate_unique_key
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -64,7 +69,7 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
 
 
 def transcribe_audio_to_srts(audio_paths, model_size="large-v3", language='zh', device="cuda", compute_type="float16"):
-    with ThreadPoolExecutor(max_workers=len(audio_paths)) as executor:
+    with ThreadPoolExecutor(max_workers=12) as executor:
         futures = [
             executor.submit(transcribe_audio, audio_path, language, model_size, device, compute_type)
             for audio_path in audio_paths
@@ -150,12 +155,25 @@ def translate_srt(srt_path, translated_srt_path, target_lang='en'):
     lock = Lock()
 
     def translate_and_save(index, subtitle):
-        translated_text = translate_text_bygoogle(subtitle.content, source_lang='zh-CN', target_lang=target_lang)
+        max_retries = 5
+        retry_delay = 2
+        for attempt in range(max_retries):
+            translated_text = translate_text_bygoogle(subtitle.content, source_lang='zh-CN', target_lang=target_lang)
+            if translated_text is not None:
+                break
+            print(f"翻译失败，重试 {attempt + 1}/{max_retries} 次...")
+            time.sleep(retry_delay)
+        else:
+            print(f"删除错误文件: {translated_srt_path} , 无法翻译字幕 {subtitle.content}")
+            os.remove(translated_srt_path)
+            exit(1)
+
         print(f"翻译: {subtitle.content}  --->  {translated_text}")
+
         with lock:
             translated_subtitles[index] = srt.Subtitle(index=subtitle.index, start=subtitle.start, end=subtitle.end, content=translated_text)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
         futures = []
         for i, subtitle in enumerate(subtitles):
             futures.append(executor.submit(translate_and_save, i, subtitle))
@@ -170,62 +188,79 @@ def translate_srt(srt_path, translated_srt_path, target_lang='en'):
 
 
 def add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_ratio=0.80, subtitle_y_position=220):
-    if os.path.exists(output_path):
-        print(f"==========输出视频文件已存在: {output_path}")
+    cache_util = DiskCacheUtil()
+
+    temp_output = os.path.splitext(output_path)[0] + "_temp.mp4"
+
+    if os.path.exists(output_path) and cache_util.get_bool_from_cache(generate_unique_key(output_path) + "_is_added_watermark"):
+        print(f"最终文件已经存在了: {output_path}")
+        cache_util.close_cache()
         return output_path
 
-    print(f"读取视频文件: {video_path}")
-    video = VideoFileClip(video_path)
-    video_width, video_height = video.size
-    print(f"视频尺寸: {video_width}x{video_height}")
+    try:
+        print(f"读取视频文件: {video_path}")
+        video = VideoFileClip(video_path)
+        video_width, video_height = video.size
+        print(f"视频尺寸: {video_width}x{video_height}")
 
-    print(f"读取字幕文件: {srt_path}")
-    with open(srt_path, 'r', encoding='utf-8') as file:
-        subtitles = list(srt.parse(file.read()))
+        print(f"读取字幕文件: {srt_path}")
+        with open(srt_path, 'r', encoding='utf-8') as file:
+            subtitles = list(srt.parse(file.read()))
 
-    clips = []
+        clips = []
 
-    subtitle_width = video_width * subtitle_width_ratio
-    max_chars_per_line = int(subtitle_width // 20)
+        subtitle_width = video_width * subtitle_width_ratio
+        max_chars_per_line = int(subtitle_width // 20)
 
-    font_path = "Impact"  # 使用系统中的 Impact 字体
-    # font_path = r"C:\Windows\Fonts\arialbd.ttf"
+        font_path = "Impact"  # 使用系统中的 Impact 字体
+        # font_path = r"C:\Windows\Fonts\arialbd.ttf"
 
-    for subtitle in subtitles:
-        start_time = subtitle.start.total_seconds()
-        end_time = subtitle.end.total_seconds()
-        text = subtitle.content
+        for subtitle in subtitles:
+            start_time = subtitle.start.total_seconds()
+            end_time = subtitle.end.total_seconds()
+            text = subtitle.content
 
-        wrapped_text = "\n".join(textwrap.wrap(text, width=max_chars_per_line))
+            wrapped_text = "\n".join(textwrap.wrap(text, width=max_chars_per_line))
 
-        try:
-            txt_clip = TextClip(
-                wrapped_text,
-                fontsize=48,
-                color='yellow',
-                font=font_path,
-                size=(subtitle_width, 150),  # 设置固定高度为 140
-                stroke_color='black',  # 添加黑色边框
-                stroke_width=2
-            )
-            txt_clip = txt_clip.on_color(color=(0, 0, 0), col_opacity=0)
-            txt_clip = txt_clip.set_position(('center', video_height - subtitle_y_position))
-            txt_clip = txt_clip.set_start(start_time)
-            txt_clip = txt_clip.set_duration(end_time - start_time)
+            try:
+                txt_clip = TextClip(
+                    wrapped_text,
+                    fontsize=48,
+                    color='yellow',
+                    font=font_path,
+                    size=(subtitle_width, 150),  # 设置固定高度为 150
+                    stroke_color='black',  # 添加黑色边框
+                    stroke_width=2
+                )
+                txt_clip = txt_clip.on_color(color=(0, 0, 0), col_opacity=0)
+                txt_clip = txt_clip.set_position(('center', video_height - subtitle_y_position))
+                txt_clip = txt_clip.set_start(start_time)
+                txt_clip = txt_clip.set_duration(end_time - start_time)
 
-            print(f"创建字幕: '{wrapped_text}' 为： {video_path}")
+                print(f"创建字幕: '{wrapped_text}' 为： {video_path}")
 
-            clips.append(txt_clip)
-        except Exception as e:
-            print(f"创建字幕时出错: {e}")
+                clips.append(txt_clip)
+            except Exception as e:
+                print(f"创建字幕时出错: {e}")
 
-    print(f"总共创建了 {len(clips)} 条字幕")
+        print(f"总共创建了 {len(clips)} 条字幕")
 
-    final_clip = CompositeVideoClip([video] + clips, size=video.size)
+        final_clip = CompositeVideoClip([video] + clips, size=video.size)
 
-    print(f"开始写入最终视频文件: {output_path}")
-    final_clip.write_videofile(output_path, codec="libx264", fps=video.fps)
-    print("视频文件写入完成")
+        print(f"开始写入最终视频文件: {temp_output}")
+        final_clip.write_videofile(temp_output, codec="libx264", fps=video.fps)
+        print("视频文件写入完成")
+
+        os.replace(temp_output, output_path)  # 将临时文件重命名为最终输出文件
+        print(f"临时文件重命名为: {output_path}")
+
+        cache_util.set_bool_to_cache(generate_unique_key(output_path) + "_is_added_watermark", True)
+    finally:
+        if os.path.exists(temp_output):
+            os.remove(temp_output)
+            print(f"临时文件 {temp_output} 已删除")
+
+        cache_util.close_cache()
 
     return output_path
 
@@ -235,10 +270,6 @@ def generate_subtitles(zh_zimu, language):
     dest_zimu = zh_zimu.replace('_zh.srt', f'_{language}.srt')
     translated_srt_path = translate_srt(zh_zimu, dest_zimu, target_lang=language)
     return translated_srt_path
-
-
-def generate_video_with_subtitles(video_path, srt_path, output_path, subtitle_width_ratio, subtitle_y_position):
-    return add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_ratio, subtitle_y_position)
 
 
 def wait_for_input(prompt, timeout):
@@ -254,6 +285,29 @@ def wait_for_input(prompt, timeout):
     thread.start()
     thread.join(timeout)
     return user_input
+
+
+def concatenate_srt_files(srt_list):
+    """拼接多个SRT文件的内容并调整索引和时间戳"""
+    concatenated_subs = pysrt.SubRipFile()
+    total_duration = pysrt.SubRipTime(0, 0, 0, 0)
+    current_index = 1
+
+    for srt_file in srt_list:
+        subs = pysrt.open(srt_file)
+        for sub in subs:
+            # 调整时间戳
+            sub.start += total_duration
+            sub.end += total_duration
+            # 调整索引
+            sub.index = current_index
+            current_index += 1
+            # 添加到最终的SRT文件
+            concatenated_subs.append(sub)
+        # 更新总持续时间
+        total_duration += subs[-1].end
+
+    return concatenated_subs
 
 
 def process_videos(zh_zimi_list, target_languages):
@@ -298,7 +352,7 @@ if __name__ == '__main__':
     for en_srt_path in result_en["en"]:
         audio_path = en_srt_path.replace('_en.srt', '.mp4')
         output_video_path = audio_path.replace('.mp4', '_en.mp4')
-        video_path = generate_video_with_subtitles(audio_path, en_srt_path, output_video_path, subtitle_width_ratio=0.90, subtitle_y_position=220)
+        video_path = add_subtitles_to_video(audio_path, en_srt_path, output_video_path, subtitle_width_ratio=0.90, subtitle_y_position=220)
         en_video_path.append(video_path)
     print("生成的视频文件:", en_video_path)
     print("==========================================")

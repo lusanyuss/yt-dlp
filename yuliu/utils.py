@@ -131,17 +131,15 @@ def extract_audio_and_video(video_path):
 
 
 def separate_audio_and_video_list(video_paths):
-    audio_outputs = []
-    video_outputs = []
-
+    audio_outputs = [None] * len(video_paths)
+    video_outputs = [None] * len(video_paths)
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = {executor.submit(extract_audio_and_video, video_path): video_path for video_path in video_paths}
-
+        futures = {executor.submit(extract_audio_and_video, video_path): index for index, video_path in enumerate(video_paths)}
         for future in concurrent.futures.as_completed(futures):
+            index = futures[future]
             audio_output, video_output = future.result()
-            audio_outputs.append(audio_output)
-            video_outputs.append(video_output)
-
+            audio_outputs[index] = audio_output
+            video_outputs[index] = video_output
     return audio_outputs, video_outputs
 
 

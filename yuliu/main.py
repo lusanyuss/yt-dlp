@@ -1,14 +1,12 @@
 import os
 
-import torch
-
 from run_main import run_main
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
 def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_clear_cache=False, is_get_video=True, num_of_covers=1,
-                  is_get_cover=False):
+                  is_get_cover=False, is_get_fanyi=False):
     video_template = '{}.mp4'
     # 生成所有视频文件的路径
     videos = [os.path.join('download_cache', sub_directory, video_template.format(i)) for i in range(1, juji_num + 1)]
@@ -31,7 +29,9 @@ def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_
                      is_clear_cache=is_clear_cache,
                      is_get_video=is_get_video,
                      num_of_covers=num_of_covers,
-                     is_get_cover=is_get_cover)
+                     is_get_cover=is_get_cover,
+                     is_get_fanyi=is_get_fanyi
+                     )
         else:
             print(f"视频文件数量({len(videos)})与指定的剧集数量({juji_num})不相等，无法继续执行。")
 
@@ -162,7 +162,9 @@ if __name__ == "__main__":
                           is_get_video=True,
 
                           is_get_cover=False,
-                          num_of_covers=8
+                          num_of_covers=8,
+
+                          is_get_fanyi=False
                           )
     else:
         check_and_run(sub_directory='aa测试目录',
@@ -172,6 +174,9 @@ if __name__ == "__main__":
 
                       is_clear_cache=False,
                       is_get_video=True,
+
                       is_get_cover=True,
-                      num_of_covers=1
+                      num_of_covers=1,
+
+                      is_get_fanyi=True
                       )

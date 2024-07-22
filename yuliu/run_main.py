@@ -13,7 +13,7 @@ from utils import get_file_name_with_extension, get_file_only_name, get_file_onl
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
-from yuliu.transcribe_video import transcribe_audio_to_srts, process_videos, generate_video_with_subtitles
+from yuliu.transcribe_video import transcribe_audio_to_srts, process_videos, concatenate_srt_files, add_subtitles_to_video
 
 
 def clear_directory_contents(directory):
@@ -258,14 +258,10 @@ import subprocess
 
 def add_watermark_to_video(video_path):
     cache_util = DiskCacheUtil()
-    unique_key = None
-
-    if os.path.exists(video_path):
-        unique_key = generate_unique_key(video_path) + "_is_added_watermark"
-        if cache_util.get_bool_from_cache(unique_key):
-            print(f"文件已存在且已添加水印: {video_path}")
-            cache_util.close_cache()
-            return video_path
+    if os.path.exists(video_path) and cache_util.get_bool_from_cache(generate_unique_key(video_path) + "_is_added_watermark"):
+        print(f"文件已存在且已添加水印: {video_path}")
+        cache_util.close_cache()
+        return video_path
 
     print_separator("添加水印-开始 " + video_path)
     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
@@ -334,7 +330,10 @@ def run_main(url=None,
              video_download_name=None,
              is_get_video=True,
              num_of_covers=1,
-             is_get_cover=False):
+             is_get_cover=False,
+
+             is_get_fanyi=False
+             ):
     global download_cache_dir, download_directory_dir, release_video_dir, mvsep_input_dir, mvsep_output_dir
 
     print_separator("初始化路径")
@@ -399,79 +398,98 @@ def run_main(url=None,
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
 
     if is_get_video:
-        # if os.path.exists(dest_video_path):
-        #     unique_key = generate_unique_key(dest_video_path) + "_is_added_watermark"
-        #     if cache_util.get_bool_from_cache(unique_key):
-        #         print(f"文件已存在且已添加水印: {dest_video_path}")
-        #         # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
-        #         # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
-        #         # audio_paths = get_sorted_vocals_wav_files(download_directory_dir)
-        #         # output_zh_srt_path = transcribe_audio_to_srts(audio_paths)
-        #         # subtitle_paths, video_path = process_videos(dest_video_path, ["en"])
-        #         # print_separator()
-        #         cache_util.close_cache()
-        #         return
+        if os.path.exists(dest_video_path) and cache_util.get_bool_from_cache(generate_unique_key(dest_video_path) + "_is_added_watermark"):
+            print(f"文件已存在且已添加水印: {dest_video_path}")
+            # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
+            # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
+            # audio_paths = get_sorted_vocals_wav_files(download_directory_dir)
+            # output_zh_srt_path = transcribe_audio_to_srts(audio_paths)
+            # subtitle_paths, video_path = process_videos(dest_video_path, ["en"])
+            # print_separator()
+            cache_util.close_cache()
+        else:
+            print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
+            output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
+            video_dest_result = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
+            print(f"\n原始视频路径: {original_video}")
+            video_duration = get_mp4_duration(original_video)
+            print(f"\n原始视频时长: {video_duration}")
+            keyframeextractor = KeyFrameExtractor(original_video, cache_util)
+            keyframe_times = keyframeextractor.extract_keyframes()
+            split_points = find_split_points(keyframe_times, split_time_ms)
+            video_clips = segment_video_times(original_video, split_points, output_pattern)
+            print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
 
-        print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
-        output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
-        video_dest_result = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
-        print(f"\n原始视频路径: {original_video}")
-        video_duration = get_mp4_duration(original_video)
-        print(f"\n原始视频时长: {video_duration}")
-        keyframeextractor = KeyFrameExtractor(original_video, cache_util)
-        keyframe_times = keyframeextractor.extract_keyframes()
-        split_points = find_split_points(keyframe_times, split_time_ms)
-        video_clips = segment_video_times(original_video, split_points, output_pattern)
-        print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
+            print_separator(f"2.对视频人声分离({cover_title})")
 
-        print_separator(f"2.对视频人声分离({cover_title})")
+            (video_dest_list, audio_origin_list,
+             video_origin_list, audio_vocals_list,
+             video_origin_clips, audio_instrum_list,
+             process_video_time) = process_video_files_list(video_clips)
 
-        (video_dest_list, audio_origin_list,
-         video_origin_list, audio_vocals_list,
-         video_origin_clips, audio_instrum_list,
-         process_video_time) = process_video_files_list(video_clips)
+            print("==========================================")
+            # 翻译zh-CN字幕母本
+            zh_cn_zimi_list = None
+            target_languages = ["zh"]
+            for language in target_languages:
+                zh_cn_zimi_list = transcribe_audio_to_srts(video_dest_list, language=language)
 
-        print("==========================================")
-        # 翻译zh-CN字幕母本
-        zh_cn_zimi_list = None
-        target_languages = ["zh"]
-        for language in target_languages:
-            zh_cn_zimi_list = transcribe_audio_to_srts(video_dest_list, language=language)
-            print(zh_cn_zimi_list)
+            zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{target_languages[0]}.srt')
+            concatenate_srt_files(zh_cn_zimi_list).save(zh_srt, encoding='utf-8')
+            # 合成为一个文件后,删除翻译文件
+            for file in zh_cn_zimi_list:
+                os.remove(file)
 
-        #  翻译en字幕
-        en_languages = ["en"]
-        result_en_srt = process_videos(zh_cn_zimi_list, en_languages)
-        en_video_path = []
-        #  en字幕加到视频上
-        print("英文视频字幕顺序:", result_en_srt["en"])
-        for en_srt_path in result_en_srt["en"]:
-            audio_path = en_srt_path.replace('_en.srt', '.mp4')
-            output_video_path = audio_path.replace('.mp4', '_en.mp4')
-            print("en_srt_path:", en_srt_path)
-            print("audio_path:", audio_path)
-            print("output_video_path:", output_video_path)
+            #  翻译en字幕
+            en_srt = process_videos([zh_srt], ["en"])['en']
 
-            video_path = generate_video_with_subtitles(audio_path, en_srt_path, output_video_path,
-                                                       subtitle_width_ratio=0.90, subtitle_y_position=220)
-            en_video_path.append(video_path)
-        print("生成的视频文件:", en_video_path)
+            # en_video_path = []
+            #  en字幕加到视频上
+            # print("英文视频字幕顺序:", en_srt["en"])
+            # for en_srt_path in en_srt["en"]:
+            #     audio_path = en_srt_path.replace('_en.srt', '.mp4')
+            #     output_video_path = audio_path.replace('.mp4', '_en.mp4')
+            #     print("en_srt_path:", en_srt_path)
+            #     print("audio_path:", audio_path)
+            #     print("output_video_path:", output_video_path)
+            #
+            #     video_path = generate_video_with_subtitles(audio_path, en_srt_path, output_video_path,
+            #                                                subtitle_width_ratio=0.90, subtitle_y_position=220)
+            #     en_video_path.append(video_path)
+            # print("生成的视频文件:", en_video_path)
 
-        # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
-        # results_other_srt = process_videos(zh_cn_zimi_list, target_languages)
-        # print(f"其他地区字幕翻译：{results_other_srt}")
+            # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
+            # results_other_srt = process_videos(zh_cn_zimi_list, target_languages)
+            # print(f"其他地区字幕翻译：{results_other_srt}")
 
-        #  目标视频变成有因为的视频，字幕加到视频上
-        delete_files_by_list(video_dest_list)
-        video_dest_list = en_video_path
-        # 合成目标视频
-        video_dest_result = merge_videos(video_dest_list, video_dest_result)
+            #  目标视频变成有因为的视频，字幕加到视频上
+            # delete_files_by_list(video_dest_list)
+            # video_dest_list = en_video_path
+            # 合成目标视频
+            video_dest_result = merge_videos(video_dest_list, video_dest_result)
 
-        process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
-        finalize_video_processing(video_dest_result, release_video_dir, sub_directory)
-        # delete_files(audio_file_list, video_file_list, audio_vocals_list, video_file_item_list, processed_audio_instrum_list, frame_image_list)
-        # delete_files(audio_origin_list, video_origin_list, video_origin_clips, audio_instrum_list, frame_image_list)
-        cache_util.close_cache()
+            add_subtitles_to_video(video_dest_result, en_srt[0], video_dest_result,
+                                   subtitle_width_ratio=0.90, subtitle_y_position=220)
+
+            process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
+            finalize_video_processing(video_dest_result, release_video_dir, sub_directory)
+            delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, audio_instrum_list)
+            cache_util.close_cache()
+
+    if is_get_fanyi:
+        try:
+            print_separator(f"3.生成翻译字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
+            target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
+            zh_srt = os.path.join(release_video_dir, f'{sub_directory}_zh.srt')
+            result_other_srt = process_videos([zh_srt], target_languages)
+            # for language in target_languages:
+            #     concatenated_subs = concatenate_srt_files(result_other_srt[language])
+            #     zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{language}.srt')
+            #     concatenated_subs.save(zh_srt, encoding='utf-8')
+            # print_separator()
+            # return
+        except Exception as e:
+            print(f'出错: {e}')
 
 
 def delete_files_by_list(frame_image_list):

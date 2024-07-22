@@ -327,7 +327,7 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, 
     timer = threading.Timer(timeout_duration, timeout_handler)
     timer.start()
 
-    with ThreadPoolExecutor(max_workers=num_frames) as executor:
+    with ThreadPoolExecutor(max_workers=12) as executor:
         futures = [
             executor.submit(generate_frame, i, video_path, duration, output_dir, crop_height, model_path, frame_paths, lock)
             for i in range(num_frames)
