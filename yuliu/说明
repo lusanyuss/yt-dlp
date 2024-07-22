@@ -1,0 +1,11 @@
+
+CUDA 版本（例如 12.3）
+
+CUDA 12.3, cuDNN 9.2.1
+
+卸载现有的 PyTorch：
+pip uninstall torch torchvision torchaudio
+
+安装支持 CUDA 的 PyTorch 版本：
+例如，安装 PyTorch 2.0.1 和 CUDA 11.8：
+pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118

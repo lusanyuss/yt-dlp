@@ -1,7 +1,9 @@
+import concurrent.futures
 import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor
 
+import ffmpeg
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
@@ -102,32 +104,44 @@ def get_mp4_duration(file_path):
         raise RuntimeError(f"ffprobe 错误: {e.stderr}")
 
 
+def extract_audio_and_video(video_path):
+    print(f"\n从视频中分离音频和视频: {video_path}")
+    start_time = time.time()
+    base, _ = os.path.splitext(video_path)
+    audio_output, video_output = f"{base}_audio.mp3", f"{base}_video.mp4"
+    if not os.path.exists(audio_output) or not os.path.exists(video_output):
+        command = [
+            'ffmpeg', '-i', video_path,
+            '-map', '0:a', '-acodec', 'libmp3lame', audio_output,
+            '-map', '0:v', '-vcodec', 'copy', video_output,
+            '-y', '-loglevel', 'quiet'
+        ]
+        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+        # 联合提取音频和视频，不重新编码
+        # (ffmpeg.input(video_path)
+        #  .output(audio_output, map='0:a', codec='copy')
+        #  .output(video_output, map='0:v', codec='copy', an=None)
+        #  .run(quiet=True, overwrite_output=True))
+        # print(f"音频提取到: {audio_output}")
+        # print(f"视频提取到: {video_output}")
+
+    elapsed_time = time.time() - start_time
+    print(f"耗时: {elapsed_time:.2f} 秒")
+
+    return audio_output, video_output
+
+
 def separate_audio_and_video_list(video_paths):
     audio_outputs = []
     video_outputs = []
 
-    for video_path in video_paths:
-        print(f"\n从视频中分离音频和视频: {video_path}")
-        start_time = time.time()
-        base, _ = os.path.splitext(video_path)
-        audio_output, video_output = f"{base}_audio.mp3", f"{base}_video.mp4"
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(extract_audio_and_video, video_path): video_path for video_path in video_paths}
 
-        if not os.path.exists(audio_output) or not os.path.exists(video_output):
-            command = [
-                'ffmpeg', '-i', video_path,
-                '-map', '0:a', '-acodec', 'libmp3lame', audio_output,
-                '-map', '0:v', '-vcodec', 'copy', video_output,
-                '-y', '-loglevel', 'quiet'
-            ]
-            subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-            print(f"音频提取到: {audio_output}")
-            print(f"视频提取到: {video_output}")
-
-        elapsed_time = time.time() - start_time
-        print(f"耗时: {elapsed_time:.2f} 秒")
-
-        audio_outputs.append(audio_output)
-        video_outputs.append(video_output)
+        for future in concurrent.futures.as_completed(futures):
+            audio_output, video_output = future.result()
+            audio_outputs.append(audio_output)
+            video_outputs.append(video_output)
 
     return audio_outputs, video_outputs
 

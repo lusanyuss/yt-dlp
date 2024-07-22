@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import time
 
@@ -12,7 +13,7 @@ from utils import get_file_name_with_extension, get_file_only_name, get_file_onl
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
-from yuliu.transcribe_video import process_video
+from yuliu.transcribe_video import transcribe_audio_to_srts, process_videos, generate_video_with_subtitles
 
 
 def clear_directory_contents(directory):
@@ -49,10 +50,10 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
     start_time = time.time()
     print(f"\n========================================处理音频文件(去除背景音乐)")
     # 输出文件列表定义
+    # 输出文件定义
     output_file_vocals_list = []
     output_file_instrum_list = []
-    destination_list = []
-    # 输出文件定义
+    destination_vocals_list = []
     for audio_file in audio_files:
         output_file_vocals = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
         output_file_instrum = os.path.join(mvsep_output_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_instrum.wav")
@@ -71,6 +72,8 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
             original_directory = os.getcwd()
             os.chdir(os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2"))
             command = ['python', 'mvsep_main.py', '--input', mvsep_input_dir, '--output', mvsep_output_dir]
+            command_str = ' '.join(command)
+            print(command_str)
             subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
             os.chdir(original_directory)
         except Exception as e:
@@ -83,8 +86,8 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
     for output_file_vocals in output_file_vocals_list:
         if os.path.exists(output_file_vocals):
             destination = shutil.copy(output_file_vocals, download_directory_dir)
-            destination_list.append(destination)
-    return destination_list, output_file_instrum_list
+            destination_vocals_list.append(destination)
+    return destination_vocals_list, output_file_instrum_list
 
 
 def are_files_same(audio_files, output_dir):
@@ -112,18 +115,21 @@ def are_files_same(audio_files, output_dir):
     return True
 
 
-def process_video_files_list(video_clips_names):
+def process_video_files_list(video_origin_clips):
     start_time = time.time()
-    processed_video_list = []
-    audio_file_list, video_file_list = separate_audio_and_video_list(video_clips_names)
-    processed_audio_list, processed_audio_instrum_list = process_audio_with_mvsep_mdx23_list(audio_file_list)
-    for index, video_file_item in enumerate(video_clips_names, start=1):
-        processed_video = os.path.splitext(video_file_item)[0] + '_processed.mp4'
-        processed_video_list.append(processed_video)
-    processed_video_list = merge_audio_and_video_list(video_file_list, processed_audio_list, processed_video_list)
+    video_dest_list = []
+    # 多线程分割视频
+    audio_origin_list, video_origin_list = separate_audio_and_video_list(video_origin_clips)
+    # 单线程去除视频背景音乐
+    audio_vocals_list, audio_instrum_list = process_audio_with_mvsep_mdx23_list(audio_origin_list)
+
+    for index, video_file_item in enumerate(video_origin_clips, start=1):
+        video_dest = os.path.splitext(video_file_item)[0] + '_processed.mp4'
+        video_dest_list.append(video_dest)
+    video_dest_list = merge_audio_and_video_list(video_origin_list, audio_vocals_list, video_dest_list)
     end_time = time.time()
     process_video_time = end_time - start_time
-    return processed_video_list, audio_file_list, video_file_list, processed_audio_list, video_clips_names, processed_audio_instrum_list, process_video_time
+    return video_dest_list, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, audio_instrum_list, process_video_time
 
 
 def get_video_list(result):
@@ -220,10 +226,10 @@ def delete_file(file_path):
         print(f"删除文件时出错: {e}")
 
 
-def finalize_video_processing(file_path, release_video_dir, new_name):
-    if os.path.exists(file_path):
+def finalize_video_processing(video_dest_result, release_video_dir, sub_directory):
+    if os.path.exists(video_dest_result):
         # 加水印
-        result_video = add_watermark_to_video(file_path)
+        result_video = add_watermark_to_video(video_dest_result)
         print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(result_video))}")
 
         # 保存标题和描述
@@ -235,11 +241,11 @@ def finalize_video_processing(file_path, release_video_dir, new_name):
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持！
 
-主标题：\n《{convert_simplified_to_traditional(new_name)}》【高清完結合集】
+主标题：\n《{convert_simplified_to_traditional(sub_directory)}》【高清完結合集】
 
         """
-        file_path = f"{release_video_dir}/{convert_simplified_to_traditional(new_name)}.txt"
-        with open(file_path, 'w', encoding='utf-8') as file:
+        video_dest_result = f"{release_video_dir}/{convert_simplified_to_traditional(sub_directory)}.txt"
+        with open(video_dest_result, 'w', encoding='utf-8') as file:
             file.write(content)
 
 
@@ -295,6 +301,13 @@ def get_dir(base_dir, sub_directory=None):
     return dir_path
 
 
+def get_sorted_vocals_wav_files(directory):
+    pattern = re.compile(r'out_times_(\d+)_audio_vocals\.wav')
+    files = [file for file in os.listdir(directory) if pattern.match(file)]
+    files.sort(key=lambda x: int(pattern.search(x).group(1)))
+    return [os.path.join(directory, file) for file in files]
+
+
 def run_main(url=None,
              videos=None,
 
@@ -323,7 +336,6 @@ def run_main(url=None,
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
     dest_video_path = os.path.join(release_video_dir, f"{sub_directory}.mp4")
-    target_languages = ["en", "es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
 
     cache_util = DiskCacheUtil()
 
@@ -368,26 +380,30 @@ def run_main(url=None,
                                                   num_of_covers=num_of_covers,
                                                   crop_height=100, isTest=False)
 
-        # delete_files_by_list(frame_image_list)
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
 
     if is_get_video:
-        if os.path.exists(dest_video_path):
-            print_separator()
-            print(f"{get_file_name_with_extension(dest_video_path)}              已存在，不需要再处理了,直接返回")
+        # if os.path.exists(dest_video_path):
+        # print_separator()
+        # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
+        # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
+        # print_separator("字幕转录")
+        # audio_paths = get_sorted_vocals_wav_files(download_directory_dir)
+        # print_separator("字幕翻译")
+        # output_zh_srt_path = transcribe_audio_to_srts(audio_paths)
 
-            subtitle_paths, video_path = process_video(dest_video_path, target_languages)
-            print("字幕文件路径:", subtitle_paths)
-            print("生成的视频文件路径:", video_path)
+        # subtitle_paths, video_path = process_videos(audio_paths, ["en"])
+        # print("字幕文件路径:", subtitle_paths)
+        # print("生成的视频文件路径:", video_path)
 
-            print_separator()
-            return
+        # print_separator()
+        # return
 
         print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
         output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
-        merged_video_path = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
+        video_dest_result = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
         print(f"\n原始视频路径: {original_video}")
         video_duration = get_mp4_duration(original_video)
         print(f"\n原始视频时长: {video_duration}")
@@ -399,20 +415,45 @@ def run_main(url=None,
 
         print_separator(f"2.对视频人声分离({cover_title})")
 
-        (processed_videos, audio_file_list,
-         video_file_list, processed_audio_list,
-         video_file_item_list, processed_audio_instrum_list,
+        (video_dest_list, audio_origin_list,
+         video_origin_list, audio_vocals_list,
+         video_origin_clips, audio_instrum_list,
          process_video_time) = process_video_files_list(video_clips)
-        result_video = merge_videos(processed_videos, merged_video_path)
 
-        # 调用封装的方法
-        subtitle_paths, video_path = process_video(result_video, target_languages)
-        print("字幕文件路径:", subtitle_paths)
-        print("生成的视频文件路径:", video_path)
+        print("==========================================")
+        # 翻译zh-CN字幕母本
+        zh_cn_zimi_list = None
+        target_languages = ["zh"]
+        for language in target_languages:
+            zh_cn_zimi_list = transcribe_audio_to_srts(video_dest_list, language=language)
+            print(zh_cn_zimi_list)
+
+        #  翻译en字幕
+        en_languages = ["en"]
+        result_en_srt = process_videos(zh_cn_zimi_list, en_languages)
+        en_video_path = []
+        #  en字幕加到视频上
+        for en_srt_path in result_en_srt["en"]:
+            audio_path = en_srt_path.replace('_en.srt', '.mp4')
+            output_video_path = audio_path.replace('.mp4', '_en.mp4')
+            video_path = generate_video_with_subtitles(audio_path, en_srt_path, output_video_path)
+            en_video_path.append(video_path)
+        print("生成的视频文件:", en_video_path)
+
+        target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
+        results_other_srt = process_videos(zh_cn_zimi_list, target_languages)
+        print(f"其他地区字幕翻译：{results_other_srt}")
+
+        #  目标视频变成有因为的视频，字幕加到视频上
+        delete_files_by_list(video_dest_list)
+        video_dest_list = en_video_path
+        # 合成目标视频
+        video_dest_result = merge_videos(video_dest_list, video_dest_result)
 
         process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
-        finalize_video_processing(result_video, release_video_dir, sub_directory)
-        delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list, frame_image_list)
+        finalize_video_processing(video_dest_result, release_video_dir, sub_directory)
+        # delete_files(audio_file_list, video_file_list, audio_vocals_list, video_file_item_list, processed_audio_instrum_list, frame_image_list)
+        delete_files(audio_origin_list, video_origin_list, video_origin_clips, audio_instrum_list, frame_image_list)
         cache_util.close_cache()
 
 
@@ -425,8 +466,8 @@ def delete_files_by_list(frame_image_list):
             print(f"Failed to delete: {file}")
 
 
-def delete_files(audio_file_list, video_file_list, processed_audio_list, video_file_item_list, processed_audio_instrum_list, frame_image_list):
-    all_files = audio_file_list + video_file_list + processed_audio_list + video_file_item_list + processed_audio_instrum_list + frame_image_list
+def delete_files(audio_file_list=[], video_file_list=[], audio_vocals_list=[], video_file_item_list=[], audio_instrum_list=[], frame_image_list=[]):
+    all_files = audio_file_list + video_file_list + audio_vocals_list + video_file_item_list + audio_instrum_list + frame_image_list
     for file in all_files:
         try:
             os.remove(file)

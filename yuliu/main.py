@@ -1,8 +1,12 @@
 import os
 
+import torch
+
 from run_main import run_main
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
+
 def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_clear_cache=False, is_get_video=True, num_of_covers=1,
                   is_get_cover=False):
     video_template = '{}.mp4'
@@ -77,7 +81,7 @@ if __name__ == "__main__":
 
     videos = [
         ################### 已经部分 #######################
-        # '丑女逆袭,被首富大佬缠上了',
+        '丑女逆袭,被首富大佬缠上了',
         # '傅总您太太真的没死',
         # '公主在现代嫁首富了,穿梭世纪来爱你',
         # '分手渣男后她成了女首富',
@@ -92,7 +96,7 @@ if __name__ == "__main__":
         # '逃婚当天我抓了个总裁过日子',
         # '隐秘的婚姻',
         # '战无不胜',
-        '周太太今天太难哄',
+        # '周太太今天太难哄',
         # '寒窗十年高考后首富爸妈摊牌了',
         # '极品房东俏房客',
         # '新版-至尊仙帝',
@@ -162,7 +166,7 @@ if __name__ == "__main__":
                           )
     else:
         check_and_run(sub_directory='aa测试目录',
-                      cover_title="萌宝萌宝萌宝萌宝助攻我帮妈妈改嫁总裁大佬",
+                      cover_title="天龙八部",
                       juji_num=1,
                       split_time_min=1,
 
