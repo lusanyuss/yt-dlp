@@ -412,7 +412,6 @@ def run_main(url=None,
         #         cache_util.close_cache()
         #         return
 
-
         print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
         output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
         video_dest_result = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
