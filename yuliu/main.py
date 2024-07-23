@@ -153,8 +153,8 @@ if __name__ == "__main__":
         # '我们都要活下去',
         # '我的傻父',
     ]
-    isTest = False
-    # isTest = True
+    # isTest = False
+    isTest = True
     if not isTest:
         for video_name in videos:
             check_and_run(sub_directory=video_name,
@@ -179,7 +179,7 @@ if __name__ == "__main__":
                       is_clear_cache=False,
                       is_get_video=True,
 
-                      is_get_cover=True,
+                      is_get_cover=False,
                       num_of_covers=1,
 
                       is_get_fanyi=False

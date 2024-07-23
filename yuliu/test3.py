@@ -16,9 +16,9 @@ def add_watermark_to_video(video_path):
     minutes_needed = video_duration_s / 60 / 4.3
     # 构建命令字符串，使用相对路径，并确保格式正确
     command = (
-        f'ffmpeg -i "{video_path}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
+        f'ffmpeg -hwaccel cuda -i "{video_path}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
         f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-        f'-c:a copy -y "{temp_output}"'
+        f'-c:v h264_nvenc -c:a copy -y "{temp_output}"'
     )
     # 打印命令以便手动检查
     print("Running command: \n", command)
@@ -38,6 +38,4 @@ def add_watermark_to_video(video_path):
 
 
 if __name__ == '__main__':
-    add_watermark_to_video('./download_cache/aa测试目录/3.mp4')
-
-
+    add_watermark_to_video('./release_video/aa测试目录/aa测试目录.mp4')

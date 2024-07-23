@@ -1,17 +1,20 @@
+import os
 import shutil
+import subprocess
 import time
 
+import pysrt
 from torchvision.datasets.utils import calculate_md5
 
 import yt_dlp
 from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
     find_split_points, \
     process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, generate_unique_key
+    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
-from yuliu.transcribe_video import process_videos
+from yuliu.transcribe_video import process_videos, transcribe_audio_to_srts, concatenate_srt_files, add_subtitles_to_video
 
 
 def clear_directory_contents(directory):
@@ -242,20 +245,14 @@ def finalize_video_processing(video_dest_result, release_video_dir, sub_director
             file.write(content)
 
 
-import subprocess
-
-
 # ffmpeg -i "release_video/aa测试目录/aa测试目录.mp4" -vf "drawtext=fontfile='ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "release_video/aa测试目录/temp_output.mp4"
 # ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
 # ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
 
 def add_watermark_to_video(video_path):
-    cache_util = DiskCacheUtil()
-    if os.path.exists(video_path) and cache_util.get_bool_from_cache(generate_unique_key(video_path) + "_is_added_watermark"):
+    if os.path.exists(video_path) and has_shuiyin_suffix(video_path):
         print(f"文件已存在且已添加水印: {video_path}")
-        cache_util.close_cache()
         return video_path
-
     print_separator("添加水印-开始 " + video_path)
     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
     text = "爽剧风暴"
@@ -269,10 +266,12 @@ def add_watermark_to_video(video_path):
 
     # 构建命令字符串，使用相对路径，并确保格式正确
     command = (
-        f'ffmpeg -i "{video_path}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
+        f'ffmpeg -hwaccel cuda -i "{video_path}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
         f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-        f'-c:a copy -y "{temp_output}"'
+        f'-c:v h264_nvenc -c:a copy -y "{temp_output}"'
     )
+
+
 
     # 打印命令以便手动检查
     print("Running command: \n", command)
@@ -282,17 +281,13 @@ def add_watermark_to_video(video_path):
         # 使用 shell=True 执行命令字符串
         result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
         result.check_returncode()  # 检查命令是否成功
-        os.replace(temp_output, video_path)  # Replace the original video with the new one
-        unique_key = generate_unique_key(video_path) + "_is_added_watermark"
-        cache_util.set_bool_to_cache(unique_key, True)
+        os.replace(temp_output, video_path)  # 替换原视频
         print_separator("添加水印-成功")
     except Exception as e:
         print(f"Error occurred: {e}")
         if os.path.exists(temp_output):
-            os.remove(temp_output)  # Remove the temporary output file if it exists
+            os.remove(temp_output)  # 移除临时文件
         return video_path
-    finally:
-        cache_util.close_cache()
 
     return video_path
 
@@ -330,7 +325,6 @@ def delete_files(audio_file_list=[], video_file_list=[], audio_vocals_list=[], v
             print(f"Failed to delete: {file}")
 
 
-import os
 import re
 
 
@@ -353,6 +347,58 @@ def check_directory(base_dir):
             return base_dir
 
     return None
+
+
+def extract_audio_only(video_path):
+    # 生成新的文件路径
+    base, ext = os.path.splitext(video_path)
+    audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
+
+    # 构建单个提取音频流的ffmpeg命令
+    command = [
+        'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
+        '-map', '0:a', '-c:a', 'pcm_s16le', audio_only_path  # 确保使用 WAV 编码器
+    ]
+
+    # 打印命令以便手动检查
+    print("Running command: \n", " ".join(command))
+
+    try:
+        # 执行命令
+        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+        result.check_returncode()  # 检查命令是否成功
+        print(f"音频流提取成功: {audio_only_path}")
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred: {e.stderr}")
+        if os.path.exists(audio_only_path):
+            os.remove(audio_only_path)  # 移除临时文件
+        return None
+
+    return audio_only_path
+
+
+def srt_to_ass(srt_path, ass_path, style):
+    subs = pysrt.open(srt_path, encoding='utf-8')
+    with open(ass_path, 'w', encoding='utf-8') as f:
+        f.write("""
+[Script Info]
+Title: Styled Subtitles
+ScriptType: v4.00+
+PlayDepth: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,{font},{fontsize},&H{primary_colour},&H{secondary_colour},&H{outline_colour},&H{back_colour},{bold},{italic},{underline},{strikeout},{scalex},{scaley},{spacing},{angle},{borderstyle},{outline},{shadow},{alignment},{marginl},{marginr},{marginv},{encoding}
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+""".format(**style))
+        for sub in subs:
+            start = sub.start.to_time().strftime('%H:%M:%S.%f')[:-3]
+            end = sub.end.to_time().strftime('%H:%M:%S.%f')[:-3]
+            text = sub.text.replace('\n', '\\N')
+            f.write("Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n".format(start=start, end=end, text=text))
 
 
 def run_main(url=None,
@@ -445,8 +491,8 @@ def run_main(url=None,
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
 
     if is_get_video:
-        if os.path.exists(dest_video_path) and cache_util.get_bool_from_cache(generate_unique_key(dest_video_path) + "_is_added_watermark"):
-            print(f"文件已存在且已添加水印: {dest_video_path}")
+        if os.path.exists(dest_video_path) and has_shuiyin_suffix(dest_video_path) and has_zimu_suffix(dest_video_path):
+            print(f"文件 : 存在,有字幕,有水印: {dest_video_path}")
             # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
             # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
             # audio_paths = get_sorted_vocals_wav_files(download_directory_dir)
@@ -476,29 +522,29 @@ def run_main(url=None,
             print("==========================================")
             # 合成目标视频
             video_dest_result = merge_videos(video_dest_list, video_dest_result)
-
-            # # 翻译zh-CN字幕母本
-            # start_time_srts = time.time()
-            # zh_cn_zimi_list = None
-            # target_languages = ["zh"]
-            # for language in target_languages:
-            #     zh_cn_zimi_list = transcribe_audio_to_srts(video_dest_list, language=language)
-            # elapsed_time_srts = time.time() - start_time_srts
-            # print(f"\n翻译zh-CN字幕母本:{elapsed_time_srts}")
-            #
-            # zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{target_languages[0]}.srt')
-            # concatenate_srt_files(zh_cn_zimi_list).save(zh_srt, encoding='utf-8')
-            # # 合成为一个文件后,删除翻译文件
-            # for file in zh_cn_zimi_list:
-            #     os.remove(file)
-            # #  翻译en字幕
-            # en_srt = process_videos([zh_srt], ["en"])['en']
-            # # 添加英文字幕
-            # add_subtitles_to_video(video_dest_result, en_srt[0], video_dest_result,
-            #                        subtitle_width_ratio=0.90, subtitle_y_position=220)
+            start_time = time.time()
+            audio_path = extract_audio_only(video_dest_result)
+            print(f"======分离音视频: {time.time() - start_time:.2f} 秒")
+            # 翻译zh-CN字幕母本
+            zh_cn_zimi_list = None
+            target_languages = ["zh"]
+            for language in target_languages:
+                zh_cn_zimi_list = transcribe_audio_to_srts([audio_path], language=language)
+            zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{target_languages[0]}.srt')
+            concatenate_srt_files(zh_cn_zimi_list).save(zh_srt, encoding='utf-8')
+            for file in zh_cn_zimi_list:
+                os.remove(file)
+            en_srt = process_videos([zh_srt], ["en"])['en']
+            # 示例用法
+            #  翻译en字幕
+            # 添加英文字幕
+            add_subtitles_to_video(video_dest_result, en_srt[0], video_dest_result,
+                                   subtitle_width_ratio=0.90, subtitle_y_position=220)
 
             process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
+
             finalize_video_processing(video_dest_result, release_video_dir, sub_directory)
+
             delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips)
             cache_util.close_cache()
 

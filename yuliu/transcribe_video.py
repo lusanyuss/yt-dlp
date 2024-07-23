@@ -10,14 +10,13 @@ from threading import Lock
 import pysrt
 import requests
 import srt
-from faster_whisper import WhisperModel, BatchedInferencePipeline
+from faster_whisper import WhisperModel
 from googletrans import Translator
 from moviepy.config import change_settings
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from requests.exceptions import JSONDecodeError
 
-from yuliu.DiskCacheUtil import DiskCacheUtil
-from yuliu.utils import generate_unique_key
+from yuliu.utils import has_zimu_suffix
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -50,7 +49,6 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
         vad_filter=True,  # 启用 VAD 过滤
         vad_parameters=dict(min_silence_duration_ms=200)  # 对话中可能有更短的停顿，设置为 200 毫秒
     )
-
 
     print(f"将结果写入SRT文件: {output_srt_path}")
     with open(output_srt_path, "w", encoding="utf-8") as srt_file:
@@ -188,13 +186,10 @@ def translate_srt(srt_path, translated_srt_path, target_lang='en'):
 
 
 def add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_ratio=0.80, subtitle_y_position=220):
-    cache_util = DiskCacheUtil()
-
     temp_output = os.path.splitext(output_path)[0] + "_temp.mp4"
 
-    if os.path.exists(output_path) and cache_util.get_bool_from_cache(generate_unique_key(output_path) + "_is_added_watermark"):
-        print(f"最终文件已经存在了: {output_path}")
-        cache_util.close_cache()
+    if os.path.exists(output_path) and has_zimu_suffix(output_path):
+        print(f"已经加过字幕了")
         return output_path
 
     try:
@@ -214,7 +209,6 @@ def add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_rat
 
         font_path = "Impact"  # 使用系统中的 Impact 字体
         # font_path = r"C:\Windows\Fonts\arialbd.ttf"
-
         for subtitle in subtitles:
             start_time = subtitle.start.total_seconds()
             end_time = subtitle.end.total_seconds()
@@ -230,7 +224,8 @@ def add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_rat
                     font=font_path,
                     size=(subtitle_width, 150),  # 设置固定高度为 150
                     stroke_color='black',  # 添加黑色边框
-                    stroke_width=2
+                    stroke_width=2,
+                    print_cmd=True
                 )
                 txt_clip = txt_clip.on_color(color=(0, 0, 0), col_opacity=0)
                 txt_clip = txt_clip.set_position(('center', video_height - subtitle_y_position))
@@ -253,14 +248,10 @@ def add_subtitles_to_video(video_path, srt_path, output_path, subtitle_width_rat
 
         os.replace(temp_output, output_path)  # 将临时文件重命名为最终输出文件
         print(f"临时文件重命名为: {output_path}")
-
-        cache_util.set_bool_to_cache(generate_unique_key(output_path) + "_is_added_watermark", True)
     finally:
         if os.path.exists(temp_output):
             os.remove(temp_output)
             print(f"临时文件 {temp_output} 已删除")
-
-        cache_util.close_cache()
 
     return output_path
 

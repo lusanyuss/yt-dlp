@@ -632,3 +632,25 @@ def convert_simplified_to_traditional(text):
         return cc.convert(text)
     except Exception:
         return text
+
+
+def add_shuiyin_suffix(video_path):
+    if not has_shuiyin_suffix(video_path):
+        base, ext = os.path.splitext(video_path)
+        return f"{base}_shuiyin{ext}"
+    return video_path
+
+
+def add_zimu_suffix(video_path):
+    if not has_zimu_suffix(video_path):
+        base, ext = os.path.splitext(video_path)
+        return f"{base}_zimu{ext}"
+    return video_path
+
+
+def has_shuiyin_suffix(video_path):
+    return "_shuiyin" in os.path.basename(video_path)
+
+
+def has_zimu_suffix(video_path):
+    return "_zimu" in os.path.basename(video_path)
