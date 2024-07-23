@@ -654,3 +654,9 @@ def has_shuiyin_suffix(video_path):
 
 def has_zimu_suffix(video_path):
     return "_zimu" in os.path.basename(video_path)
+
+
+def get_relative_path(path, start=os.curdir):
+    if os.path.isabs(path):
+        return os.path.relpath(path, start)
+    return path

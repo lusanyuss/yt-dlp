@@ -10,11 +10,12 @@ import yt_dlp
 from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
     find_split_points, \
     process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix
+    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix, add_shuiyin_suffix, get_relative_path
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
-from yuliu.transcribe_video import process_videos, transcribe_audio_to_srts, concatenate_srt_files, add_subtitles_to_video
+from yuliu.transcribe_video import process_videos, transcribe_audio_to_srts, concatenate_srt_files
+from yuliu.zimu_utils import add_zimu_to_video
 
 
 def clear_directory_contents(directory):
@@ -254,7 +255,7 @@ def add_watermark_to_video(video_path):
         print(f"文件已存在且已添加水印: {video_path}")
         return video_path
     print_separator("添加水印-开始 " + video_path)
-    font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
+    font_file = get_relative_path('ziti/fengmian/gwkt-SC-Black.ttf')  # 使用相对路径
     text = "爽剧风暴"
     temp_output = os.path.join(os.path.dirname(video_path), "temp_output.mp4").replace("\\", "/")
 
@@ -271,8 +272,6 @@ def add_watermark_to_video(video_path):
         f'-c:v h264_nvenc -c:a copy -y "{temp_output}"'
     )
 
-
-
     # 打印命令以便手动检查
     print("Running command: \n", command)
     print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
@@ -282,6 +281,7 @@ def add_watermark_to_video(video_path):
         result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
         result.check_returncode()  # 检查命令是否成功
         os.replace(temp_output, video_path)  # 替换原视频
+        add_shuiyin_suffix(video_path)
         print_separator("添加水印-成功")
     except Exception as e:
         print(f"Error occurred: {e}")
@@ -354,14 +354,19 @@ def extract_audio_only(video_path):
     base, ext = os.path.splitext(video_path)
     audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
 
-    # 构建单个提取音频流的ffmpeg命令
+    # 如果文件已存在，直接返回
+    if os.path.exists(audio_only_path):
+        print(f"音频文件已存在: {audio_only_path}")
+        return audio_only_path
+
+    # 构建单个提取音频流的ffmpeg命令，使用-y选项覆盖现有文件
     command = [
         'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
-        '-map', '0:a', '-c:a', 'pcm_s16le', audio_only_path  # 确保使用 WAV 编码器
+        '-map', '0:a', '-c:a', 'pcm_s16le', '-y', audio_only_path  # 确保使用 WAV 编码器
     ]
 
     # 打印命令以便手动检查
-    print("Running command: \n", " ".join(command))
+    print("运行命令: \n", " ".join(command))
 
     try:
         # 执行命令
@@ -370,7 +375,7 @@ def extract_audio_only(video_path):
         print(f"音频流提取成功: {audio_only_path}")
 
     except subprocess.CalledProcessError as e:
-        print(f"Error occurred: {e.stderr}")
+        print(f"发生错误: {e.stderr}")
         if os.path.exists(audio_only_path):
             os.remove(audio_only_path)  # 移除临时文件
         return None
@@ -534,17 +539,14 @@ def run_main(url=None,
             concatenate_srt_files(zh_cn_zimi_list).save(zh_srt, encoding='utf-8')
             for file in zh_cn_zimi_list:
                 os.remove(file)
-            en_srt = process_videos([zh_srt], ["en"])['en']
+            en_srt = process_videos([zh_srt], ["en"])['en'][0]
             # 示例用法
-            #  翻译en字幕
+            print(video_dest_result)
+            print(en_srt)
             # 添加英文字幕
-            add_subtitles_to_video(video_dest_result, en_srt[0], video_dest_result,
-                                   subtitle_width_ratio=0.90, subtitle_y_position=220)
-
+            add_zimu_to_video(video_dest_result, en_srt)
             process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
-
             finalize_video_processing(video_dest_result, release_video_dir, sub_directory)
-
             delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips)
             cache_util.close_cache()
 
