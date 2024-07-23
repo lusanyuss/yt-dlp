@@ -3,19 +3,18 @@ import shutil
 import subprocess
 import time
 
-import pysrt
 from torchvision.datasets.utils import calculate_md5
 
 import yt_dlp
-from utils import get_file_name_with_extension, get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
+from utils import get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
     find_split_points, \
     process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix, add_shuiyin_suffix, get_relative_path
+    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix, add_shuiyin_suffix
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
 from yuliu.transcribe_video import process_videos, transcribe_audio_to_srts, concatenate_srt_files
-from yuliu.zimu_utils import add_zimu_to_video
+from yuliu.zimu_utils import add_zimu_shuiyin_to_video
 
 
 def clear_directory_contents(directory):
@@ -223,14 +222,9 @@ def delete_file(file_path):
         print(f"删除文件时出错: {e}")
 
 
-def finalize_video_processing(video_dest_result, release_video_dir, sub_directory):
+def generate_video_metadata(video_dest_result, release_video_dir, sub_directory):
     if os.path.exists(video_dest_result):
-        # 加水印
-        result_video = add_watermark_to_video(video_dest_result)
-        print(f"成功组合成完整视频: {os.path.join(release_video_dir, get_file_name_with_extension(result_video))}")
-
         # 保存标题和描述
-
         content = f"""
 
 请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，使用中文繁体字，主标题和副标题写一起组合成整个标题,用|分开, 在说明描述中包含用 | 分割的相关标签。整个标题需要便于搜索，足够接地气，容易出现在搜索列表中，并且富有吸引力，让人感兴趣，使人立即点击观看。说明描述的第一个段落一定是：
@@ -255,7 +249,7 @@ def add_watermark_to_video(video_path):
         print(f"文件已存在且已添加水印: {video_path}")
         return video_path
     print_separator("添加水印-开始 " + video_path)
-    font_file = get_relative_path('ziti/fengmian/gwkt-SC-Black.ttf')  # 使用相对路径
+    font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
     text = "爽剧风暴"
     temp_output = os.path.join(os.path.dirname(video_path), "temp_output.mp4").replace("\\", "/")
 
@@ -383,27 +377,29 @@ def extract_audio_only(video_path):
     return audio_only_path
 
 
-def srt_to_ass(srt_path, ass_path, style):
-    subs = pysrt.open(srt_path, encoding='utf-8')
-    with open(ass_path, 'w', encoding='utf-8') as f:
-        f.write("""
-[Script Info]
-Title: Styled Subtitles
-ScriptType: v4.00+
-PlayDepth: 0
+def generate_chinese_and_english_subtitles(video_list, output_video_path, release_video_dir, sub_directory):
+    # 合成目标视频
+    video_dest_result = merge_videos(video_list, output_video_path)
 
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{font},{fontsize},&H{primary_colour},&H{secondary_colour},&H{outline_colour},&H{back_colour},{bold},{italic},{underline},{strikeout},{scalex},{scaley},{spacing},{angle},{borderstyle},{outline},{shadow},{alignment},{marginl},{marginr},{marginv},{encoding}
+    start_time = time.time()
+    audio_path_wav = extract_audio_only(video_dest_result)
+    print(f"======分离音视频: {time.time() - start_time:.2f} 秒")
 
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-""".format(**style))
-        for sub in subs:
-            start = sub.start.to_time().strftime('%H:%M:%S.%f')[:-3]
-            end = sub.end.to_time().strftime('%H:%M:%S.%f')[:-3]
-            text = sub.text.replace('\n', '\\N')
-            f.write("Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n".format(start=start, end=end, text=text))
+    # 翻译zh-CN字幕母本
+    zh_cn_srt_list = []
+    target_languages = ["zh"]
+
+    for language in target_languages:
+        zh_cn_srt_list = transcribe_audio_to_srts([audio_path_wav], language=language)
+
+    zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{target_languages[0]}.srt')
+    concatenate_srt_files(zh_cn_srt_list).save(zh_srt, encoding='utf-8')
+    for file in zh_cn_srt_list:
+        os.remove(file)
+
+    en_srt = process_videos([zh_srt], ["en"])['en'][0]
+
+    return zh_srt, en_srt, audio_path_wav
 
 
 def run_main(url=None,
@@ -446,7 +442,7 @@ def run_main(url=None,
     ensure_directory_exists(release_video_dir)
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
-    dest_video_path = os.path.join(release_video_dir, f"{sub_directory}.mp4")
+    dest_video_path = os.path.join(release_video_dir, f"{sub_directory}_zimu.mp4")
 
     cache_util = DiskCacheUtil()
 
@@ -496,7 +492,7 @@ def run_main(url=None,
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
 
     if is_get_video:
-        if os.path.exists(dest_video_path) and has_shuiyin_suffix(dest_video_path) and has_zimu_suffix(dest_video_path):
+        if os.path.exists(dest_video_path) and has_zimu_suffix(dest_video_path):
             print(f"文件 : 存在,有字幕,有水印: {dest_video_path}")
             # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
             # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
@@ -504,7 +500,6 @@ def run_main(url=None,
             # output_zh_srt_path = transcribe_audio_to_srts(audio_paths)
             # subtitle_paths, video_path = process_videos(dest_video_path, ["en"])
             # print_separator()
-            cache_util.close_cache()
         else:
             print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
             output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
@@ -525,30 +520,15 @@ def run_main(url=None,
              video_origin_clips, process_video_time) = process_video_files_list(video_clips)
 
             print("==========================================")
-            # 合成目标视频
-            video_dest_result = merge_videos(video_dest_list, video_dest_result)
-            start_time = time.time()
-            audio_path = extract_audio_only(video_dest_result)
-            print(f"======分离音视频: {time.time() - start_time:.2f} 秒")
-            # 翻译zh-CN字幕母本
-            zh_cn_zimi_list = None
-            target_languages = ["zh"]
-            for language in target_languages:
-                zh_cn_zimi_list = transcribe_audio_to_srts([audio_path], language=language)
-            zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{target_languages[0]}.srt')
-            concatenate_srt_files(zh_cn_zimi_list).save(zh_srt, encoding='utf-8')
-            for file in zh_cn_zimi_list:
-                os.remove(file)
-            en_srt = process_videos([zh_srt], ["en"])['en'][0]
+            zh_srt, en_srt, audio_path_wav = generate_chinese_and_english_subtitles(video_dest_list, video_dest_result, release_video_dir, sub_directory)
             # 示例用法
-            print(video_dest_result)
-            print(en_srt)
-            # 添加英文字幕
-            add_zimu_to_video(video_dest_result, en_srt)
+            print_separator("添加英文字幕")
+            # 添加英文字幕和水印
+            add_zimu_shuiyin_to_video(video_dest_result, en_srt)
             process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
-            finalize_video_processing(video_dest_result, release_video_dir, sub_directory)
+            # 生成视频metadata
+            generate_video_metadata(video_dest_result, release_video_dir, sub_directory)
             delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips)
-            cache_util.close_cache()
 
     if is_get_fanyi:
         try:
@@ -564,3 +544,5 @@ def run_main(url=None,
             # return
         except Exception as e:
             print(f'出错: {e}')
+
+    cache_util.close_cache()
