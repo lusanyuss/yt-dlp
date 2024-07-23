@@ -29,7 +29,10 @@ if __name__ == '__main__':
     ]
     base_dirs = ["download_cache", "download_directory", "release_video",
                  os.path.join("MVSEP-MDX23-Colab_v2", "input"),
-                 os.path.join("MVSEP-MDX23-Colab_v2", "output")]
+                 os.path.join("MVSEP-MDX23-Colab_v2", "output"),
+                 os.path.join("MVSEP-CDX23-Cinematic-Sound-Demixing", "input"),
+                 os.path.join("MVSEP-CDX23-Cinematic-Sound-Demixing", "output")
+                 ]
 
     for sub_directory in sub_directory_list:
         for base_dir in base_dirs:

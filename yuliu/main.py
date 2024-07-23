@@ -103,6 +103,10 @@ if __name__ == "__main__":
         # '棋圣,胜天半子',
         # '玄门侠女',
         ################### 未传部分 #######################
+        '战神饶命我真不是故意抢你女人',
+        '摊牌了,我有三个后妈',
+        '豪门狂少归来',
+        '首富老爸抓娃娃',
         # '重启人生我靠败家逆袭',
         # '归来之我妈是战神',
         # '当丑女遇上总裁',
@@ -149,8 +153,8 @@ if __name__ == "__main__":
         # '我们都要活下去',
         # '我的傻父',
     ]
-    # isTest = False
-    isTest = True
+    isTest = False
+    # isTest = True
     if not isTest:
         for video_name in videos:
             check_and_run(sub_directory=video_name,
@@ -178,5 +182,5 @@ if __name__ == "__main__":
                       is_get_cover=True,
                       num_of_covers=1,
 
-                      is_get_fanyi=True
+                      is_get_fanyi=False
                       )

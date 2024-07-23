@@ -10,7 +10,7 @@ from threading import Lock
 import pysrt
 import requests
 import srt
-from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel, BatchedInferencePipeline
 from googletrans import Translator
 from moviepy.config import change_settings
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
@@ -21,6 +21,7 @@ from yuliu.utils import generate_unique_key
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 # 指定 ImageMagick 的路径
 change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
@@ -50,7 +51,6 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
         vad_parameters=dict(min_silence_duration_ms=200)  # 对话中可能有更短的停顿，设置为 200 毫秒
     )
 
-    # tiny.en, tiny, base.en, base, small.en, small, medium.en, medium, large-v1, large-v2, large-v3, large, distil-large-v2, distil-medium.en, distil-small.en, distil-large-v3
 
     print(f"将结果写入SRT文件: {output_srt_path}")
     with open(output_srt_path, "w", encoding="utf-8") as srt_file:
@@ -69,7 +69,7 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
 
 
 def transcribe_audio_to_srts(audio_paths, model_size="large-v3", language='zh', device="cuda", compute_type="float16"):
-    with ThreadPoolExecutor(max_workers=12) as executor:
+    with ThreadPoolExecutor(max_workers=1) as executor:
         futures = [
             executor.submit(transcribe_audio, audio_path, language, model_size, device, compute_type)
             for audio_path in audio_paths
