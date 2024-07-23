@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import time
 from pathlib import Path
 
 
@@ -62,10 +63,19 @@ def separate_audio(input,
             {use_InstVoc_} \
             {use_BSRoformer_}')
     else:
+
+        # python C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-MDX23-Colab_v2\mvsep_main.py --input C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-MDX23-Colab_v2\input\aa测试目录 --output C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-MDX23-Colab_v2\output\aa测试目录
+
+        base_dir = os.path.join('C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-MDX23-Colab_v2')
+        inference = os.path.join(base_dir, 'inference.py')
+        input_dir = args.input
+        output_dir = args.output
+
         file_paths = sorted(glob.glob(input + "/*"))[:]
         input_audio_args = ' '.join([f'"{path}"' for path in file_paths])
         Path(output).mkdir(parents=True, exist_ok=True)
-        os.system(f'python inference.py \
+        start_time = time.time()
+        os.system(f'python {inference} \
             --input_audio {input_audio_args} \
             --large_gpu \
             --BSRoformer_model {BSRoformer_model} \
@@ -89,6 +99,18 @@ def separate_audio(input,
             {use_InstHQ4_} \
             {use_InstVoc_} \
             {use_BSRoformer_}')
+        print(f"去背景音乐耗时: {time.time() - start_time:.2f} seconds")
+
+        for input_file in os.listdir(input_dir):
+            if input_file.endswith('.mp3'):
+                base_filename = os.path.splitext(input_file)[0]
+                files_to_keep = [f"{base_filename}_vocals.wav"]
+                # 遍历 output_dir 并删除不需要的文件
+                for output_file in os.listdir(output_dir):
+                    if output_file.startswith(base_filename) and output_file not in files_to_keep:
+                        file_to_delete = os.path.join(output_dir, output_file)
+                        os.remove(file_to_delete)
+                        print(f"删除文件: {file_to_delete}")
 
 
 if __name__ == '__main__':

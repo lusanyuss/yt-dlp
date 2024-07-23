@@ -136,3 +136,11 @@ yt-dlp-plugins
 /yuliu/pretrained_models/2stems/model.index
 /yuliu/keyframe_cache.json
 /yuliu/release_video/**/*.txt
+!/whisper-large-v3-ct2/model.bin
+
+!/whisper-large-v3-ct2/config.json
+
+!/whisper-large-v3-ct2/vocabulary.json
+/whisper-large-v3-ct2/model.bin
+/whisper-large-v3-ct2/config.json
+/whisper-large-v3-ct2/vocabulary.json
