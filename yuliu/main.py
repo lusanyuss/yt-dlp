@@ -79,6 +79,11 @@ if __name__ == "__main__":
     #
     # exit()
 
+
+
+
+    isTest = False
+    # isTest = True
     videos = [
         ################### 已经部分 #######################
         # '丑女逆袭,被首富大佬缠上了',
@@ -153,8 +158,7 @@ if __name__ == "__main__":
         # '我们都要活下去',
         # '我的傻父',
     ]
-    # isTest = False
-    isTest = True
+
     if not isTest:
         for video_name in videos:
             check_and_run(sub_directory=video_name,
