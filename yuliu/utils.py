@@ -1,11 +1,56 @@
 import concurrent.futures
 import hashlib
 import json
+import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
+
+
+class CommandExecutor:
+    @staticmethod
+    def run_command(command):
+        start_time = time.time()
+        try:
+            process = subprocess.Popen(
+                command,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding='utf-8'
+            )
+            # 实时读取输出
+            while True:
+                output = process.stdout.readline()
+                if output == '' and process.poll() is not None:
+                    break
+                if output:
+                    print(output.strip())
+
+            # 读取错误输出
+            stderr = process.stderr.read()
+            if stderr:
+                print(f"错误输出:\n{stderr.strip()}")
+
+            return_code = process.poll()
+            if return_code != 0:
+                print(f"返回代码: {return_code}")
+
+        except subprocess.CalledProcessError as e:
+            if e.stderr:
+                print("执行命令时发生错误.")
+                print(f"错误输出:\n{e.stderr}")
+            print(f"返回代码: {e.returncode}")
+        except Exception as e:
+            print(f"执行命令时发生未知错误: {e}")
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"命令 '{' '.join(command)}' 执行时间: {elapsed_time:.2f} 秒")
 
 
 def print_separator(text='', char='=', length=150):
@@ -149,8 +194,6 @@ def separate_audio_and_video_list(video_paths):
 
 
 import os
-import subprocess
-import time
 
 
 def separate_audio_and_video(video_path):
@@ -408,30 +451,17 @@ def convert_jpeg_to_png(input_imgs):
     for input_img in input_imgs:
         try:
             with Image.open(input_img) as img:
-                print(f"原始图像格式: {img.format}")
-                print(f"原始图像尺寸: {img.size}")
-
                 if img.format == 'JPEG':
                     base_name = os.path.basename(input_img)
                     dir_name = os.path.dirname(input_img)
                     new_file_name = os.path.join(dir_name, os.path.splitext(base_name)[0] + '.png')
-
                     img.save(new_file_name, 'PNG')
-                    print(f"{input_img} 已成功转换为 {new_file_name}")
-
                     with Image.open(new_file_name) as new_img:
                         width, height = new_img.size
-                        print(f"转换后图像格式: {new_img.format}")
-                        print(f"转换后图像尺寸: {width}x{height}")
-
                     os.remove(input_img)
-                    print(f"原始图像 {input_img} 已删除")
-
                     new_image_paths.append(new_file_name)
-                else:
-                    print(f"输入文件 {input_img} 不是 JPEG 格式")
         except Exception as e:
-            print(f"无法打开图像 {input_img}。错误信息：{e}")
+            pass
 
     return new_image_paths
 
@@ -468,43 +498,7 @@ def get_ffmpeg_version():
         return None
 
 
-def run_command(command):
-    start_time = time.time()
-    try:
-        process = subprocess.Popen(
-            command,
-            shell=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding='utf-8'
-        )
-
-        # 实时读取输出
-        while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                print(output.strip())
-
-        # 读取错误输出
-        stderr = process.stderr.read()
-        if stderr:
-            print(f"错误输出:\n{stderr.strip()}")
-
-        return_code = process.poll()
-        if return_code != 0:
-            print(f"返回代码: {return_code}")
-
-    except subprocess.CalledProcessError as e:
-        if e.stderr:
-            print("执行命令时发生错误.")
-            print(f"错误输出:\n{e.stderr}")
-        print(f"返回代码: {e.returncode}")
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"命令 '{' '.join(command)}' 执行时间: {elapsed_time:.2f} 秒")
+# 调用示例
 
 
 def files_exist(file_list):
@@ -568,25 +562,18 @@ def merge_videos(file_list, output_file):
         print(f"只有一个文件，无需合并，复制 {file_list[0]} 为 {output_file}")
         shutil.copy(file_list[0], output_file)
         return output_file
-
     try:
-        # 创建一个临时的文件列表
         with open('filelist.txt', 'w', encoding='utf-8') as f:
             for file in file_list:
                 f.write(f"file '{file}'\n")
-
-        # 调试信息：打印 filelist.txt 的内容
         with open('filelist.txt', 'r', encoding='utf-8') as f:
             print(f"filelist.txt 内容:\n{f.read()}")
-
         command = [
             'ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'filelist.txt', '-c', 'copy', output_file,
             '-loglevel', 'quiet'
         ]
         result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
-        # 调试信息：打印 ffmpeg 输出
     finally:
-        # 清理临时文件
         os.remove('filelist.txt')
     return output_file
 
@@ -654,8 +641,6 @@ def has_shuiyin_suffix(video_path):
 
 def has_zimu_suffix(video_path):
     return "_zimu" in os.path.basename(video_path)
-
-
 
 
 def get_relative_path(path, start=os.curdir):

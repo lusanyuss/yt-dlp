@@ -1,12 +1,10 @@
 import os
-import subprocess
 
-from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path
+from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor
 
 
 def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     dest_video_path = add_zimu_suffix(video_path)
-    video_path = get_relative_path(video_path)
     subtitles_path = get_relative_path(subtitles_path)
     if os.path.exists(dest_video_path) and has_zimu_suffix(dest_video_path):
         print(f"文件已存在且已添加字幕: {video_path}")
@@ -34,16 +32,15 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     )
 
     # 打印命令以便手动检查
-    print("运行命令: \n\n", command)
+    print("运行命令: \n", command)
     print(f"\n\n请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
     try:
         # 使用 shell=True 执行命令字符串
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
-        result.check_returncode()  # 检查命令是否成功
+        CommandExecutor.run_command(command)
         os.remove(video_path)
         print(f"添加字幕成功 {dest_video_path}")
     except Exception as e:
-        print(f"发生错误: {e}\n输出: {result.stderr}")
+        print(f"发生错误: {e}\n")
         if os.path.exists(dest_video_path):
             os.remove(dest_video_path)
         return None

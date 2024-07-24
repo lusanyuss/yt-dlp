@@ -4,7 +4,6 @@ import os
 import textwrap
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 
 import pysrt
@@ -29,10 +28,8 @@ change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-
 # 设置字体路径
 
 
-def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="cuda", compute_type="float16"):
-    base_name = os.path.splitext(audio_path)[0]
-    output_srt_path = f"{base_name}_{language}.srt"
-
+def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="cuda", compute_type="float16", sub_directory=""):
+    output_srt_path = f"{sub_directory}_{language}.srt"
     if os.path.exists(output_srt_path):
         print(f"字幕文件已存在: {output_srt_path}")
         return output_srt_path
@@ -40,6 +37,10 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
     print("加载模型...")
     model = WhisperModel(model_size_or_path=model_size, device=device, compute_type=compute_type)
     print("开始转录音频...")
+
+    # 兼容语言不和的问题
+    if language == 'cmn':
+        language = 'zh'
 
     segments, info = model.transcribe(
         audio_path,
@@ -66,14 +67,12 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
     return output_srt_path
 
 
-def transcribe_audio_to_srts(audio_paths, model_size="large-v3", language='zh', device="cuda", compute_type="float16"):
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        futures = [
-            executor.submit(transcribe_audio, audio_path, language, model_size, device, compute_type)
-            for audio_path in audio_paths
-        ]
-    # 收集所有的结果
-    return [future.result() for future in futures]
+def transcribe_audio_to_srts(audio_paths, sub_directory="", model_size="large-v3", language='zh', device="cuda", compute_type="float16"):
+    results = []
+    for audio_path in audio_paths:
+        result = transcribe_audio(audio_path, language, model_size, device, compute_type, sub_directory=sub_directory)
+        results.append(result)
+    return results
 
 
 # def transcribe_audio_to_srts(audio_paths, model_size="large-v2", device="cuda", compute_type="float16"):

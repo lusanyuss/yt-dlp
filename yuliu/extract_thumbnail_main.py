@@ -15,7 +15,6 @@ from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_sepa
 def is_resolution_gte_1920x1080(image_path):
     with Image.open(image_path) as img:
         width, height = img.size
-        print(f"Image width: {width}, Image height: {height}")  # 打印图片的宽度和高度
         return width >= 1920 and height >= 1080
 
 
@@ -253,30 +252,27 @@ def get_cover_images(frame_images, output_dir):
         batch_index = ''.join([str(j + 1) for j in range(i, i + batch_size)])
         final_image_path = os.path.join(output_dir, f'input_img{batch_index}.jpg')
         new_im.save(final_image_path)
-        print(f"Concatenated image saved as: {final_image_path}")
 
     return [os.path.join(output_dir, f'input_img{"".join([str(j + 1) for j in range(i, i + batch_size)])}.jpg') for i in
             range(0, frame_images_length, batch_size)]
 
 
 def generate_frame(index, video_path, duration, output_dir, crop_height, model_path, frame_paths, lock):
-    while True:
-        time = random.randint(1, int(duration))
-        output_path = os.path.join(output_dir, f"frame_{index + 1}.jpg")
-        if os.path.exists(output_path) and not has_chinese_characters(extract_and_print_chinese_text(output_path)):
-            with lock:
-                frame_paths[index] = output_path
-            break
+    output_path = os.path.join(output_dir, f"frame_{index + 1}.jpg")
+    if os.path.exists(output_path):
+        with lock:
+            frame_paths[index] = output_path
+            print(f"文件已存在: {output_path}")
+            return
 
+    while True:
         command = [
             'ffmpeg',
-            '-v',
-            'quiet',
             '-y',
-            '-ss', str(time), '-i', video_path, '-frames:v', '1',
-            '-q:v', '2', output_path
+            '-ss', str(random.randint(1, int(duration))), '-i', video_path, '-frames:v', '1',
+            '-q:v', '2', output_path,
+            '-loglevel', 'quiet'
         ]
-        command += ['-loglevel', 'quiet']
         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
 
         if os.path.exists(output_path):
@@ -293,8 +289,8 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
 
                 cropped_image = image.crop((left, top, right, bottom))
                 cropped_image.save(output_path)
-
                 chinese_text = extract_and_print_chinese_text(output_path)
+
                 if not has_chinese_characters(chinese_text):
                     cropped_image_cv = cv2.cvtColor(np.array(cropped_image), cv2.COLOR_RGB2BGR)
                     sr = cv2.dnn_superres.DnnSuperResImpl_create()
@@ -306,6 +302,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
                     enhanced_image.save(output_path)
                     with lock:
                         frame_paths[index] = output_path
+                        print(f"生成图片: {output_path}")
                     break
             except Exception as e:
                 print(f"Error processing image {output_path}: {e}")
@@ -599,15 +596,11 @@ def delete_matching_images(directory):
 
 def process_image(image, cover_path):
     image.save(cover_path)
-
     if os.path.exists(cover_path) and os.path.getsize(cover_path) > 2 * 1024 * 1024:
         with Image.open(cover_path) as img:
             img = img.resize((1280, 720), Image.LANCZOS)
             img.save(cover_path, optimize=True, quality=85)
         file_size = os.path.getsize(cover_path) / (1024 * 1024)
-        print(f"Optimization completed for {cover_path}, new size: {file_size:.2f} MB")
-    else:
-        print(f"No optimization needed for {cover_path}")
 
 
 def adjust_title(title, kongge='　'):
@@ -626,11 +619,7 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
     frame_image_list = []
     cover_images_list = []
 
-    if not isTest:
-        if check_images_in_release_dir(release_video_dir, num_of_covers):
-            return frame_image_list
-
-    print_separator("开始制作封面图")
+    print_separator(f"开始制作封面图 <<{cover_title}>>")
 
     cover_images_list, frame_images_list = extract_covers_and_frames(original_video, release_video_dir, 3 * num_of_covers, crop_height)
     if len(cover_images_list) != num_of_covers:
@@ -753,7 +742,7 @@ if __name__ == "__main__":
     for fooo in fontts:
         title_font = os.path.join('ziti', fooo[0], fooo[1])  # 标题
         subtitle_font = os.path.join('ziti', fooo[0], fooo[1])  # 副标题
-        extract_thumbnail_main(original_video, release_video_dir, "录测试目", title_font, subtitle_font, 1, 100, True)
+        extract_thumbnail_main(original_video, release_video_dir, "录测\n试目", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", title_font, subtitle_font, 1, 100, True)

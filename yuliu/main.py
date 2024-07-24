@@ -41,6 +41,12 @@ def download_only_videos(urls, sub_directory):
         run_main(sub_directory=sub_directory, video_download_name=str(index), is_only_download=True, url=url)
 
 
+def replace_comma_with_newline(input_string):
+    if ',' in input_string:
+        return input_string.replace(',', '\n')
+    return input_string
+
+
 # 调用方法
 if __name__ == "__main__":
     # 单视频
@@ -78,9 +84,6 @@ if __name__ == "__main__":
     # check_and_run('御龙刀主 举世欠我赊刀债', 1, 15, is_clear_cache=True)#有3家
     #
     # exit()
-
-
-
 
     isTest = False
     # isTest = True
@@ -162,14 +165,13 @@ if __name__ == "__main__":
     if not isTest:
         for video_name in videos:
             check_and_run(sub_directory=video_name,
-                          cover_title=video_name,
+                          cover_title=replace_comma_with_newline(video_name),
                           juji_num=1,
                           split_time_min=15,
                           # is_clear_cache=True,
 
                           is_get_video=True,
-
-                          is_get_cover=False,
+                          is_get_cover=True,
                           num_of_covers=8,
 
                           is_get_fanyi=False
@@ -181,9 +183,9 @@ if __name__ == "__main__":
                       split_time_min=0.5,
 
                       is_clear_cache=False,
-                      is_get_video=True,
 
-                      is_get_cover=False,
+                      is_get_video=True,
+                      is_get_cover=True,
                       num_of_covers=1,
 
                       is_get_fanyi=False

@@ -116,8 +116,8 @@ if __name__ == '__main__':
     parser.add_argument('--input', type=str, default='input', help='输入文件夹')
     parser.add_argument('--output', type=str, default='output', help='输出文件夹')
     args = parser.parse_args()
-    print(f"输入文件夹: {args.input}")
-    print(f"输出文件夹: {args.output}")
+    print(f"    输入文件夹: {args.input}")
+    print(f"    输出文件夹: {args.output}")
     # 使用示例
     separate_audio(
         input=args.input,

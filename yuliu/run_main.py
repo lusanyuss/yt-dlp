@@ -9,11 +9,11 @@ import yt_dlp
 from utils import get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
     find_split_points, \
     process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix, add_shuiyin_suffix
+    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix, add_shuiyin_suffix, CommandExecutor
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
-from yuliu.transcribe_video import process_videos, transcribe_audio_to_srts, concatenate_srt_files
+from yuliu.transcribe_video import transcribe_audio_to_srts, concatenate_srt_files
 from yuliu.zimu_utils import add_zimu_shuiyin_to_video
 
 
@@ -71,7 +71,8 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
             mvsep_main = os.path.join(mvsep_base_dir, 'mvsep_main.py')
             command = ['python', f'{mvsep_main}', '--input', mvsep_input_dir, '--output', mvsep_output_dir]
             print(' '.join(command))
-            subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+            CommandExecutor.run_command(command)
+            # subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         except Exception as e:
             print(f"处理音频文件时发生错误: {e}")
     else:
@@ -222,22 +223,38 @@ def delete_file(file_path):
         print(f"删除文件时出错: {e}")
 
 
-def generate_video_metadata(video_dest_result, release_video_dir, sub_directory):
-    if os.path.exists(video_dest_result):
-        # 保存标题和描述
-        content = f"""
+def generate_video_metadata(release_video_dir, sub_directory):
+    # 创建目录（如果不存在）
+    os.makedirs(release_video_dir, exist_ok=True)
+
+    # 转换子目录名称为繁体字
+    traditional_sub_directory = convert_simplified_to_traditional(sub_directory)
+
+    # 文件路径
+    video_dest_result = f"{release_video_dir}/{traditional_sub_directory}.txt"
+
+    # 检查文件是否已存在并包含内容
+    if os.path.exists(video_dest_result) and os.path.getsize(video_dest_result) > 0:
+        print(f"文件 {video_dest_result} 已存在且包含内容，跳过写入。")
+        return
+
+    # 保存标题和描述
+    content = f"""
 
 请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，使用中文繁体字，主标题和副标题写一起组合成整个标题,用|分开, 在说明描述中包含用 | 分割的相关标签。整个标题需要便于搜索，足够接地气，容易出现在搜索列表中，并且富有吸引力，让人感兴趣，使人立即点击观看。说明描述的第一个段落一定是：
 
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持！
 
-主标题：\n《{convert_simplified_to_traditional(sub_directory)}》【高清完結合集】
+主标题：\n【清晰音质】《{convert_simplified_to_traditional(sub_directory)}》【高清合集】
 
-        """
-        video_dest_result = f"{release_video_dir}/{convert_simplified_to_traditional(sub_directory)}.txt"
-        with open(video_dest_result, 'w', encoding='utf-8') as file:
-            file.write(content)
+    """
+
+    # 写入文件
+    with open(video_dest_result, 'w', encoding='utf-8') as file:
+        file.write(content)
+
+    print(f"文件 {video_dest_result} 已生成。")
 
 
 # ffmpeg -i "release_video/aa测试目录/aa测试目录.mp4" -vf "drawtext=fontfile='ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "release_video/aa测试目录/temp_output.mp4"
@@ -257,24 +274,20 @@ def add_watermark_to_video(video_path):
     video_duration_ms = get_mp4_duration(video_path)
     video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
     # 计算分钟数
-    minutes_needed = video_duration_s / 60 / 4.3
-
+    minutes_needed = video_duration_s / 60 / 24
     # 构建命令字符串，使用相对路径，并确保格式正确
     command = (
         f'ffmpeg -hwaccel cuda -i "{video_path}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
         f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
         f'-c:v h264_nvenc -c:a copy -y "{temp_output}"'
     )
-
     # 打印命令以便手动检查
     print("Running command: \n", command)
     print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
-
     try:
         # 使用 shell=True 执行命令字符串
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
-        result.check_returncode()  # 检查命令是否成功
-        os.replace(temp_output, video_path)  # 替换原视频
+        CommandExecutor.run_command(command)
+        os.replace(temp_output, video_path)
         add_shuiyin_suffix(video_path)
         print_separator("添加水印-成功")
     except Exception as e:
@@ -377,29 +390,24 @@ def extract_audio_only(video_path):
     return audio_only_path
 
 
-def generate_chinese_and_english_subtitles(video_list, output_video_path, release_video_dir, sub_directory):
-    # 合成目标视频
-    video_dest_result = merge_videos(video_list, output_video_path)
-
-    start_time = time.time()
-    audio_path_wav = extract_audio_only(video_dest_result)
-    print(f"======分离音视频: {time.time() - start_time:.2f} 秒")
-
-    # 翻译zh-CN字幕母本
+def generate_chinese_subtitles(audio_path_wav, release_video_dir, sub_directory):
     zh_cn_srt_list = []
-    target_languages = ["zh"]
-
+    target_languages = ["cmn"]
     for language in target_languages:
-        zh_cn_srt_list = transcribe_audio_to_srts([audio_path_wav], language=language)
-
+        zh_cn_srt_list = transcribe_audio_to_srts([audio_path_wav], sub_directory=sub_directory, language=language)
     zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{target_languages[0]}.srt')
     concatenate_srt_files(zh_cn_srt_list).save(zh_srt, encoding='utf-8')
     for file in zh_cn_srt_list:
         os.remove(file)
+    return zh_srt
 
-    en_srt = process_videos([zh_srt], ["en"])['en'][0]
 
-    return zh_srt, en_srt, audio_path_wav
+def get_user_confirmation():
+    confirmation = input("请核对翻译文案对不对,会对完毕按 'y' 并且 Enter 继续: ")
+    if confirmation.lower() == 'y':
+        return True
+    else:
+        return False
 
 
 def run_main(url=None,
@@ -420,7 +428,7 @@ def run_main(url=None,
              ):
     global download_cache_dir, download_directory_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
 
-    print_separator("初始化路径")
+    print_separator(f"初始化路径 <<{sub_directory}>>")
 
     download_cache_dir = get_dir("download_cache", sub_directory)
     download_directory_dir = get_dir("download_directory", sub_directory)
@@ -466,12 +474,12 @@ def run_main(url=None,
             exit()
     else:
         if len(videos) > 1:
-            print_separator("合并视频")
+            print_separator(f"合并视频 {sub_directory}")
             original_video = os.path.join(download_directory_dir, generate_md5_filename(videos))
             if not os.path.exists(original_video):
                 original_video = merge_videos(videos, original_video)
         else:
-            print_separator("复制视频文件到下载目录")
+            print_separator(f"复制视频文件到下载目录 <<{sub_directory}>>")
             target_path = os.path.join(download_directory_dir, os.path.basename(videos[0]))
             shutil.copy(videos[0], target_path)
             original_video = target_path
@@ -491,6 +499,8 @@ def run_main(url=None,
         elapsed_time = end_time - start_time
         print(f"获取{num_of_covers}张图片时间: {elapsed_time:.2f} 秒, 平均每张: {elapsed_time / num_of_covers:.2f} 秒")
 
+        generate_video_metadata(release_video_dir, sub_directory)
+
     if is_get_video:
         if os.path.exists(dest_video_path) and has_zimu_suffix(dest_video_path):
             print(f"文件 : 存在,有字幕,有水印: {dest_video_path}")
@@ -501,7 +511,7 @@ def run_main(url=None,
             # subtitle_paths, video_path = process_videos(dest_video_path, ["en"])
             # print_separator()
         else:
-            print_separator(f"1.处理视频,切成小块视频,进行处理({cover_title})")
+            print_separator(f"1.处理视频,切成小块视频,进行处理 <<{sub_directory}>>")
             output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
             video_dest_result = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
             print(f"\n原始视频路径: {original_video}")
@@ -513,29 +523,54 @@ def run_main(url=None,
             video_clips = segment_video_times(original_video, split_points, output_pattern)
             print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
 
-            print_separator(f"2.对视频人声分离({cover_title})")
+            print_separator(f"2.对视频人声分离 <<{sub_directory}>>")
 
             (video_dest_list, audio_origin_list,
              video_origin_list, audio_vocals_list,
              video_origin_clips, process_video_time) = process_video_files_list(video_clips)
 
-            print("==========================================")
-            zh_srt, en_srt, audio_path_wav = generate_chinese_and_english_subtitles(video_dest_list, video_dest_result, release_video_dir, sub_directory)
-            # 示例用法
-            print_separator("添加英文字幕")
+            video_dest_result = merge_videos(video_dest_list, video_dest_result)
+
+            audio_path_wav = extract_audio_only(video_dest_result)
+            print_separator(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
+            en_srt = os.path.join(release_video_dir, f"{sub_directory}_eng.srt")
+            if not os.path.exists(en_srt):
+                generate_chinese_subtitles(audio_path_wav, release_video_dir, sub_directory)
+                # if get_user_confirmation():
+                #     print("确认中文字幕完毕...")
+                # else:
+                #     print("中文字幕有问题,退出程序.")
+                #     exit()
+                command = ['wsl', 'python', '/root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py', '--sub_directory', sub_directory]
+                print(f"命令: wsl python /root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py --sub_directory {sub_directory}")
+
+
+                CommandExecutor.run_command(command)
+
+                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                stdout = stdout.decode('utf-8', errors='ignore')
+                stderr = stderr.decode('utf-8', errors='ignore')
+                print("输出:", stdout)
+                print("错误:", stderr)
+                ##以上步骤保证一定有英文字幕了
+            print(f"====================添加英文字幕和水印<<{sub_directory}>>======================")
             # 添加英文字幕和水印
-            add_zimu_shuiyin_to_video(video_dest_result, en_srt)
+            start_time = time.time()
+            dest_video_path = add_zimu_shuiyin_to_video(video_dest_result, en_srt)
+            print(f"添加水印和字幕耗时: {time.time() - start_time:.2f} seconds")
+
             process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
             # 生成视频metadata
-            generate_video_metadata(video_dest_result, release_video_dir, sub_directory)
             delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips)
 
     if is_get_fanyi:
         try:
             print_separator(f"3.生成翻译字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
-            target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
-            zh_srt = os.path.join(release_video_dir, f'{sub_directory}_zh.srt')
-            result_other_srt = process_videos([zh_srt], target_languages)
+            # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
+            # target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
+            # zh_srt = os.path.join(release_video_dir, f'{sub_directory}_zh.srt')
+            # result_other_srt = process_videos([zh_srt], target_languages)
             # for language in target_languages:
             #     concatenated_subs = concatenate_srt_files(result_other_srt[language])
             #     zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{language}.srt')

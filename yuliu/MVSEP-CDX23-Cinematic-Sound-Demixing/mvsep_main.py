@@ -12,8 +12,8 @@ if __name__ == '__main__':
     parser.add_argument('--input', type=str, default='input', help='输入文件夹')
     parser.add_argument('--output', type=str, default='output', help='输出文件夹')
     args = parser.parse_args()
-    print(f"输入文件夹: {args.input}")
-    print(f"输出文件夹: {args.output}")
+    print(f"    输入文件夹: {args.input}")
+    print(f"    输出文件夹: {args.output}")
     # 使用示例
     start_time = time.time()
     # python C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-CDX23-Cinematic-Sound-Demixing\mvsep_main.py --input C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-CDX23-Cinematic-Sound-Demixing\input\摊牌了,我有三个后妈 --output C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-CDX23-Cinematic-Sound-Demixing\output\摊牌了,我有三个后妈
