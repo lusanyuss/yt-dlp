@@ -1,4 +1,19 @@
-import os
+import shutil
+import subprocess
+import time
+
+from torchvision.datasets.utils import calculate_md5
+
+import yt_dlp
+from utils import get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
+    find_split_points, \
+    process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
+    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix, add_shuiyin_suffix, CommandExecutor
+from yuliu.DiskCacheUtil import DiskCacheUtil
+from yuliu.extract_thumbnail_main import extract_thumbnail_main
+from yuliu.keyframe_extractor import KeyFrameExtractor
+from yuliu.transcribe_video import transcribe_audio_to_srts, concatenate_srt_files
+from yuliu.zimu_utils import add_zimu_shuiyin_to_video
 import shutil
 import subprocess
 import time
@@ -336,11 +351,7 @@ import re
 
 
 def check_directory(base_dir):
-    input_dir = os.path.join(base_dir, 'input')
     output_dir = os.path.join(base_dir, 'output')
-
-    # 定义文件匹配的正则表达式
-    input_pattern = re.compile(r"out_times_\d+_audio\.(mp3|wav)")
     output_pattern = re.compile(r"out_times_\d+_audio_vocals\.wav")
 
     # 获取 input 和 output 目录下的所有子目录
@@ -410,6 +421,24 @@ def get_user_confirmation():
         return False
 
 
+import os
+
+
+def get_mvsep_base_dir(is_high_quality, sub_directory):
+    base_dir1 = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2")
+    base_dir2 = os.path.join(os.getcwd(), "MVSEP-CDX23-Cinematic-Sound-Demixing")
+    base_dir1_out = os.path.join(base_dir1, "output", sub_directory)
+    base_dir2_out = os.path.join(base_dir2, "output", sub_directory)
+
+    # 判断 base_dir1_out 下面是否有文件
+    if os.path.exists(base_dir1_out) and os.listdir(base_dir1_out):
+        return base_dir1
+    elif os.path.exists(base_dir2_out) and os.listdir(base_dir2_out):
+        return base_dir2
+    else:
+        return base_dir1 if is_high_quality else base_dir2
+
+
 def run_main(url=None,
              videos=None,
 
@@ -424,7 +453,8 @@ def run_main(url=None,
              num_of_covers=1,
              is_get_cover=False,
 
-             is_get_fanyi=False
+             is_get_fanyi=False,
+             is_high_quality=False
              ):
     global download_cache_dir, download_directory_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
 
@@ -435,13 +465,8 @@ def run_main(url=None,
     release_video_dir = get_dir("release_video", sub_directory)
 
     # 定义两个目录
-    base_dir1 = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2")
-    base_dir2 = os.path.join(os.getcwd(), "MVSEP-CDX23-Cinematic-Sound-Demixing")
-    mvsep_base_dir = check_directory(base_dir1)
-    if not mvsep_base_dir:
-        mvsep_base_dir = check_directory(base_dir2)
-    if mvsep_base_dir:
-        print(f"选择的音频分离项目是: {mvsep_base_dir}")
+    mvsep_base_dir = get_mvsep_base_dir(is_high_quality, sub_directory)
+    print(f"选择的目录是: {mvsep_base_dir}")
 
     mvsep_input_dir = get_dir(os.path.join(mvsep_base_dir, "input"), sub_directory)
     mvsep_output_dir = get_dir(os.path.join(mvsep_base_dir, "output"), sub_directory)
@@ -543,16 +568,7 @@ def run_main(url=None,
                 #     exit()
                 command = ['wsl', 'python', '/root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py', '--sub_directory', sub_directory]
                 print(f"命令: wsl python /root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py --sub_directory {sub_directory}")
-
-
                 CommandExecutor.run_command(command)
-
-                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = process.communicate()
-                stdout = stdout.decode('utf-8', errors='ignore')
-                stderr = stderr.decode('utf-8', errors='ignore')
-                print("输出:", stdout)
-                print("错误:", stderr)
                 ##以上步骤保证一定有英文字幕了
             print(f"====================添加英文字幕和水印<<{sub_directory}>>======================")
             # 添加英文字幕和水印
