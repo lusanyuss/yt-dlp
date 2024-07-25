@@ -109,7 +109,7 @@ def translate_srt_file(path, target_language):
 
 
 if __name__ == "__main__":
-    source_file_path = 'release_video/aa测试目录/aa测试目录_cmn.srt'
+    source_file_path = 'release_video/豪门狂少归来/豪门狂少归来_cmn.srt'
     target_language = 'en'  # 翻译为英语
     new_srt_path = translate_srt_file(source_file_path, target_language)
     print(f"翻译后的 SRT 文件保存在: {new_srt_path}")

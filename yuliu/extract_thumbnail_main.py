@@ -745,7 +745,7 @@ if __name__ == "__main__":
     for fooo in fontts:
         title_font = os.path.join('ziti', fooo[0], fooo[1])  # 标题
         subtitle_font = os.path.join('ziti', fooo[0], fooo[1])  # 副标题
-        extract_thumbnail_main(original_video, release_video_dir, "摊牌了,我有三个后妈", title_font, subtitle_font, 1, 100, True)
+        extract_thumbnail_main(original_video, release_video_dir, "摊牌了我的五个哥哥是大佬", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", title_font, subtitle_font, 1, 100, True)

@@ -86,8 +86,8 @@ if __name__ == "__main__":
     #
     # exit()
 
-    # isTest = False
-    isTest = True
+    isTest = False
+    # isTest = True
     videos = [
         ################### 已经部分 #######################
         # '丑女逆袭,被首富大佬缠上了',

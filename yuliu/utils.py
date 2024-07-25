@@ -125,7 +125,7 @@ def merge_single_audio_video(video_file, audio_file, result_file):
         print(f"{get_file_only_name(result_file)} 已经存在，直接返回。")
         return result_file
 
-    print(f"\n合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
+    print(f"合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
     command = [
         'ffmpeg',
         '-i', video_file,
@@ -179,7 +179,7 @@ def get_mp4_duration(file_path):
 
 
 def extract_audio_and_video(video_path):
-    print(f"\n从视频中分离音频和视频: {video_path}")
+    print(f"从视频中分离音频和视频: {video_path}")
     start_time = time.time()
     base, _ = os.path.splitext(video_path)
     audio_output, video_output = f"{base}_audio.mp3", f"{base}_video.mp4"

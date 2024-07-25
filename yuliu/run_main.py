@@ -519,6 +519,7 @@ def run_main(url=None,
             # command = ['wsl', 'python', '/root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py', '--sub_directory', sub_directory]
             # print(f"命令: wsl python /root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py --sub_directory {sub_directory}")
             # CommandExecutor.run_command(command)
+
             en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en')
 
             ##以上步骤保证一定有英文字幕了

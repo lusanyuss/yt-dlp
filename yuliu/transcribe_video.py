@@ -1,5 +1,6 @@
 import concurrent.futures
 import html
+import logging
 import os
 import textwrap
 import threading
@@ -25,6 +26,8 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
 
+# 配置日志
+
 # 设置字体路径
 
 
@@ -35,10 +38,13 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
         return output_srt_path
 
     print("加载模型...")
+    logging.basicConfig()
+    logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
     model = WhisperModel(model_size_or_path=model_size, device=device, compute_type=compute_type)
     print("开始转录音频...")
-
     # 兼容语言不和的问题
+
+    start_time1 = time.time()
     segments, info = model.transcribe(
         audio_path,
         beam_size=5,
@@ -47,8 +53,11 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
         vad_filter=True,  # 启用 VAD 过滤
         vad_parameters=dict(min_silence_duration_ms=200)  # 对话中可能有更短的停顿，设置为 200 毫秒
     )
+    print(f"开始转录音频: {time.time() - start_time1:.2f} seconds")
 
     print(f"将结果写入SRT文件: {output_srt_path}")
+
+    start_time2 = time.time()
     with open(output_srt_path, "w", encoding="utf-8") as srt_file:
         for i, segment in enumerate(segments, start=1):
             start = segment.start
@@ -59,6 +68,7 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
             end_time = f"{int(end // 3600):02}:{int((end % 3600) // 60):02}:{int(end % 60):02},{int((end * 1000) % 1000):03}"
 
             srt_file.write(f"{i}\n{start_time} --> {end_time}\n{text}\n\n")
+    print(f"将结果写入SRT文件: {time.time() - start_time2:.2f} seconds")
 
     print(f"字幕已保存到 {output_srt_path}")
     return output_srt_path
