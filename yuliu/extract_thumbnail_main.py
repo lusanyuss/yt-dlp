@@ -517,26 +517,29 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, sub
     margin_bottom = int(cover_image.height * beilv)
     text_area_width = cover_image.width - margin_left - margin_right
 
-    avg_char_width = draw.textbbox((0, 0), '测试', font=font)[2] // 2
-    max_chars_per_line = text_area_width // avg_char_width
+    if ',' in title:
+        lines = title.split(',')
+    else:
+        avg_char_width = draw.textbbox((0, 0), '测试', font=font)[2] // 2
+        max_chars_per_line = text_area_width // avg_char_width
 
-    total_chars = len(title)
-    if max_chars_per_line == 0:
-        max_chars_per_line = 1
-    total_lines = (total_chars + max_chars_per_line - 1) // max_chars_per_line
+        total_chars = len(title)
+        if max_chars_per_line == 0:
+            max_chars_per_line = 1
+        total_lines = (total_chars + max_chars_per_line - 1) // max_chars_per_line
 
-    lines = []
-    first_line_length = total_chars - (total_lines - 1) * max_chars_per_line
-    if first_line_length > max_chars_per_line:
-        first_line_length = max_chars_per_line
-    start_idx = 0
+        lines = []
+        first_line_length = total_chars - (total_lines - 1) * max_chars_per_line
+        if first_line_length > max_chars_per_line:
+            first_line_length = max_chars_per_line
+        start_idx = 0
 
-    lines.append(title[start_idx:start_idx + first_line_length])
-    start_idx += first_line_length
+        lines.append(title[start_idx:start_idx + first_line_length])
+        start_idx += first_line_length
 
-    while start_idx < total_chars:
-        lines.append(title[start_idx:start_idx + max_chars_per_line])
-        start_idx += max_chars_per_line
+        while start_idx < total_chars:
+            lines.append(title[start_idx:start_idx + max_chars_per_line])
+            start_idx += max_chars_per_line
 
     line_spacing = font_size * 0.2
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
@@ -604,14 +607,14 @@ def process_image(image, cover_path):
 
 
 def adjust_title(title, kongge='　'):
+    if ',' in title:
+        return title
     title_len = len(title)
     if title_len == 2:
-        adjusted_title = title[0] + kongge * 2 + title[1]
+        return title[0] + kongge * 2 + title[1]
     elif title_len == 3:
-        adjusted_title = title[0] + kongge + title[1] + kongge + title[2]
-    else:
-        adjusted_title = title
-    return adjusted_title
+        return title[0] + kongge + title[1] + kongge + title[2]
+    return title
 
 
 def extract_thumbnail_main(original_video, release_video_dir, cover_title, title_font, subtitle_font, num_of_covers=1, crop_height=100, isTest=False):
@@ -742,7 +745,7 @@ if __name__ == "__main__":
     for fooo in fontts:
         title_font = os.path.join('ziti', fooo[0], fooo[1])  # 标题
         subtitle_font = os.path.join('ziti', fooo[0], fooo[1])  # 副标题
-        extract_thumbnail_main(original_video, release_video_dir, "录测\n试目", title_font, subtitle_font, 1, 100, True)
+        extract_thumbnail_main(original_video, release_video_dir, "摊牌了,我有三个后妈", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", title_font, subtitle_font, 1, 100, True)
         # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", title_font, subtitle_font, 1, 100, True)
