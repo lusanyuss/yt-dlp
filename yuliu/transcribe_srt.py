@@ -1,49 +1,130 @@
 import os
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
+import urllib3.exceptions
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from yuliu.utils import iso639_2_to_3, iso639_3_to_2
+
+requests.packages.urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# 全局变量
+CREDENTIALS_PATH = 'radiant-works-430523-c8-9c23194b94e2.json'
+PROXIES = {
+    "http": "http://127.0.0.1:7890",
+    "https": "http://127.0.0.1:7890",
+}
+DEFAULT_MAX_PAYLOAD_SIZE = 10000  # 默认每次请求的最大负载大小（字节）
+
+
+# 创建带有重试机制的 session
+def create_session_with_retries(retries, backoff_factor, status_forcelist):
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
 
 
 # 获取访问令牌
 def get_access_token():
     credentials = service_account.Credentials.from_service_account_file(
-        os.getenv('GOOGLE_APPLICATION_CREDENTIALS'),
+        CREDENTIALS_PATH,
         scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
     credentials.refresh(Request())
     return credentials.token
 
 
-# 翻译文本内容
-def translate_text(text, target_language, source_language=None):
+# 批量翻译文本内容
+def translate_text_batch(texts, target_language, source_language=None, max_payload_size=DEFAULT_MAX_PAYLOAD_SIZE):
     access_token = get_access_token()
     url = "https://translation.googleapis.com/language/translate/v2"
     headers = {"Authorization": f"Bearer {access_token}"}
-    params = {"q": text, "target": target_language, "format": "text"}
+    all_translations = []
+    session = create_session_with_retries(retries=5, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
 
-    if source_language:
-        params["source"] = source_language
+    # 计算总请求次数
+    total_requests = 0
+    current_length = 0
+    for text in texts:
+        text_length = len(text.encode('utf-8'))
+        if current_length + text_length + len(texts) * 2 > max_payload_size:
+            total_requests += 1
+            current_length = 0
+        current_length += text_length
 
-    # 设置代理（如果需要）
-    proxies = {
-        "http": "http://127.0.0.1:7890",
-        "https": "http://127.0.0.1:7890",
-    }
+    # 最后一批文本也算一次请求
+    if current_length > 0:
+        total_requests += 1
 
-    response = requests.post(url, headers=headers, params=params, proxies=proxies)
-    response.raise_for_status()
+    # 打印总请求次数
+    print(f"根据 max_payload_size = {max_payload_size}，一共需要请求 {total_requests} 次翻译")
 
-    return response.json()['data']['translations'][0]['translatedText']
+    # 分割文本块，确保每个请求的数据不超过限制
+    current_texts = []
+    current_length = 0
+    for text in texts:
+        text_length = len(text.encode('utf-8'))  # 计算UTF-8编码的字节长度
+        if current_length + text_length + len(current_texts) * 2 > max_payload_size:
+            # 打印日志
+            print(f"翻译请求数据长度: {current_length} 字节")
+            print(f"请求内容: {current_texts}")
+
+            # 执行请求
+            data = {
+                "q": current_texts,
+                "target": target_language,
+                "format": "text"
+            }
+            if source_language:
+                data["source"] = source_language
+            response = session.post(url, headers=headers, json=data, proxies=PROXIES, verify=False)
+            response.raise_for_status()
+            translations = response.json()['data']['translations']
+            all_translations.extend([t['translatedText'] for t in translations])
+
+            # 重置
+            current_texts = []
+            current_length = 0
+
+        current_texts.append(text)
+        current_length += text_length
+
+    # 处理最后一批文本
+    if current_texts:
+        # 打印日志
+        print(f"翻译请求数据长度: {current_length} 字节")
+        print(f"请求内容: {current_texts}")
+
+        data = {
+            "q": current_texts,
+            "target": target_language,
+            "format": "text"
+        }
+        if source_language:
+            data["source"] = source_language
+        response = session.post(url, headers=headers, json=data, proxies=PROXIES, verify=False)
+        response.raise_for_status()
+        translations = response.json()['data']['translations']
+        all_translations.extend([t['translatedText'] for t in translations])
+
+    return all_translations
 
 
 # 处理 SRT 文件并翻译内容
-def translate_srt_file(path, target_language):
+def translate_srt_file(path, target_language, max_payload_size=DEFAULT_MAX_PAYLOAD_SIZE):
     print("===========================开始翻译字幕===========================")
     start_time = time.time()  # 记录开始时间
 
@@ -64,39 +145,44 @@ def translate_srt_file(path, target_language):
     translated_content = []
     text_to_translate = []
     text_blocks = []
-    block_index = 0
-    line_indices = []
+    block_indices = []
+    current_block = []
+    current_block_size = 0
 
-    for i, line in enumerate(read_lines(path)):
+    for line in read_lines(path):
         if re.match(r'^\d+$', line.strip()) or re.match(r'^\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}$', line.strip()):
             translated_content.append(line)
         elif line.strip() == "":
-            if text_to_translate:
-                text_blocks.append(" ".join(text_to_translate))
-                line_indices.append(block_index)
-                text_to_translate = []
+            if current_block:
+                text_blocks.append("\n".join(current_block))
+                block_indices.append(len(translated_content) - len(current_block))
+                current_block = []
+                current_block_size = 0
             translated_content.append(line)
         else:
-            text_to_translate.append(line.strip())
+            line_size = len(line.strip().encode('utf-8'))
+            if current_block_size + line_size > max_payload_size:
+                text_blocks.append("\n".join(current_block))
+                block_indices.append(len(translated_content) - len(current_block))
+                current_block = [line.strip()]
+                current_block_size = line_size
+            else:
+                current_block.append(line.strip())
+                current_block_size += line_size
             translated_content.append(None)  # 占位符，用于稍后替换翻译文本
-            block_index += 1
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(translate_text, text, target_language, iso639_3_to_2(source_language)): index for index, text in enumerate(text_blocks)}
+    if current_block:
+        text_blocks.append("\n".join(current_block))
+        block_indices.append(len(translated_content) - len(current_block))
 
-        translations = [None] * len(text_blocks)
-        for future in as_completed(futures):
-            index = futures[future]
-            translations[index] = future.result() + '\n'
+    if text_blocks:
+        translations = translate_text_batch(text_blocks, target_language, iso639_3_to_2(source_language), max_payload_size)
 
-    translation_index = 0
-    for i, line in enumerate(translated_content):
-        if line is None and translation_index < len(translations):
-            translated_content[i] = translations[translation_index]
-            translation_index += 1
+        for i, block_index in enumerate(block_indices):
+            translated_content[block_index] = translations[i] + '\n'
 
-    # 移除原始中文文本行
-    translated_content = [line for line in translated_content if line is not None]
+    # 移除所有 None 值，确保写入文件时没有 None
+    translated_content = [line if line is not None else '' for line in translated_content]
 
     with open(new_file_name, 'w', encoding='utf-8') as file:
         file.writelines(translated_content)
@@ -110,6 +196,14 @@ def translate_srt_file(path, target_language):
 
 if __name__ == "__main__":
     source_file_path = 'release_video/豪门狂少归来/豪门狂少归来_cmn.srt'
+    traget_file_path = 'release_video/豪门狂少归来/豪门狂少归来_eng.srt'
+
+    # source_file_path = 'release_video/aa测试目录/aa测试目录_cmn.srt'
+    # traget_file_path = 'release_video/aa测试目录/aa测试目录_eng.srt'
+
+    if os.path.exists(traget_file_path):
+        os.remove(traget_file_path)
+
     target_language = 'en'  # 翻译为英语
-    new_srt_path = translate_srt_file(source_file_path, target_language)
+    new_srt_path = translate_srt_file(source_file_path, target_language, max_payload_size=2048)
     print(f"翻译后的 SRT 文件保存在: {new_srt_path}")
