@@ -1,54 +1,7 @@
-import os
-
-from run_main import run_main
-
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-
-
-def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_clear_cache=False, is_get_video=True, num_of_covers=1,
-                  is_get_cover=False, is_get_fanyi=False, is_high_quality=False):
-    video_template = '{}.mp4'
-    # 生成所有视频文件的路径
-    videos = [os.path.join('download_cache', sub_directory, video_template.format(i)) for i in range(1, juji_num + 1)]
-    # 检查文件是否存在
-    missing_files = [video for video in videos if not os.path.exists(video)]
-    if missing_files:
-        print("以下视频文件缺失:")
-        for missing_file in missing_files:
-            print(missing_file)
-    else:
-        # 检查文件数是否与juji_num相等
-        if len(videos) == juji_num:
-            # 运行命令，添加base_directory和sub_directory参数
-            print(f"所有 {juji_num} 个视频文件均存在，准备执行命令。")
-            run_main(sub_directory=sub_directory,
-                     cover_title=cover_title,
-                     videos=videos,
-                     split_time_min=split_time_min,
-                     is_only_download=is_only_download,
-                     is_clear_cache=is_clear_cache,
-                     is_get_video=is_get_video,
-                     num_of_covers=num_of_covers,
-                     is_get_cover=is_get_cover,
-                     is_get_fanyi=is_get_fanyi,
-                     is_high_quality=is_high_quality
-                     )
-        else:
-            print(f"视频文件数量({len(videos)})与指定的剧集数量({juji_num})不相等，无法继续执行。")
-
-
-def download_only_videos(urls, sub_directory):
-    for index, url in enumerate(urls, start=1):
-        run_main(sub_directory=sub_directory, video_download_name=str(index), is_only_download=True, url=url)
-
-
-def replace_comma_with_newline(input_string):
-    if ',' in input_string:
-        return input_string.replace(',', '\n')
-    return input_string
-
-
 # 调用方法
+import yuliu.utils
+from yuliu import common
+
 if __name__ == "__main__":
     # 单视频
     # run_command(['python', 'run.py', '--url', url])
@@ -163,33 +116,17 @@ if __name__ == "__main__":
         # '我的傻父',
     ]
 
-    if not isTest:
-        for video_name in videos:
-            check_and_run(sub_directory=video_name,
-                          cover_title=replace_comma_with_newline(video_name),
-                          juji_num=1,
-                          split_time_min=15,
-                          # is_clear_cache=True,
+    common.check_and_run(sub_directory='aa测试目录',
+                         cover_title="天龙八部",
+                         juji_num=1,
+                         split_time_min=0.5,
 
-                          is_get_video=True,
-                          is_get_cover=True,
-                          num_of_covers=8,
+                         is_clear_cache=False,
 
-                          is_get_fanyi=False,
-                          is_high_quality=False
-                          )
-    else:
-        check_and_run(sub_directory='aa测试目录',
-                      cover_title="天龙八部",
-                      juji_num=1,
-                      split_time_min=0.5,
+                         is_get_video=True,
+                         is_get_cover=True,
+                         num_of_covers=1,
 
-                      is_clear_cache=False,
-
-                      is_get_video=True,
-                      is_get_cover=True,
-                      num_of_covers=1,
-
-                      is_get_fanyi=False,
-                      is_high_quality=False
-                      )
+                         is_get_fanyi=False,
+                         is_high_quality=False
+                         )

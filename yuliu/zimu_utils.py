@@ -8,7 +8,7 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     dest_video_path = add_zimu_suffix(video_path)
     subtitles_path = get_relative_path(subtitles_path)
     if os.path.exists(dest_video_path) and has_zimu_suffix(dest_video_path):
-        print(f"文件已存在且已添加字幕: {video_path}")
+        print(f"文件已存在且已添加字幕和水印: {video_path}")
         return dest_video_path
 
     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
@@ -17,7 +17,7 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     video_duration_ms = get_mp4_duration(video_path)
     video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
     # 计算分钟数
-    minutes_needed = video_duration_s / 60 / 4.3
+    minutes_needed = video_duration_s / 60 / 24
     # 构建命令字符串，使用相对路径，并确保格式正确
     # 设置黄色的PrimaryColour值为&H00FFFF00
     primary_colour = '&H0000FFFF'
@@ -33,16 +33,16 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     )
 
     # 打印命令以便手动检查
-    print("运行命令: \n", command)
-    print(f"\n\n请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
+    print("运行命令,加字幕和水印: \n", command)
+    print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
     try:
         # 使用 shell=True 执行命令字符串
         result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
         result.check_returncode()  # 检查命令是否成功
         os.remove(video_path)
-        print(f"添加字幕成功 {dest_video_path}")
+        print(f"添加字幕和水印成功 {dest_video_path}")
     except Exception as e:
-        print(f"发生错误: {e}\n")
+        print(f"添加字幕和水印失败,发生错误: {e}\n")
         if os.path.exists(dest_video_path):
             os.remove(dest_video_path)
         return None

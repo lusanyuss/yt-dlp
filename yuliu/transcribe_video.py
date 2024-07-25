@@ -10,13 +10,14 @@ from threading import Lock
 import pysrt
 import requests
 import srt
-from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel  # 假设这是一个已安装的库
 from googletrans import Translator
 from moviepy.config import change_settings
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from requests.exceptions import JSONDecodeError
 
-from yuliu.utils import has_zimu_suffix, iso639_3_to_2
+from yuliu.transcribe_srt import iso639_3_to_2
+from yuliu.utils import has_zimu_suffix
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -26,13 +27,11 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
 
-# 配置日志
-
-# 设置字体路径
-
-
-def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="cuda", compute_type="float16", sub_directory=""):
-    output_srt_path = f"{sub_directory}_{language}.srt"
+def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v3", device="cuda", compute_type="float16", sub_directory=""):
+    output_srt_path = os.path.join(os.path.dirname(audio_path), f"{sub_directory}_{language}.srt")
+    temp_srt_path = os.path.join(os.path.dirname(audio_path), f"{sub_directory}_{language}_temp.srt")
+    if os.path.exists(temp_srt_path):
+        os.remove(temp_srt_path)
     if os.path.exists(output_srt_path):
         print(f"字幕文件已存在: {output_srt_path}")
         return output_srt_path
@@ -40,76 +39,42 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
     print("加载模型...")
     logging.basicConfig()
     logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
-    model = WhisperModel(model_size_or_path=model_size, device=device, compute_type=compute_type)
-    print("开始转录音频...")
-    # 兼容语言不和的问题
 
-    start_time1 = time.time()
-    segments, info = model.transcribe(
-        audio_path,
-        beam_size=5,
-        language=iso639_3_to_2(language),  # 如果已知语言，替换为实际语言代码
-        condition_on_previous_text=False,
-        vad_filter=True,  # 启用 VAD 过滤
-        vad_parameters=dict(min_silence_duration_ms=200)  # 对话中可能有更短的停顿，设置为 200 毫秒
-    )
-    print(f"开始转录音频: {time.time() - start_time1:.2f} seconds")
+    try:
+        start_time1 = time.time()
+        model = WhisperModel(model_size_or_path=model_size, device=device, compute_type=compute_type)
+        segments, info = model.transcribe(
+            audio_path,
+            beam_size=5,
+            language=iso639_3_to_2(language),
+            condition_on_previous_text=False,
+            vad_filter=False,
+            vad_parameters=dict(min_silence_duration_ms=500)
+        )
+        print(f"开始转录音频: {time.time() - start_time1:.2f} 秒")
+        print(f"将结果写入临时SRT文件: {temp_srt_path}")
 
-    print(f"将结果写入SRT文件: {output_srt_path}")
+        start_time2 = time.time()
+        with open(temp_srt_path, "w", encoding="utf-8") as srt_file:
+            for i, segment in enumerate(segments, start=1):
+                start = segment.start
+                end = segment.end
+                text = segment.text
 
-    start_time2 = time.time()
-    with open(output_srt_path, "w", encoding="utf-8") as srt_file:
-        for i, segment in enumerate(segments, start=1):
-            start = segment.start
-            end = segment.end
-            text = segment.text
+                start_time = f"{int(start // 3600):02}:{int((start % 3600) // 60):02}:{int(start % 60):02},{int((start * 1000) % 1000):03}"
+                end_time = f"{int(end // 3600):02}:{int((end % 3600) // 60):02}:{int(end % 60):02},{int((end * 1000) % 1000):03}"
 
-            start_time = f"{int(start // 3600):02}:{int((start % 3600) // 60):02}:{int(start % 60):02},{int((start * 1000) % 1000):03}"
-            end_time = f"{int(end // 3600):02}:{int((end % 3600) // 60):02}:{int(end % 60):02},{int((end * 1000) % 1000):03}"
+                srt_file.write(f"{i}\n{start_time} --> {end_time}\n{text}\n\n")
+        print(f"将结果写入临时SRT文件: {time.time() - start_time2:.2f} 秒")
+        os.replace(temp_srt_path, output_srt_path)
+        print(f"字幕已保存到 {output_srt_path}")
+    except Exception as e:
+        if os.path.exists(temp_srt_path):
+            os.remove(temp_srt_path)
+        print(f"发生异常: {str(e)}")
+        raise e
 
-            srt_file.write(f"{i}\n{start_time} --> {end_time}\n{text}\n\n")
-    print(f"将结果写入SRT文件: {time.time() - start_time2:.2f} seconds")
-
-    print(f"字幕已保存到 {output_srt_path}")
     return output_srt_path
-
-
-def transcribe_audio_to_srts(audio_paths, sub_directory="", model_size="large-v3", language='zh', device="cuda", compute_type="float16"):
-    results = []
-    for audio_path in audio_paths:
-        result = transcribe_audio(audio_path, language, model_size, device, compute_type, sub_directory=sub_directory)
-        results.append(result)
-    return results
-
-
-# def transcribe_audio_to_srts(audio_paths, model_size="large-v2", device="cuda", compute_type="float16"):
-#     for audio_path in audio_paths:
-#         base_name = os.path.splitext(audio_path)[0]
-#         output_srt_path = f"{base_name}_zh.srt"
-#
-#         if os.path.exists(output_srt_path):
-#             print(f"字幕文件已存在: {output_srt_path}")
-#             continue
-#
-#         print("加载模型...")
-#         model = WhisperModel(model_size, device=device, compute_type=compute_type)
-#         print("开始转录音频...")
-#         segments, info = model.transcribe(audio_path, beam_size=5)
-#
-#         print(f"将结果写入SRT文件: {output_srt_path}")
-#         with open(output_srt_path, "w", encoding="utf-8") as srt_file:
-#             for i, segment in enumerate(segments, start=1):
-#                 start = segment.start
-#                 end = segment.end
-#                 text = segment.text
-#
-#                 start_time = f"{int(start // 3600):02}:{int((start % 3600) // 60):02}:{int(start % 60):02},{int((start * 1000) % 1000):03}"
-#                 end_time = f"{int(end // 3600):02}:{int((end % 3600) // 60):02}:{int(end % 60):02},{int((end * 1000) % 1000):03}"
-#
-#                 srt_file.write(f"{i}\n{start_time} --> {end_time}\n{text}\n\n")
-#
-#         print(f"字幕已保存到 {output_srt_path}")
-#     return [f"{os.path.splitext(audio_path)[0]}_zh.srt" for audio_path in audio_paths]
 
 
 def translate_text_bygoogle(text, source_lang='zh', target_lang='en'):
@@ -328,32 +293,3 @@ def process_videos_zh(audio_vocals_list):
         results.append(zh_subtitle_path)
 
     return results
-
-
-if __name__ == '__main__':
-
-    print("==========================================")
-    audio_paths = ["./res/12miao1.mp4", "./res/12miao2.mp4"]
-    zh_zimi_list = None
-    # 翻译母本
-    target_languages = ["zh"]
-    for language in target_languages:
-        zh_zimi_list = transcribe_audio_to_srts(audio_paths, language=language)
-        print(zh_zimi_list)
-
-    print("==========================================")
-    #  翻译其他
-    en_languages = ["en"]
-    result_en = process_videos(zh_zimi_list, en_languages)
-    en_video_path = []
-    for en_srt_path in result_en["en"]:
-        audio_path = en_srt_path.replace('_en.srt', '.mp4')
-        output_video_path = audio_path.replace('.mp4', '_en.mp4')
-        video_path = add_subtitles_to_video(audio_path, en_srt_path, output_video_path, subtitle_width_ratio=0.90, subtitle_y_position=220)
-        en_video_path.append(video_path)
-    print("生成的视频文件:", en_video_path)
-    print("==========================================")
-    # # 翻译其他
-    target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
-    results = process_videos(zh_zimi_list, target_languages)
-    print(results)

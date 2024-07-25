@@ -35,7 +35,6 @@ if __name__ == '__main__':
     logger.info(f"模型加载时间: {end_time - start_time:.2f} 秒")
 
     # 开始转录
-    logger.info("开始转录音频...")
     start_time = time.time()  # 记录转录开始时间
     # batched_model = BatchedInferencePipeline(model=model)
     # segments, info = batched_model.transcribe(audio_path, batch_size=4)

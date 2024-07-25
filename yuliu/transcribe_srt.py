@@ -9,8 +9,6 @@ from google.oauth2 import service_account
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from yuliu.utils import iso639_2_to_3, iso639_3_to_2
-
 requests.packages.urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 全局变量
 CREDENTIALS_PATH = 'radiant-works-430523-c8-9c23194b94e2.json'
@@ -18,7 +16,37 @@ PROXIES = {
     "http": "http://127.0.0.1:7890",
     "https": "http://127.0.0.1:7890",
 }
-DEFAULT_MAX_PAYLOAD_SIZE = 10000  # 默认每次请求的最大负载大小（字节）
+DEFAULT_MAX_PAYLOAD_SIZE = 2048  # 默认每次请求的最大负载大小（字节）
+
+# 定义ISO 639-3到ISO 639-1的映射
+iso639_3_to_2_map = {
+    "eng": "en",
+    "cmn": "zh",
+    "spa": "es",
+    "hin": "hi",
+    "arb": "ar",
+    "por": "pt",
+    "fra": "fr",
+    "deu": "de",
+    "rus": "ru",
+    "jpn": "ja"
+}
+
+# 创建一个反向映射从ISO 639-1到ISO 639-3
+iso639_2_to_3_map = {v: k for k, v in iso639_3_to_2_map.items()}
+
+
+# 定义方法从ISO 639-3转换到ISO 639-1
+def iso639_3_to_2(code):
+    if code in iso639_3_to_2_map:
+        return iso639_3_to_2_map[code]
+    return code
+
+
+def iso639_2_to_3(code):
+    if code in iso639_2_to_3_map:
+        return iso639_2_to_3_map[code]
+    return code
 
 
 # 创建带有重试机制的 session

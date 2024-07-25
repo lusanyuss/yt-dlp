@@ -9,36 +9,6 @@ import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
 
-# 定义ISO 639-3到ISO 639-1的映射
-iso639_3_to_2_map = {
-    "eng": "en",
-    "cmn": "zh",
-    "spa": "es",
-    "hin": "hi",
-    "arb": "ar",
-    "por": "pt",
-    "fra": "fr",
-    "deu": "de",
-    "rus": "ru",
-    "jpn": "ja"
-}
-
-# 创建一个反向映射从ISO 639-1到ISO 639-3
-iso639_2_to_3_map = {v: k for k, v in iso639_3_to_2_map.items()}
-
-
-# 定义方法从ISO 639-3转换到ISO 639-1
-def iso639_3_to_2(code):
-    if code in iso639_3_to_2_map:
-        return iso639_3_to_2_map[code]
-    return code
-
-
-def iso639_2_to_3(code):
-    if code in iso639_2_to_3_map:
-        return iso639_2_to_3_map[code]
-    return code
-
 
 class CommandExecutor:
     @staticmethod
@@ -677,3 +647,9 @@ def get_relative_path(path, start=os.curdir):
     if os.path.isabs(path):
         return os.path.relpath(path, start).replace("\\", "/")
     return path.replace("\\", "/")
+
+
+def replace_comma_with_newline(input_string):
+    if ',' in input_string:
+        return input_string.replace(',', '\n')
+    return input_string

@@ -1,3 +1,5 @@
+import os
+import re
 import shutil
 import subprocess
 import time
@@ -13,8 +15,10 @@ from utils import get_file_only_name, get_file_only_extension, generate_md5_file
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
-from yuliu.transcribe_video import transcribe_audio_to_srts, concatenate_srt_files
+from yuliu.transcribe_video import transcribe_audio_to_srt
 from yuliu.zimu_utils import add_zimu_shuiyin_to_video
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
 def clear_directory_contents(directory):
@@ -294,24 +298,21 @@ def delete_files(audio_file_list=[], video_file_list=[], audio_vocals_list=[], v
             print(f"Failed to delete: {file}")
 
 
-import re
-
-
-def check_directory(base_dir):
-    output_dir = os.path.join(base_dir, 'output')
-    output_pattern = re.compile(r"out_times_\d+_audio_vocals\.wav")
-
-    # 获取 input 和 output 目录下的所有子目录
-    sub_directories = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
-
-    for sub_dir in sub_directories:
-        input_files = [f for f in os.listdir(os.path.join(input_dir, sub_dir)) if input_pattern.match(f)]
-        output_files = [f for f in os.listdir(os.path.join(output_dir, sub_dir)) if output_pattern.match(f)]
-
-        if len(input_files) > 0 and len(input_files) == len(output_files):
-            return base_dir
-
-    return None
+# def check_directory(base_dir):
+#     output_dir = os.path.join(base_dir, 'output')
+#     output_pattern = re.compile(r"out_times_\d+_audio_vocals\.wav")
+#
+#     # 获取 input 和 output 目录下的所有子目录
+#     sub_directories = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
+#
+#     for sub_dir in sub_directories:
+#         input_files = [f for f in os.listdir(os.path.join(input_dir, sub_dir)) if input_pattern.match(f)]
+#         output_files = [f for f in os.listdir(os.path.join(output_dir, sub_dir)) if output_pattern.match(f)]
+#
+#         if len(input_files) > 0 and len(input_files) == len(output_files):
+#             return base_dir
+#
+#     return None
 
 
 def extract_audio_only(video_path):
@@ -346,18 +347,6 @@ def extract_audio_only(video_path):
         return None
 
     return audio_only_path
-
-
-def generate_chinese_subtitles(audio_path_wav, release_video_dir, sub_directory):
-    zh_cn_srt_list = []
-    target_languages = ["cmn"]
-    for language in target_languages:
-        zh_cn_srt_list = transcribe_audio_to_srts([audio_path_wav], sub_directory=sub_directory, language=language)
-    zh_srt = os.path.join(release_video_dir, f'{sub_directory}_{target_languages[0]}.srt')
-    concatenate_srt_files(zh_cn_srt_list).save(zh_srt, encoding='utf-8')
-    for file in zh_cn_srt_list:
-        os.remove(file)
-    return zh_srt
 
 
 def get_user_confirmation():
@@ -508,9 +497,8 @@ def run_main(url=None,
 
             # target_language = 'en'
             # en_srt = os.path.join(release_video_dir, f"{sub_directory}_{iso639_2_to_3(target_language)}.srt")
-
             # if not os.path.exists(en_srt):
-            zh_srt = generate_chinese_subtitles(audio_path_wav, release_video_dir, sub_directory)
+            zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
             # if get_user_confirmation():
             #     print("确认中文字幕完毕...")
             # else:
@@ -519,8 +507,7 @@ def run_main(url=None,
             # command = ['wsl', 'python', '/root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py', '--sub_directory', sub_directory]
             # print(f"命令: wsl python /root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py --sub_directory {sub_directory}")
             # CommandExecutor.run_command(command)
-
-            en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en')
+            en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
 
             ##以上步骤保证一定有英文字幕了
             print(f"====================添加英文字幕和水印<<{sub_directory}>>======================")
