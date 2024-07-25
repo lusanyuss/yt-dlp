@@ -32,8 +32,8 @@ def move_and_rename_videos(base_dir, src_folder, video_files):
         # 移动并重命名视频文件
         video_path = os.path.join(src_folder, video)
         shutil.move(video_path, new_video_path)
-        print(f"Video {video} moved to {new_folder_path} and renamed to 1.mp4.")
-
+        # print(f"Video {video} moved to {new_folder_path} and renamed to 1.mp4.")
+        print(f"'{video.rsplit('.', 1)[0]}',")
 
 def get_filtered_folders(base_dir):
     filtered_folders = []
@@ -57,7 +57,7 @@ def main():
         print("No 'src' folder found in the current directory.")
 
     folders = get_filtered_folders(base_dir)
-    print("Filtered folders:")
+    print("\nFiltered folders:")
     for folder in folders:
         print(f"\'{folder}\',")
 

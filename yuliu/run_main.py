@@ -250,7 +250,7 @@ def generate_video_metadata(release_video_dir, sub_directory):
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持！
 
-主标题：\n【清晰音质】《{convert_simplified_to_traditional(sub_directory)}》【高清合集】
+主标题：\n《{convert_simplified_to_traditional(sub_directory)}》【高清合集】【清晰音质】
 
     """
 

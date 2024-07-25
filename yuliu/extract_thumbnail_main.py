@@ -617,6 +617,13 @@ def adjust_title(title, kongge='　'):
     return title
 
 
+def replace_subtitle(subtitle):
+    choices = [80, 85, 90, 95, 100, 110, 120]
+    random_number = random.choice(choices)
+    new_subtitle = subtitle.replace("120", str(random_number))
+    return new_subtitle
+
+
 def extract_thumbnail_main(original_video, release_video_dir, cover_title, title_font, subtitle_font, num_of_covers=1, crop_height=100, isTest=False):
     # 截取3张没有汉字的截图
     frame_image_list = []
@@ -652,7 +659,7 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
                 title = cover_title if cover_title else os.path.basename(os.path.dirname(original_video))
                 title = adjust_title(title)
 
-                subtitle = "EP1-120"
+                subtitle = replace_subtitle("EP1-120")
                 # title_color = "#FF0000"  # 红色
                 # subtitle_color = "#FFFF00"  # 黄色
 
