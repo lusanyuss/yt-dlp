@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
@@ -43,6 +44,9 @@ def translate_text(text, target_language, source_language=None):
 
 # 处理 SRT 文件并翻译内容
 def translate_srt_file(path, target_language):
+    print("===========================开始翻译字幕===========================")
+    start_time = time.time()  # 记录开始时间
+
     source_language = os.path.splitext(path)[0].rsplit('_', 1)[-1]
     base_name = os.path.basename(path).rsplit('_', 1)[0]
     target_lang_code = iso639_2_to_3(target_language)
@@ -96,6 +100,10 @@ def translate_srt_file(path, target_language):
 
     with open(new_file_name, 'w', encoding='utf-8') as file:
         file.writelines(translated_content)
+
+    end_time = time.time()  # 记录结束时间
+    elapsed_time = end_time - start_time  # 计算总耗时
+    print(f"翻译字幕耗时{target_language}: {elapsed_time:.2f} 秒")  # 输出耗时
 
     return new_file_name
 

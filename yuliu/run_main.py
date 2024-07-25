@@ -5,26 +5,11 @@ import time
 from torchvision.datasets.utils import calculate_md5
 
 import yt_dlp
+import yuliu.transcribe_srt
 from utils import get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
     find_split_points, \
     process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix, add_shuiyin_suffix, CommandExecutor
-from yuliu.DiskCacheUtil import DiskCacheUtil
-from yuliu.extract_thumbnail_main import extract_thumbnail_main
-from yuliu.keyframe_extractor import KeyFrameExtractor
-from yuliu.transcribe_video import transcribe_audio_to_srts, concatenate_srt_files
-from yuliu.zimu_utils import add_zimu_shuiyin_to_video
-import shutil
-import subprocess
-import time
-
-from torchvision.datasets.utils import calculate_md5
-
-import yt_dlp
-from utils import get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
-    find_split_points, \
-    process_and_save_results, print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, has_shuiyin_suffix, has_zimu_suffix, add_shuiyin_suffix, CommandExecutor
+    separate_audio_and_video_list, merge_audio_and_video_list, has_zimu_suffix, CommandExecutor
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
@@ -276,44 +261,6 @@ def generate_video_metadata(release_video_dir, sub_directory):
 # ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
 # ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
 
-def add_watermark_to_video(video_path):
-    if os.path.exists(video_path) and has_shuiyin_suffix(video_path):
-        print(f"文件已存在且已添加水印: {video_path}")
-        return video_path
-    print_separator("添加水印-开始 " + video_path)
-    font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
-    text = "爽剧风暴"
-    temp_output = os.path.join(os.path.dirname(video_path), "temp_output.mp4").replace("\\", "/")
-
-    # 获取视频时长
-    video_duration_ms = get_mp4_duration(video_path)
-    video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
-    # 计算分钟数
-    minutes_needed = video_duration_s / 60 / 24
-    # 构建命令字符串，使用相对路径，并确保格式正确
-    command = (
-        f'ffmpeg -hwaccel cuda -i "{video_path}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
-        f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-        f'-c:v h264_nvenc -c:a copy -y "{temp_output}"'
-    )
-    # 打印命令以便手动检查
-    print("Running command: \n", command)
-    print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
-    try:
-        # 使用 shell=True 执行命令字符串
-        CommandExecutor.run_command(command)
-        os.replace(temp_output, video_path)
-        add_shuiyin_suffix(video_path)
-        print_separator("添加水印-成功")
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        if os.path.exists(temp_output):
-            os.remove(temp_output)  # 移除临时文件
-        return video_path
-
-    return video_path
-
-
 def get_dir(base_dir, sub_directory=None):
     dir_path = os.path.join(os.getcwd(), base_dir)
     if sub_directory:
@@ -558,18 +505,23 @@ def run_main(url=None,
 
             audio_path_wav = extract_audio_only(video_dest_result)
             print_separator(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
-            en_srt = os.path.join(release_video_dir, f"{sub_directory}_eng.srt")
-            if not os.path.exists(en_srt):
-                generate_chinese_subtitles(audio_path_wav, release_video_dir, sub_directory)
-                # if get_user_confirmation():
-                #     print("确认中文字幕完毕...")
-                # else:
-                #     print("中文字幕有问题,退出程序.")
-                #     exit()
-                command = ['wsl', 'python', '/root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py', '--sub_directory', sub_directory]
-                print(f"命令: wsl python /root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py --sub_directory {sub_directory}")
-                CommandExecutor.run_command(command)
-                ##以上步骤保证一定有英文字幕了
+
+            # target_language = 'en'
+            # en_srt = os.path.join(release_video_dir, f"{sub_directory}_{iso639_2_to_3(target_language)}.srt")
+
+            # if not os.path.exists(en_srt):
+            zh_srt = generate_chinese_subtitles(audio_path_wav, release_video_dir, sub_directory)
+            # if get_user_confirmation():
+            #     print("确认中文字幕完毕...")
+            # else:
+            #     print("中文字幕有问题,退出程序.")
+            #     exit()
+            # command = ['wsl', 'python', '/root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py', '--sub_directory', sub_directory]
+            # print(f"命令: wsl python /root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py --sub_directory {sub_directory}")
+            # CommandExecutor.run_command(command)
+            en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en')
+
+            ##以上步骤保证一定有英文字幕了
             print(f"====================添加英文字幕和水印<<{sub_directory}>>======================")
             # 添加英文字幕和水印
             start_time = time.time()

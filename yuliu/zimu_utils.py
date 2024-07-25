@@ -1,6 +1,7 @@
 import os
+import subprocess
 
-from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor
+from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path
 
 
 def add_zimu_shuiyin_to_video(video_path, subtitles_path):
@@ -36,7 +37,8 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     print(f"\n\n请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
     try:
         # 使用 shell=True 执行命令字符串
-        CommandExecutor.run_command(command)
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
+        result.check_returncode()  # 检查命令是否成功
         os.remove(video_path)
         print(f"添加字幕成功 {dest_video_path}")
     except Exception as e:

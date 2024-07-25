@@ -29,12 +29,15 @@ iso639_2_to_3_map = {v: k for k, v in iso639_3_to_2_map.items()}
 
 # 定义方法从ISO 639-3转换到ISO 639-1
 def iso639_3_to_2(code):
-    return iso639_3_to_2_map.get(code, 'unknown')
+    if code in iso639_3_to_2_map:
+        return iso639_3_to_2_map[code]
+    return code
 
 
-# 定义方法从ISO 639-1转换到ISO 639-3
 def iso639_2_to_3(code):
-    return iso639_2_to_3_map.get(code, 'unknown')
+    if code in iso639_2_to_3_map:
+        return iso639_2_to_3_map[code]
+    return code
 
 
 class CommandExecutor:

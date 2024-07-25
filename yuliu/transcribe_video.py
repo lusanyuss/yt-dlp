@@ -15,7 +15,7 @@ from moviepy.config import change_settings
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from requests.exceptions import JSONDecodeError
 
-from yuliu.utils import has_zimu_suffix
+from yuliu.utils import has_zimu_suffix, iso639_3_to_2
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -39,13 +39,10 @@ def transcribe_audio(audio_path, language='zh', model_size="large-v3", device="c
     print("开始转录音频...")
 
     # 兼容语言不和的问题
-    if language == 'cmn':
-        language = 'zh'
-
     segments, info = model.transcribe(
         audio_path,
         beam_size=5,
-        language=language,  # 如果已知语言，替换为实际语言代码
+        language=iso639_3_to_2(language),  # 如果已知语言，替换为实际语言代码
         condition_on_previous_text=False,
         vad_filter=True,  # 启用 VAD 过滤
         vad_parameters=dict(min_silence_duration_ms=200)  # 对话中可能有更短的停顿，设置为 200 毫秒
