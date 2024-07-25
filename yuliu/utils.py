@@ -2,6 +2,7 @@ import concurrent.futures
 import hashlib
 import json
 import subprocess
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,9 +11,24 @@ import psutil
 from yuliu.DiskCacheUtil import DiskCacheUtil
 
 
+import subprocess
+import threading
+import time
+import re
+
 class CommandExecutor:
     @staticmethod
-    def run_command(command):
+    def read_output(pipe, log_file, pattern=None):
+        try:
+            for line in iter(pipe.readline, ''):
+                if pattern is None or re.search(pattern, line):
+                    print(line.strip())
+                    log_file.write(line)
+        finally:
+            pipe.close()
+
+    @staticmethod
+    def run_command(command, pattern=None):
         start_time = time.time()
         try:
             process = subprocess.Popen(
@@ -21,36 +37,46 @@ class CommandExecutor:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                encoding='utf-8'
+                encoding='utf-8',
+                bufsize=1,
+                universal_newlines=True,
+                errors='ignore'
             )
-            # 实时读取输出
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    print(output.strip())
 
-            # 读取错误输出
-            stderr = process.stderr.read()
-            if stderr:
-                print(f"错误输出:\n{stderr.strip()}")
+            with open("ffmpeg_output.log", "w", encoding="utf-8", errors='ignore') as log_file:
+                stdout_thread = threading.Thread(target=CommandExecutor.read_output, args=(process.stdout, log_file, pattern))
+                stderr_thread = threading.Thread(target=CommandExecutor.read_output, args=(process.stderr, log_file, pattern))
 
-            return_code = process.poll()
-            if return_code != 0:
-                print(f"返回代码: {return_code}")
+                stdout_thread.start()
+                stderr_thread.start()
+
+                process.wait()
+
+                stdout_thread.join()
+                stderr_thread.join()
 
         except subprocess.CalledProcessError as e:
+            print("执行命令时发生错误.")
             if e.stderr:
-                print("执行命令时发生错误.")
                 print(f"错误输出:\n{e.stderr}")
             print(f"返回代码: {e.returncode}")
         except Exception as e:
             print(f"执行命令时发生未知错误: {e}")
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                process.wait()
 
         end_time = time.time()
         elapsed_time = end_time - start_time
-        print(f"命令 '{' '.join(command)}' 执行时间: {elapsed_time:.2f} 秒")
+        if isinstance(command, list):
+            command_str = ' '.join(command)
+        else:
+            command_str = command
+        print(f"\n命令: {command_str}\n")
+        print(f"命令执行时间: {elapsed_time:.2f} 秒")
+
+
 
 
 def print_separator(text='', char='=', length=150):
@@ -98,6 +124,7 @@ def merge_single_audio_video(video_file, audio_file, result_file):
     print(f"合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
     command = [
         'ffmpeg',
+        '-loglevel', 'quiet',
         '-i', video_file,
         '-i', audio_file,
         '-c:v', 'copy',  # 视频流不重新编码，直接复制
@@ -105,8 +132,7 @@ def merge_single_audio_video(video_file, audio_file, result_file):
         '-b:a', '192k',  # 设置音频比特率
         '-strict', 'experimental',  # 使用实验性AAC编码器
         '-y',  # 覆盖输出文件
-        result_file,
-        '-loglevel', 'quiet'
+        result_file
     ]
     subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
     return result_file
@@ -125,17 +151,19 @@ def merge_audio_and_video_list(video_files, audio_files, result_files):
 
 
 def get_mp4_duration(file_path):
+    # file_path=os.path.abspath(file_path)
     print(f"\n获取 MP4 文件时长: {file_path}")
     try:
         command = [
             'ffprobe',
+            '-loglevel', 'quiet',
             '-v', 'error',
             '-select_streams', 'v:0',
             '-show_entries', 'format=duration',
             '-of', 'json',
             file_path
         ]
-        command += ['-loglevel', 'quiet']
+        print(' '.join(command))
         result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         if result.stdout:
             duration_json = json.loads(result.stdout)

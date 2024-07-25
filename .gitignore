@@ -144,3 +144,4 @@ yt-dlp-plugins
 /whisper-large-v3-ct2/model.bin
 /whisper-large-v3-ct2/config.json
 /whisper-large-v3-ct2/vocabulary.json
+/yuliu/ffmpeg_output.log

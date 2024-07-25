@@ -1,7 +1,14 @@
 import os
-import subprocess
+import shutil
 
-from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path
+from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor
+
+
+def read_output(pipe, log_file):
+    for line in iter(pipe.readline, ''):
+        print(line.strip())
+        log_file.write(line)
+    pipe.close()
 
 
 def add_zimu_shuiyin_to_video(video_path, subtitles_path):
@@ -25,7 +32,7 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     margin_v = 30  # 调整字幕离底部的距离
 
     command = (
-        f'ffmpeg -hwaccel cuda -i "{video_path}" -vf "subtitles=\'{get_relative_path(subtitles_path)}\':force_style='
+        f'ffmpeg -loglevel info -hwaccel cuda -i "{video_path}" -vf "subtitles=\'{get_relative_path(subtitles_path)}\':force_style='
         f'\'FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}\', '
         f'drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
         f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
@@ -36,11 +43,10 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     print("运行命令,加字幕和水印: \n", command)
     print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
     try:
-        # 使用 shell=True 执行命令字符串
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
-        result.check_returncode()  # 检查命令是否成功
+        pattern = r"(frame=|Parsed_subtitles)"  # 只打印包含 "frame=" 或 "Parsed_subtitles" 的行
+        CommandExecutor.run_command(command, pattern)
         os.remove(video_path)
-        print(f"添加字幕和水印成功 {dest_video_path}")
+        print(f"\n\n添加字幕和水印成功 {dest_video_path}")
     except Exception as e:
         print(f"添加字幕和水印失败,发生错误: {e}\n")
         if os.path.exists(dest_video_path):
@@ -53,8 +59,13 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
 if __name__ == '__main__':
     print("===============相对==================")
     video_path = 'release_video/aa测试目录/aa测试目录.mp4'
-    srt_path = 'release_video/aa测试目录/aa测试目录_en.srt'
+    srt_path = 'release_video/aa测试目录/aa测试目录_eng.srt'
+    result = 'release_video/aa测试目录/aa测试目录_zimu.mp4'
 
+    shutil.copy2('download_cache/aa测试目录/1.mp4', video_path)
+
+    if os.path.exists(result):
+        os.remove(result)
     # print("==============绝对===================")
     # video_path = os.path.abspath(video_path).replace("\\", "/")
     # srt_path = os.path.abspath(srt_path).replace("\\", "/")
