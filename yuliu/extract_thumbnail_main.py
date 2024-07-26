@@ -302,7 +302,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
                     enhanced_image.save(output_path)
                     with lock:
                         frame_paths[index] = output_path
-                        print(f"\n重新生成 frame_{index + 1}.jpg 图片: {output_path} \n")
+                        print(f"重新生成 frame_{index + 1}.jpg 图片: {output_path}")
                     break
             except Exception as e:
                 print(f"Error processing image {output_path}: {e}")

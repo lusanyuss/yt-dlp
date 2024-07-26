@@ -11,7 +11,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 requests.packages.urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 全局变量
-CREDENTIALS_PATH = 'radiant-works-430523-c8-9c23194b94e2.json'
+CREDENTIALS_PATH = 'radiant-works-430523-c8-047f59cf9cdd.json'
 PROXIES = {
     "http": "http://127.0.0.1:7890",
     "https": "http://127.0.0.1:7890",
@@ -223,11 +223,11 @@ def translate_srt_file(path, target_language, max_payload_size=DEFAULT_MAX_PAYLO
 
 
 if __name__ == "__main__":
-    source_file_path = 'release_video/豪门狂少归来/豪门狂少归来_cmn.srt'
-    traget_file_path = 'release_video/豪门狂少归来/豪门狂少归来_eng.srt'
+    # source_file_path = 'release_video/豪门狂少归来/豪门狂少归来_cmn.srt'
+    # traget_file_path = 'release_video/豪门狂少归来/豪门狂少归来_eng.srt'
 
-    # source_file_path = 'release_video/aa测试目录/aa测试目录_cmn.srt'
-    # traget_file_path = 'release_video/aa测试目录/aa测试目录_eng.srt'
+    source_file_path = 'release_video/aa测试目录/aa测试目录_cmn.srt'
+    traget_file_path = 'release_video/aa测试目录/aa测试目录_eng.srt'
 
     if os.path.exists(traget_file_path):
         os.remove(traget_file_path)

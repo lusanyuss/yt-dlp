@@ -17,7 +17,7 @@ def add_zimu_shuiyin_to_video(video_nobgm, subtitles_path):
     subtitles_path = get_relative_path(subtitles_path)
     if os.path.exists(video_final) and has_zimu_suffix(video_final):
         print(f"文件已存在且已添加字幕和水印: {video_nobgm}")
-        return video_final
+        return video_nobgm, video_final
 
     start_time = time.time()
     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
@@ -52,7 +52,7 @@ def add_zimu_shuiyin_to_video(video_nobgm, subtitles_path):
         print(f"添加字幕和水印失败,发生错误: {e}\n")
         if os.path.exists(video_final):
             os.remove(video_final)
-        return None
+        return None, None
 
     return video_nobgm, video_final
 
