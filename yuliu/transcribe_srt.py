@@ -11,7 +11,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 requests.packages.urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 全局变量
-CREDENTIALS_PATH = 'radiant-works-430523-c8-047f59cf9cdd.json'
+CREDENTIALS_PATH = 'yuliusecret-radiant-works-430523-c8-26198acdb648.json'
 PROXIES = {
     "http": "http://127.0.0.1:7890",
     "https": "http://127.0.0.1:7890",
