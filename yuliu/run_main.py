@@ -244,14 +244,13 @@ def generate_video_metadata(release_video_dir, sub_directory):
 
     # 保存标题和描述
     content = f"""
-
-请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，使用中文繁体字，主标题和副标题写一起组合成整个标题,用|分开, 在说明描述中包含用 | 分割的相关标签。整个标题需要便于搜索，足够接地气，容易出现在搜索列表中，并且富有吸引力，让人感兴趣，使人立即点击观看。说明描述的第一个段落一定是：
+请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，使用中文繁体字，主标题和副标题和相关标签写一起组合成整个标题,用|分开, 在整个标题和说明描述中包含用 | 分割的相关标签。整个标题需要便于搜索，足够接地气，容易出现在搜索列表中，并且富有吸引力，让人感兴趣，使人立即点击观看。说明描述的第一个段落一定是：
 
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持！
 
-主标题：\n《{convert_simplified_to_traditional(sub_directory)}》【高清合集】【清晰音质】
-
+主标题：
+《{convert_simplified_to_traditional(sub_directory)}》【高清合集】【清晰音质】
     """
 
     # 写入文件
@@ -390,7 +389,8 @@ def run_main(url=None,
              is_get_cover=False,
 
              is_get_fanyi=False,
-             is_high_quality=False
+             is_high_quality=False,
+             cover_title_split_postion=0
              ):
     global download_cache_dir, download_directory_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
 
@@ -452,10 +452,14 @@ def run_main(url=None,
         start_time = time.time()
         title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
         subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
-        frame_image_list = extract_thumbnail_main(original_video, release_video_dir,
-                                                  cover_title, title_font, subtitle_font,
+        frame_image_list = extract_thumbnail_main(original_video,
+                                                  release_video_dir,
+                                                  cover_title,
+                                                  title_font,
+                                                  subtitle_font,
                                                   num_of_covers=num_of_covers,
-                                                  crop_height=100, isTest=False,
+                                                  crop_height=100,
+                                                  isTest=False,
                                                   cover_title_split_postion=cover_title_split_postion
                                                   )
 

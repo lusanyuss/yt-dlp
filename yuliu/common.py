@@ -5,7 +5,7 @@ from yuliu.run_main import run_main
 
 
 def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_clear_cache=False, is_get_video=True, num_of_covers=1,
-                  is_get_cover=False, is_get_fanyi=False, is_high_quality=False,cover_title_split_postion=0):
+                  is_get_cover=False, is_get_fanyi=False, is_high_quality=False, cover_title_split_postion=0):
     video_template = '{}.mp4'
     # 生成所有视频文件的路径
     videos = [os.path.join('download_cache', sub_directory, video_template.format(i)) for i in range(1, juji_num + 1)]

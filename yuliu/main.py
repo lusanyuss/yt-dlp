@@ -124,6 +124,8 @@ if __name__ == "__main__":
         cover_title_split_postion = 0
         if video_name == '我的爷爷是大佬':
             cover_title_split_postion = 2
+        if video_name == '重启人生我靠败家逆袭':
+            cover_title_split_postion = 4
 
         common.check_and_run(sub_directory=video_name,
                              cover_title=yuliu.utils.replace_comma_with_newline(video_name),
