@@ -1,4 +1,6 @@
 # 调用方法
+
+import yuliu.utils
 from yuliu import common
 
 if __name__ == "__main__":
@@ -66,9 +68,13 @@ if __name__ == "__main__":
         ################### 未传部分 #######################
         # '战神饶命我真不是故意抢你女人',
         # '摊牌了,我有三个后妈',
-        '豪门狂少归来',
-        '首富老爸抓娃娃',
-        # '重启人生我靠败家逆袭',
+        # '豪门狂少归来',
+
+        # '首富老爸抓娃娃',
+        # '我以我血荐轩辕',
+
+        '我的爷爷是大佬',
+        '重启人生我靠败家逆袭',
         # '归来之我妈是战神',
         # '当丑女遇上总裁',
         # '摊牌了,我的五个哥哥是大佬',
@@ -114,19 +120,22 @@ if __name__ == "__main__":
         # '我们都要活下去',
         # '我的傻父',
     ]
+    for video_name in videos:
+        cover_title_split_postion = 0
+        if video_name == '我的爷爷是大佬':
+            cover_title_split_postion = 2
 
-    common.check_and_run(sub_directory='aa测试目录',
-                         cover_title="天龙八部",
-                         juji_num=1,
-                         split_time_min=0.5,
+        common.check_and_run(sub_directory=video_name,
+                             cover_title=yuliu.utils.replace_comma_with_newline(video_name),
+                             juji_num=1,
+                             split_time_min=15,
+                             # is_clear_cache=True,
 
-                         is_clear_cache=False,
+                             is_get_video=True,
+                             is_get_cover=True,
+                             num_of_covers=8,
 
-                         is_get_video=True,
-                         is_get_cover=True,
-                         num_of_covers=1,
-
-                         is_get_fanyi=False,
-                         is_high_quality=False,
-                         cover_title_split_postion=0
-                         )
+                             is_get_fanyi=False,
+                             is_high_quality=True,
+                             cover_title_split_postion=cover_title_split_postion
+                             )

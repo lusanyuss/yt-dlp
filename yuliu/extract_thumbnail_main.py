@@ -624,7 +624,8 @@ def replace_subtitle(subtitle):
     return new_subtitle
 
 
-def extract_thumbnail_main(original_video, release_video_dir, cover_title, title_font, subtitle_font, num_of_covers=1, crop_height=100, isTest=False):
+def extract_thumbnail_main(original_video, release_video_dir, cover_title, title_font, subtitle_font, num_of_covers=1,
+                           crop_height=100, isTest=False, cover_title_split_postion=0):
     # 截取3张没有汉字的截图
     frame_image_list = []
     cover_images_list = []
@@ -657,6 +658,10 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
                 # title = "测试目录测试目录测试"
                 # title = os.path.basename(os.path.dirname(video_path))
                 title = cover_title if cover_title else os.path.basename(os.path.dirname(original_video))
+
+                if cover_title_split_postion > 0 and isinstance(title, str):
+                    title = title[:cover_title_split_postion] + ',' + title[cover_title_split_postion:]
+
                 title = adjust_title(title)
 
                 subtitle = replace_subtitle("EP1-120")
@@ -681,14 +686,14 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
     return frame_image_list
 
 
-def calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, num_pages):
-    font_size = (base_font_size - reduction_step * num_pages) * 3
-    subtitle_font_size = (base_subtitle_font_size - reduction_step * num_pages) * 3
+def calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, degrade):
+    font_size = (base_font_size - reduction_step * degrade) * 3
+    subtitle_font_size = (base_subtitle_font_size - reduction_step * degrade) * 3
     return font_size, subtitle_font_size
 
 
 def calculate_font_size(char_count):
-    reduction_step = 8
+    reduction_step = 9
     base_font_size = 80
     base_subtitle_font_size = 60
 
@@ -752,20 +757,20 @@ if __name__ == "__main__":
     for fooo in fontts:
         title_font = os.path.join('ziti', fooo[0], fooo[1])  # 标题
         subtitle_font = os.path.join('ziti', fooo[0], fooo[1])  # 副标题
-        extract_thumbnail_main(original_video, release_video_dir, "摊牌了我的五个哥哥是大佬", title_font, subtitle_font, 1, 100, True)
-        # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", title_font, subtitle_font, 1, 100, True)
-        # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", title_font, subtitle_font, 1, 100, True)
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", title_font, subtitle_font, 1, 100, True)
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目", title_font, subtitle_font, 1, 100, True)
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目", title_font, subtitle_font, 1, 100, True)
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目", title_font, subtitle_font, 1, 100, True)  # 10
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目", title_font, subtitle_font, 1, 100, True)  # 11
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目", title_font, subtitle_font, 1, 100, True)  # 12
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 13
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 14
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 15
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 16
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 17
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 18
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 19
-        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True)  # 20
+        extract_thumbnail_main(original_video, release_video_dir, "摊牌了我的五个哥哥是大佬", title_font, subtitle_font, 1, 100, True, 0)
+        # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", title_font, subtitle_font, 1, 100, True,0)
+        # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", title_font, subtitle_font, 1, 100, True,0)
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", title_font, subtitle_font, 1, 100, True,0)
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目", title_font, subtitle_font, 1, 100, True,0)
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目", title_font, subtitle_font, 1, 100, True,0)
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目", title_font, subtitle_font, 1, 100, True,0)  # 10
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 11
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 12
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 13
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 14
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 15
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 16
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 17
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 18
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 19
+        # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目目目目目目目目目目目目目目", title_font, subtitle_font, 1, 100, True,0)  # 20

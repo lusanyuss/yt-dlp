@@ -448,13 +448,16 @@ def run_main(url=None,
     frame_image_list = []
     if is_get_cover:
         # 记录开始时间
+        print_separator(f"生成封面图 <<{sub_directory}>>")
         start_time = time.time()
         title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
         subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
         frame_image_list = extract_thumbnail_main(original_video, release_video_dir,
                                                   cover_title, title_font, subtitle_font,
                                                   num_of_covers=num_of_covers,
-                                                  crop_height=100, isTest=False)
+                                                  crop_height=100, isTest=False,
+                                                  cover_title_split_postion=cover_title_split_postion
+                                                  )
 
         end_time = time.time()
         elapsed_time = end_time - start_time
