@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 
 from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor
 
@@ -11,17 +12,18 @@ def read_output(pipe, log_file):
     pipe.close()
 
 
-def add_zimu_shuiyin_to_video(video_path, subtitles_path):
-    dest_video_path = add_zimu_suffix(video_path)
+def add_zimu_shuiyin_to_video(video_nobgm, subtitles_path):
+    video_final = add_zimu_suffix(video_nobgm)
     subtitles_path = get_relative_path(subtitles_path)
-    if os.path.exists(dest_video_path) and has_zimu_suffix(dest_video_path):
-        print(f"文件已存在且已添加字幕和水印: {video_path}")
-        return dest_video_path
+    if os.path.exists(video_final) and has_zimu_suffix(video_final):
+        print(f"文件已存在且已添加字幕和水印: {video_nobgm}")
+        return video_final
 
+    start_time = time.time()
     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
     text = "爽剧风暴"
     # 获取视频时长
-    video_duration_ms = get_mp4_duration(video_path)
+    video_duration_ms = get_mp4_duration(video_nobgm)
     video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
     # 计算分钟数
     minutes_needed = video_duration_s / 60 / 24
@@ -32,11 +34,11 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     margin_v = 30  # 调整字幕离底部的距离
 
     command = (
-        f'ffmpeg -loglevel info -hwaccel cuda -i "{video_path}" -vf "subtitles=\'{get_relative_path(subtitles_path)}\':force_style='
+        f'ffmpeg -loglevel info -hwaccel cuda -i "{video_nobgm}" -vf "subtitles=\'{get_relative_path(subtitles_path)}\':force_style='
         f'\'FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}\', '
         f'drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
         f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-        f'-c:v h264_nvenc -c:a copy -y "{dest_video_path}"'
+        f'-c:v h264_nvenc -c:a copy -y "{video_final}"'
     )
 
     # 打印命令以便手动检查
@@ -45,15 +47,14 @@ def add_zimu_shuiyin_to_video(video_path, subtitles_path):
     try:
         pattern = r"(frame=|Parsed_subtitles)"  # 只打印包含 "frame=" 或 "Parsed_subtitles" 的行
         CommandExecutor.run_command(command, pattern)
-        os.remove(video_path)
-        print(f"\n\n添加字幕和水印成功 {dest_video_path}")
+        print(f"\n\n添加水印和字幕成功{video_final}\n耗时: {time.time() - start_time:.2f} seconds")
     except Exception as e:
         print(f"添加字幕和水印失败,发生错误: {e}\n")
-        if os.path.exists(dest_video_path):
-            os.remove(dest_video_path)
+        if os.path.exists(video_final):
+            os.remove(video_final)
         return None
 
-    return dest_video_path
+    return video_nobgm, video_final
 
 
 if __name__ == '__main__':

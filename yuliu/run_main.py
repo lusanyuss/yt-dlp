@@ -286,14 +286,25 @@ def delete_files_by_list(frame_image_list):
             print(f"Failed to delete: {file}")
 
 
-def delete_files(audio_file_list=[], video_file_list=[], audio_vocals_list=[], video_file_item_list=[], audio_instrum_list=[], frame_image_list=[]):
-    all_files = audio_file_list + video_file_list + audio_vocals_list + video_file_item_list + audio_instrum_list + frame_image_list
+def delete_files(*args):
+    # 合并所有传入的参数到一个列表
+    all_files = []
+    for arg in args:
+        if isinstance(arg, str):
+            all_files.append(arg)
+        elif isinstance(arg, list):
+            all_files.extend(arg)
+        else:
+            print(f"Unsupported input type: {type(arg)}")
+            return
+
+    # 尝试删除每个文件
     for file in all_files:
         try:
             os.remove(file)
             print(f"Deleted: {file}")
-        except OSError:
-            print(f"Failed to delete: {file}")
+        except OSError as e:
+            print(f"Failed to delete {file}: {e}")
 
 
 # def check_directory(base_dir):
@@ -355,7 +366,19 @@ def get_user_confirmation():
         return False
 
 
-import os
+def rename_file(original_video, sub_directory):
+    # 获取文件目录和后缀
+    directory, filename = os.path.split(original_video)
+    _, extension = os.path.splitext(filename)
+    # 新的文件路径
+    new_path = os.path.join(directory, sub_directory + extension)
+    # 如果目标文件已存在，删除它
+    if os.path.exists(new_path):
+        os.remove(new_path)
+    # 重命名文件
+    os.rename(original_video, new_path)
+    # 返回新的文件路径
+    return new_path
 
 
 def get_mvsep_base_dir(is_high_quality, sub_directory):
@@ -409,7 +432,7 @@ def run_main(url=None,
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
 
-    dest_video_path = os.path.join(release_video_dir, f"{sub_directory}_zimu.mp4")
+    video_final = os.path.join(release_video_dir, f"{sub_directory}_zimu.mp4")
     cache_util = DiskCacheUtil()
 
     split_time_ms = minutes_to_milliseconds(split_time_min)
@@ -441,7 +464,8 @@ def run_main(url=None,
             target_path = os.path.join(release_video_dir, os.path.basename(videos[0]))
             shutil.copy(videos[0], target_path)
             original_video = target_path
-
+    # 对原始视频重命名
+    original_video = rename_file(original_video, sub_directory)
     frame_image_list = []
     if is_get_cover:
         # 记录开始时间
@@ -467,8 +491,8 @@ def run_main(url=None,
         generate_video_metadata(release_video_dir, sub_directory)
 
     if is_get_video:
-        if os.path.exists(dest_video_path) and has_zimu_suffix(dest_video_path):
-            print(f"文件 : 存在,有字幕,有水印: {dest_video_path}")
+        if os.path.exists(video_final) and has_zimu_suffix(video_final):
+            print(f"文件 : 存在,有字幕,有水印: {video_final}")
             # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
             # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
             # audio_paths = get_sorted_vocals_wav_files(release_video_dir)
@@ -477,7 +501,7 @@ def run_main(url=None,
             # print_separator()
         else:
             print_separator(f"1.处理视频,切成小块视频,进行处理 <<{sub_directory}>>")
-            video_dest_result = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
+            video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm{get_file_only_extension(original_video)}")
             print(f"\n原始视频路径: {original_video}")
             video_duration = get_mp4_duration(original_video)
             print(f"\n原始视频时长: {video_duration}")
@@ -493,32 +517,18 @@ def run_main(url=None,
              video_origin_list, audio_vocals_list,
              video_origin_clips, process_video_time) = process_video_files_list(video_clips)
 
-            video_dest_result = merge_videos(video_dest_list, video_dest_result)
+            video_nobgm = merge_videos(video_dest_list, video_nobgm)
 
-            audio_path_wav = extract_audio_only(video_dest_result)
+            audio_path_wav = extract_audio_only(video_nobgm)
             print_separator(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
-
-            # target_language = 'en'
-            # en_srt = os.path.join(release_video_dir, f"{sub_directory}_{iso639_2_to_3(target_language)}.srt")
-            # if not os.path.exists(en_srt):
+            # 音频 转录 生成 中文字幕
             zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
-            # if get_user_confirmation():
-            #     print("确认中文字幕完毕...")
-            # else:
-            #     print("中文字幕有问题,退出程序.")
-            #     exit()
-            # command = ['wsl', 'python', '/root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py', '--sub_directory', sub_directory]
-            # print(f"命令: wsl python /root/seamless_communication/demo/m4tv2/seamless_subtitle_translation.py --sub_directory {sub_directory}")
-            # CommandExecutor.run_command(command)
+            # 用 中文字幕 翻译 生成 英文字幕
             en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
-
             ##以上步骤保证一定有英文字幕了
             print(f"====================添加英文字幕和水印<<{sub_directory}>>======================")
             # 添加英文字幕和水印
-            start_time = time.time()
-            dest_video_path = add_zimu_shuiyin_to_video(video_dest_result, en_srt)
-            print(f"添加水印和字幕耗时: {time.time() - start_time:.2f} seconds")
-
+            video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
             process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
             # 生成视频metadata
             delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips)
