@@ -1,0 +1,379 @@
+import http.client as httplib  # 更新为 http.client
+import os
+import random
+import sys
+import time
+
+import httplib2
+from googleapiclient.discovery import build  # 更新为 googleapiclient
+from googleapiclient.errors import HttpError  # 更新为 googleapiclient
+from googleapiclient.http import MediaFileUpload  # 更新为 googleapiclient
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.file import Storage
+from oauth2client.tools import argparser, run_flow
+
+# Explicitly tell the underlying HTTP transport library not to retry, since
+# we are handling retry logic ourselves.
+httplib2.RETRIES = 1
+
+# Maximum number of times to retry before giving up.
+MAX_RETRIES = 10
+
+# Always retry when these exceptions are raised.
+RETRIABLE_EXCEPTIONS = (httplib2.HttpLib2Error, IOError, httplib.NotConnected,
+                        httplib.IncompleteRead, httplib.ImproperConnectionState,
+                        httplib.CannotSendRequest, httplib.CannotSendHeader,
+                        httplib.ResponseNotReady, httplib.BadStatusLine)
+
+# Always retry when an googleapiclient.errors.HttpError with one of these status
+# codes is raised.
+RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
+
+CLIENT_SECRETS_FILE = "client_secrets.json"
+YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
+YOUTUBE_API_SERVICE_NAME = "youtube"
+YOUTUBE_API_VERSION = "v3"
+
+MISSING_CLIENT_SECRETS_MESSAGE = """
+WARNING: Please configure OAuth 2.0
+
+To make this sample run you will need to populate the client_secrets.json file
+found at:
+
+   %s
+
+with information from the API Console
+https://console.cloud.google.com/
+
+For more information about the client_secrets.json file format, please visit:
+https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
+""" % os.path.abspath(os.path.join(os.path.dirname(__file__), CLIENT_SECRETS_FILE))
+
+VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
+
+PROXIES = {
+    "http": "http://127.0.0.1:7890",
+    "https": "http://127.0.0.1:7890",
+}
+
+
+def get_authenticated_service(args):
+    flow = flow_from_clientsecrets(CLIENT_SECRETS_FILE,
+                                   scope=YOUTUBE_UPLOAD_SCOPE,
+                                   message=MISSING_CLIENT_SECRETS_MESSAGE)
+
+    storage = Storage("%s-oauth2.json" % sys.argv[0])
+    credentials = storage.get()
+
+    if credentials is None or credentials.invalid:
+        http = httplib2.Http(proxy_info=httplib2.ProxyInfo(
+            proxy_type=httplib2.socks.PROXY_TYPE_HTTP,
+            proxy_host="127.0.0.1",
+            proxy_port=7890
+        ), timeout=60)
+        credentials = run_flow(flow, storage, args, http=http)
+    else:
+        http = httplib2.Http(proxy_info=httplib2.ProxyInfo(
+            proxy_type=httplib2.socks.PROXY_TYPE_HTTP,
+            proxy_host="127.0.0.1",
+            proxy_port=7890
+        ), timeout=60)
+
+    return build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
+                 http=credentials.authorize(http))
+
+
+def initialize_upload(youtube, options):
+    tags = None
+    if options.keywords:
+        tags = options.keywords.split(",")
+
+    body = dict(
+        snippet=dict(
+            title=options.title,
+            description=options.description,
+            tags=tags,
+            categoryId=options.category
+        ),
+        status=dict(
+            privacyStatus=options.privacyStatus
+        )
+    )
+
+    insert_request = youtube.videos().insert(
+        part=",".join(body.keys()),
+        body=body,
+        media_body=MediaFileUpload(options.file, chunksize=-1, resumable=True)
+    )
+
+    resumable_upload(insert_request)
+
+
+def resumable_upload(insert_request):
+    response = None
+    error = None
+    retry = 0
+    while response is None:
+        try:
+            print("Uploading file...")
+            status, response = insert_request.next_chunk()
+            if response is not None:
+                if 'id' in response:
+                    print("Video id '%s' was successfully uploaded." % response['id'])
+                else:
+                    exit("The upload failed with an unexpected response: %s" % response)
+        except HttpError as e:
+            if e.resp.status in RETRIABLE_STATUS_CODES:
+                error = "A retriable HTTP error %d occurred:\n%s" % (e.resp.status, e.content)
+            else:
+                raise
+        except RETRIABLE_EXCEPTIONS as e:
+            error = "A retriable error occurred: %s" % e
+
+        if error is not None:
+            print(error)
+            retry += 1
+            if retry > MAX_RETRIES:
+                exit("No longer attempting to retry.")
+
+            max_sleep = 2 ** retry
+            sleep_seconds = random.random() * max_sleep
+            print("Sleeping %f seconds and then retrying..." % sleep_seconds)
+            time.sleep(sleep_seconds)
+
+
+if __name__ == '__main__':
+    argparser.add_argument("--file", required=True, help="Video file to upload")
+    argparser.add_argument("--title", help="Video title", default="Test Title")
+    argparser.add_argument("--description", help="Video description",
+                           default="Test Description")
+    argparser.add_argument("--category", default="18",
+                           help="Numeric video category. " +
+                                "See https://developers.google.com/youtube/v3/docs/videoCategories/list")
+    argparser.add_argument("--keywords", help="Video keywords, comma separated",
+                           default="")
+    argparser.add_argument("--privacyStatus", choices=VALID_PRIVACY_STATUSES,
+                           default=VALID_PRIVACY_STATUSES[0], help="Video privacy status.")
+    args = argparser.parse_args()
+
+    if not os.path.exists(args.file):
+        exit("Please specify a valid file using the --file= parameter.")
+
+    youtube = get_authenticated_service(args)
+    try:
+        initialize_upload(youtube, args)
+    except HttpError as e:
+        print("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))
+
+# 类别
+# '''
+# python upload_youtube.py --file="release_video/aa测试目录/aa测试目录_zimu.mp4" --title="Your Video Upload Test" --description="Your Video Description" --category="24" --keywords="keyword1,keyword2" --privacyStatus="private"
+
+
+#
+#
+#
+# {
+# “kind”：“youtube#videoCategoryListResponse”，
+# “etag”：“QteLrrS_X7rM7rlcU_e7qa0embQ”，
+# “items”：[
+# {
+# “kind”：“youtube#videoCategory”，
+# “etag”：“grPOPYEUUZN3ltuDUGEWlrTR90U”，
+# “id”：“1”，
+# “snippet”：{
+# “title”：“电影与动画”，
+# “assignable”：true，
+# “channelId”：“UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”：“youtube#videoCategory”，
+# “etag”：“Q0xgUf8BFM8rW3W0R9wNq809xyA”，
+# “id”：“2”，
+# “snippet”：{
+# “title”：“汽车与车辆”，
+# “assignable”：true，
+# “channelId”： “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”：“youtube#videoCategory”，
+# “etag”：“qnpwjh5QlWM5hrnZCvHisquztC4”，
+# “id”：“10”，
+# “snippet”：{
+# “title”：“音乐”，
+# “assignable”：true，
+# “channelId”：“UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”：“youtube#videoCategory”，
+# “etag”：“HyFIixS5BZaoBdkQdLzPdoXWipg”，
+# “id”：“15”，
+# “snippet”：{
+# “title”：“宠物和动物”，
+# “assignable”：true，
+# “channelId”：“UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “PNU8SwXhjsF90fmkilVohofOi4I”,
+# “id”: “17”,
+# “snippet”: {
+# “title”: “体育”,
+# “assignable”: true,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “5kFljz9YJ4lEgSfVwHWi5kTAwAs”,
+# “id”: “18”,
+# “snippet”: {
+# “title”: “短片”,
+# “assignable”: false,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”：“ANnLQyzEA_9m3bMyJXMhKTCOiyg”，
+# “id”：“19”，
+# “snippet”：{
+# “title”：“旅行与活动”，
+# “assignable”：true，
+# “channelId”：“UCBR8-60-B28hp2BmDPdntcQ”
+#
+# }
+# }，
+#
+# {
+# “kind”：“youtube#videoCategory”，
+# “etag”：“0Hh6gbZ9zWjnV3sfdZjKB5LQr6E”，
+# “id”：“20”，
+# “snippet”：{
+# “title”：“游戏”，
+# “assignable”：true，
+# “channelId”：“UCBR8-60-B28hp2BmDPdntcQ”
+#
+# }
+# }，
+#
+# {
+# “kind”：“youtube#videoCategory”，
+# “etag”： “q8Cp4pUfCD8Fuh8VJ_yl5cBCVNw”,
+# “id”: “21”,
+# “snippet”: {
+# “title”: “视频博客”,
+# “assignable”: false,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “cHDaaqPDZsJT1FPr1-MwtyIhR28”,
+# “id”: “22”,
+# “snippet”: {
+# “title”: “人物与博客”,
+# “assignable”: true,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “3Uz364xBbKY50a2s0XQlv-gXJds”,
+# “id”: “23”,
+# “snippet”: {
+# “title”: “喜剧”,
+# “assignable”: true,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “0srcLUqQzO7-NGLF7QnhdVzJQmY”,
+# “id”: “24”,
+# “snippet”: {
+# “title”: “娱乐”,
+# “assignable”: true,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “bQlQMjmYX7DyFkX4w3kT0osJyIc”,
+# “id”: “25”,
+# “snippet”: {
+# “title”: “新闻与政治”,
+# “assignable”: true,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “Y06N41HP_WlZmeREZvkGF0HW5pg”,
+# “id”: “26”,
+# “snippet”: {
+# “title”: “操作方法与风格”,
+# “assignable”: true,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: "yBaNkLx4sX9NcDmFgAmxQcV4Y30",
+# "id": "27",
+# "snippet": {
+# "title": "教育",
+# "assignable": true,
+# "channelId": "UCBR8-60-B28hp2BmDPdntcQ"
+# }
+# },
+# {
+# "kind": "youtube#videoCategory",
+# "etag": "Mxy3A-SkmnR7MhJDZRS4DuAIbQA",
+# "id": "28",
+# "snippet": {
+# "title": "科学与技术",
+# "assignable": true,
+# "channelId": "UCBR8-60-B28hp2BmDPdntcQ"
+# }
+# },
+# {
+# "kind": "youtube#videoCategory",
+# "etag": “p3lEirEJApyEkuWpaGEHoF-m-aA”,
+# “id”: “29”,
+# “snippet”: {
+# “title”: “非营利组织和激进主义”,
+# “assignable”: true,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “4pIHL_AdN2kO7btAGAP1TvPucNk”,
+# “id”: “30”,
+# “snippet”: {
+# “title”: “电影”,
+# “assignable”: false,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “Iqol1myDwh​​2AuOnxjtn2AfYwJTU”,
+# “id”: “31”,
+# “snippet”: {
+# “title”: “动漫/动画”,
+# “assignable”: false,
+# “channelId”: “UCBR8-60-B28hp2BmDPdntcQ”
+# }
+# },
+# {
+# “kind”: “youtube#videoCategory”,
+# “etag”: “tzhBKCBcYWZLPai5INY4id91ss8”,
+# “id”: “32”,
+#
+# '''
