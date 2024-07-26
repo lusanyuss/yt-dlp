@@ -512,6 +512,30 @@ def run_main(url=None,
         except Exception as e:
             print(f'出错: {e}')
 
+    if is_get_fanyi:
+        try:
+            zh_srt = os.path.join(release_video_dir, f"{sub_directory}_cmn.srt")
+            if os.path.exists(zh_srt):
+                print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
+                start_time = time.time()
+                print(f"1.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
+                video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
+                en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
+                ##以上步骤保证一定有英文字幕了
+
+                print(f"2.视频添加字幕,水印 <<{sub_directory}>>")
+                # 添加英文字幕和水印
+                video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
+
+                print(f"3.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
+                target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
+                for code in target_languages:
+                    yuliu.transcribe_srt.translate_srt_file(zh_srt, code, max_payload_size=2048)
+
+                print(f"\n总耗时情况:{(time.time() - start_time)}")
+        except Exception as e:
+            print(f'出错: {e}')
+
     if is_get_video:
         try:
             start_time = time.time()
@@ -564,28 +588,5 @@ def run_main(url=None,
 
         # 删除多余文件
         # delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips)
-
-    if is_get_fanyi:
-        try:
-            print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
-            start_time = time.time()
-            print(f"1.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
-            zh_srt = os.path.join(release_video_dir, f"{sub_directory}_cmn.srt")
-            video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
-            en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
-            ##以上步骤保证一定有英文字幕了
-
-            print(f"2.视频添加字幕,水印 <<{sub_directory}>>")
-            # 添加英文字幕和水印
-            video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
-
-            print(f"3.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
-            target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
-            for code in target_languages:
-                yuliu.transcribe_srt.translate_srt_file(zh_srt, code, max_payload_size=2048)
-
-            print(f"\n总耗时情况:{(time.time() - start_time)}")
-        except Exception as e:
-            print(f'出错: {e}')
 
     cache_util.close_cache()
