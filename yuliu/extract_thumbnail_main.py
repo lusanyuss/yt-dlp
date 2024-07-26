@@ -216,7 +216,7 @@ def has_chinese_characters(text):
 
 
 def extract_and_print_chinese_text(output_path):
-    ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False)
+    ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=True, show_log=False)
     result = ocr.ocr(output_path, cls=True)
     chinese_text = ''
     if result and isinstance(result, list):
