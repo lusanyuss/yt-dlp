@@ -65,18 +65,17 @@ if __name__ == "__main__":
         # '新版-至尊仙帝',
         # '棋圣,胜天半子',
         # '玄门侠女',
-        ################### 未传部分 #######################
         # '战神饶命我真不是故意抢你女人',
         # '摊牌了,我有三个后妈',
         # '豪门狂少归来',
-
-        # '首富老爸抓娃娃',
-        # '我以我血荐轩辕',
-
-        '我的爷爷是大佬',
-        '重启人生我靠败家逆袭',
+        # '我的爷爷是大佬',
+        # '重启人生我靠败家逆袭',
         # '归来之我妈是战神',
-        # '当丑女遇上总裁',
+        ################### 未传部分 #######################
+
+        '首富老爸抓娃娃',
+        '我以我血荐轩辕',
+        '当丑女遇上总裁',
         # '摊牌了,我的五个哥哥是大佬',
         # '偏偏对你心动',
 
@@ -122,10 +121,10 @@ if __name__ == "__main__":
     ]
     for video_name in videos:
         cover_title_split_postion = 0
-        if video_name == '我的爷爷是大佬':
-            cover_title_split_postion = 2
-        if video_name == '重启人生我靠败家逆袭':
-            cover_title_split_postion = 4
+        # if video_name == '我的爷爷是大佬':
+        #     cover_title_split_postion = 2
+        # if video_name == '重启人生我靠败家逆袭':
+        #     cover_title_split_postion = 4
 
         common.check_and_run(sub_directory=video_name,
                              cover_title=yuliu.utils.replace_comma_with_newline(video_name),
