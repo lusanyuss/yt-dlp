@@ -115,21 +115,35 @@ def are_files_same(audio_files, output_dir):
     return True
 
 
+def check_files_exist(file_list):
+    # 检查每个文件是否存在
+    for file in file_list:
+        if not os.path.isfile(file):
+            # 如果有任何文件不存在，返回空数组
+            return []
+    # 如果所有文件都存在，返回原始数组
+    return file_list
+
+
 def process_video_files_list(video_origin_clips):
     start_time = time.time()
     video_dest_list = []
-    # 多线程分割视频
-    audio_origin_list, video_origin_list = separate_audio_and_video_list(video_origin_clips)
-    # 单线程去除视频背景音乐
-    audio_vocals_list = process_audio_with_mvsep_mdx23_list(audio_origin_list)
-
     for index, video_file_item in enumerate(video_origin_clips, start=1):
-        video_dest = os.path.splitext(video_file_item)[0] + '_processed.mp4'
-        video_dest_list.append(video_dest)
-    video_dest_list = merge_audio_and_video_list(video_origin_list, audio_vocals_list, video_dest_list)
-    end_time = time.time()
-    process_video_time = end_time - start_time
-    return video_dest_list, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, process_video_time
+        video_dest_list.append(os.path.splitext(video_file_item)[0] + '_processed.mp4')
+
+    if all(os.path.isfile(file) for file in video_dest_list):
+        process_video_time = time.time() - start_time
+        return video_dest_list, [], [], [], [], process_video_time
+    else:
+        # 多线程分割视频
+        audio_origin_list, video_origin_list = separate_audio_and_video_list(video_origin_clips)
+        # 单线程去除视频背景音乐
+        audio_vocals_list = process_audio_with_mvsep_mdx23_list(audio_origin_list)
+
+        video_dest_list = merge_audio_and_video_list(video_origin_list, audio_vocals_list, video_dest_list)
+
+        process_video_time = time.time() - start_time
+        return video_dest_list, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, process_video_time
 
 
 def get_video_list(result):
@@ -523,6 +537,7 @@ def run_main(url=None,
             print_separator(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
             # 音频 转录 生成 中文字幕
             zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
+
             # 用 中文字幕 翻译 生成 英文字幕
             en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
             ##以上步骤保证一定有英文字幕了
@@ -536,8 +551,21 @@ def run_main(url=None,
     if is_get_fanyi:
         try:
             print_separator(f"3.生成翻译字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
-            # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
-            # target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
+            zh_srt = os.path.join(release_video_dir, f"{sub_directory}_cmn.srt")
+            video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
+
+            en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
+
+            ##以上步骤保证一定有英文字幕了
+            print(f"====================添加英文字幕和水印<<{sub_directory}>>======================")
+            # 添加英文字幕和水印
+            video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
+
+            print(f"====================生成 8 国翻译<<{sub_directory}>>======================")
+            target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
+            for code in target_languages:
+                yuliu.transcribe_srt.translate_srt_file(zh_srt, code, max_payload_size=2048)
+
             # zh_srt = os.path.join(release_video_dir, f'{sub_directory}_zh.srt')
             # result_other_srt = process_videos([zh_srt], target_languages)
             # for language in target_languages:
