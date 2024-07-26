@@ -13,6 +13,12 @@ def read_output(pipe, log_file):
 
 
 def add_zimu_shuiyin_to_video(video_nobgm, subtitles_path):
+    if not os.path.exists(video_nobgm):
+        raise Exception("无背景音乐视频不存在")
+
+    if not os.path.exists(subtitles_path):
+        raise Exception("字幕不存在")
+
     video_final = add_zimu_suffix(video_nobgm)
     subtitles_path = get_relative_path(subtitles_path)
     if os.path.exists(video_final) and has_zimu_suffix(video_final):

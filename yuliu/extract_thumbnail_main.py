@@ -633,11 +633,11 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
     frame_image_list = []
     cover_images_list = []
 
-    print_separator(f"开始制作封面图 <<{cover_title}>>")
+    print(f"开始制作封面图 <<{cover_title}>>")
 
     cover_images_list, frame_images_list = extract_covers_and_frames(original_video, release_video_dir, 3 * num_of_covers, crop_height)
     if len(cover_images_list) != num_of_covers:
-        print_separator("制作封面图超过设定时间，退出不获取了")
+        print("制作封面图超过设定时间，退出不获取了")
         return frame_image_list
     # 示例调用
     resize_images_if_needed(cover_images_list)

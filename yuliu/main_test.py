@@ -119,14 +119,13 @@ if __name__ == "__main__":
                          cover_title="天龙八部",
                          juji_num=1,
                          split_time_min=0.5,
-
                          is_clear_cache=False,
 
-                         is_get_video=True,
                          is_get_cover=True,
-                         num_of_covers=1,
+                         is_get_video=True,
+                         is_get_fanyi=True,
 
-                         is_get_fanyi=False,
+                         num_of_covers=1,
                          is_high_quality=False,
                          cover_title_split_postion=0
                          )
