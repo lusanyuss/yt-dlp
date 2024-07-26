@@ -17,7 +17,7 @@ def process_audio_with_mvsep_mdx23_onebyone(audio_file):
 
     mvsep_input_dir = os.path.join(os.getcwd(), 'MVSEP-MDX23-Colab_v2', 'input', 'aa测试目录')
     mvsep_output_dir = os.path.join(os.getcwd(), 'MVSEP-MDX23-Colab_v2', 'output', 'aa测试目录')
-    download_directory_dir = os.path.join(os.getcwd(), 'download_directory', 'aa测试目录')
+    release_video_dir = os.path.join(os.getcwd(), 'release_video', 'aa测试目录')
 
     # 清空目录
     clear_directory(mvsep_input_dir)
@@ -46,7 +46,7 @@ def process_audio_with_mvsep_mdx23_onebyone(audio_file):
                 os.remove(output_file_instrum)
 
     if os.path.exists(output_file_vocals):
-        destination = shutil.copy(output_file_vocals, download_directory_dir)
+        destination = shutil.copy(output_file_vocals, release_video_dir)
         elapsed_time = time.time() - start_time
         print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
 
@@ -61,7 +61,7 @@ def process_audio_with_mvsep_mdx23_onebyone1(audio_files):
 
     mvsep_input_dir = os.path.join(os.getcwd(), 'MVSEP-MDX23-Colab_v2', 'input', 'aa测试目录')
     mvsep_output_dir = os.path.join(os.getcwd(), 'MVSEP-MDX23-Colab_v2', 'output', 'aa测试目录')
-    download_directory_dir = os.path.join(os.getcwd(), 'download_directory', 'aa测试目录')
+    release_video_dir = os.path.join(os.getcwd(), 'release_video', 'aa测试目录')
 
     # 清空目录
     clear_directory(mvsep_input_dir)

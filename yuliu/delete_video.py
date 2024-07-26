@@ -27,7 +27,7 @@ if __name__ == '__main__':
         '我无敌于世间',
         '当丑女遇上总裁'
     ]
-    base_dirs = ["download_cache", "download_directory", "release_video",
+    base_dirs = ["download_cache", "release_video", "release_video",
                  os.path.join("MVSEP-MDX23-Colab_v2", "input"),
                  os.path.join("MVSEP-MDX23-Colab_v2", "output"),
                  os.path.join("MVSEP-CDX23-Cinematic-Sound-Demixing", "input"),

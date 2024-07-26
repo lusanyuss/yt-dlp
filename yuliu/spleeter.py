@@ -123,7 +123,7 @@ def merge_videos(video_files, output_dir, max_length=50):
 
 if __name__ == '__main__':
     # 检查下载目录中的最新文件
-    download_path = 'download_directory'  # 请根据实际情况替换
+    download_path = 'release_video'  # 请根据实际情况替换
     # 定义视频文件列表，现在包含完整路径
     video_files = [
         os.path.join(download_path, 'BV12e411a7ys.mp4')

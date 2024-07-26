@@ -262,7 +262,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
     if os.path.exists(output_path):
         with lock:
             frame_paths[index] = output_path
-            print(f"文件已存在: {output_path}")
+            print(f"文件 frame_{index + 1}.jpg 已存在,直接返回: {output_path}")
             return
 
     while True:
@@ -302,7 +302,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
                     enhanced_image.save(output_path)
                     with lock:
                         frame_paths[index] = output_path
-                        print(f"生成图片: {output_path}")
+                        print(f"\n重新生成 frame_{index + 1}.jpg 图片: {output_path} \n")
                     break
             except Exception as e:
                 print(f"Error processing image {output_path}: {e}")
@@ -350,12 +350,15 @@ def extract_covers_and_frames(video_path, release_video_dir, num_frames=3 * 1, c
     # Model path for super resolution
     model_path = "ESPCN_x3.pb"
     timeout_duration = num_frames * 50
+    images_dir = os.path.join(release_video_dir, "images")
+    os.makedirs(images_dir, exist_ok=True)
+
     # 截图列表
-    frame_images = get_frame_images(num_frames, video_path, duration, release_video_dir, crop_height, model_path, timeout_duration)
+    frame_images = get_frame_images(num_frames, video_path, duration, images_dir, crop_height, model_path, timeout_duration)
     # 封面图列表
     cover_images = []
     if len(frame_images) == num_frames:
-        cover_images = get_cover_images(frame_images, release_video_dir)
+        cover_images = get_cover_images(frame_images, images_dir)
     else:
         delete_files(frame_images)
         frame_images = []
@@ -729,7 +732,7 @@ def calculate_font_size(char_count):
 
 
 if __name__ == "__main__":
-    output_dir = os.path.join('download_directory', 'aa测试目录')
+    output_dir = os.path.join('release_video', 'aa测试目录')
     os.makedirs(output_dir, exist_ok=True)
     video_path = os.path.join(output_dir, '1.mp4')
     duration = 10
@@ -737,7 +740,7 @@ if __name__ == "__main__":
     num_frames = 3
     model_path = "ESPCN_x3.pb"
 
-    original_video = os.path.join(os.getcwd(), 'download_directory', 'aa测试目录', '1.mp4')
+    original_video = os.path.join(os.getcwd(), 'release_video', 'aa测试目录', '1.mp4')
     release_video_dir = os.path.join(os.getcwd(), 'release_video', 'aa测试目录')
 
     # delete_matching_images(release_video_dir)

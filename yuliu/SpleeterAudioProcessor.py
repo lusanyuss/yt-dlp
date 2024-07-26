@@ -27,7 +27,7 @@ class SpleeterAudioProcessor:
         return self.output_file
 
 # 示例使用
-processor = SpleeterAudioProcessor("./download_directory/周太太今天太难哄/out_times_00_audio.mp3")
-processor.separate_audio()
-output_file = processor.get_output_file()
-print(f"分离后的音频文件路径: {output_file}")
+# processor = SpleeterAudioProcessor("./release_video/周太太今天太难哄/out_times_00_audio.mp3")
+# processor.separate_audio()
+# output_file = processor.get_output_file()
+# print(f"分离后的音频文件路径: {output_file}")

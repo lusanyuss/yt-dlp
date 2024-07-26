@@ -41,7 +41,6 @@ def clear_directory_contents(directory):
 def clear_cache():
     directories_to_clear = [
         # download_cache_dir,
-        download_directory_dir,
         release_video_dir,
         mvsep_input_dir,
         # mvsep_output_dir
@@ -86,7 +85,7 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
 
     for output_file_vocals in output_file_vocals_list:
         if os.path.exists(output_file_vocals):
-            destination = shutil.copy(output_file_vocals, download_directory_dir)
+            destination = shutil.copy(output_file_vocals, release_video_dir)
             destination_vocals_list.append(destination)
     return destination_vocals_list
 
@@ -167,17 +166,17 @@ def download_video(url, video_name):
             video_list = get_video_list(result)
             merge_videos(video_list, merged_video_path)
         add_timestamp_to_filename(merged_video_path)
-        shutil.copy(merged_video_path, download_directory_dir)
-        return os.path.join(download_directory_dir, merged_video)
+        shutil.copy(merged_video_path, release_video_dir)
+        return os.path.join(release_video_dir, merged_video)
 
     def process_single_video(video_path):
         print("处理单个视频")
         if video_exists(video_path):
             print(f"视频已经存在（缓存）: {video_path}")
-            shutil.copy(video_path, download_directory_dir)
+            shutil.copy(video_path, release_video_dir)
         if not video_name:
             add_timestamp_to_filename(video_path)
-        return os.path.join(download_directory_dir, get_file_only_name(video_path))
+        return os.path.join(release_video_dir, get_file_only_name(video_path))
 
     close_chrome()
 
@@ -392,12 +391,11 @@ def run_main(url=None,
              is_high_quality=False,
              cover_title_split_postion=0
              ):
-    global download_cache_dir, download_directory_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
+    global download_cache_dir, release_video_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
 
     print_separator(f"初始化路径 <<{sub_directory}>>")
 
     download_cache_dir = get_dir("download_cache", sub_directory)
-    download_directory_dir = get_dir("download_directory", sub_directory)
     release_video_dir = get_dir("release_video", sub_directory)
 
     # 定义两个目录
@@ -407,12 +405,11 @@ def run_main(url=None,
     mvsep_input_dir = get_dir(os.path.join(mvsep_base_dir, "input"), sub_directory)
     mvsep_output_dir = get_dir(os.path.join(mvsep_base_dir, "output"), sub_directory)
     ensure_directory_exists(download_cache_dir)
-    ensure_directory_exists(download_directory_dir)
     ensure_directory_exists(release_video_dir)
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
-    dest_video_path = os.path.join(release_video_dir, f"{sub_directory}_zimu.mp4")
 
+    dest_video_path = os.path.join(release_video_dir, f"{sub_directory}_zimu.mp4")
     cache_util = DiskCacheUtil()
 
     split_time_ms = minutes_to_milliseconds(split_time_min)
@@ -436,12 +433,12 @@ def run_main(url=None,
     else:
         if len(videos) > 1:
             print_separator(f"合并视频 {sub_directory}")
-            original_video = os.path.join(download_directory_dir, generate_md5_filename(videos))
+            original_video = os.path.join(release_video_dir, generate_md5_filename(videos))
             if not os.path.exists(original_video):
                 original_video = merge_videos(videos, original_video)
         else:
             print_separator(f"复制视频文件到下载目录 <<{sub_directory}>>")
-            target_path = os.path.join(download_directory_dir, os.path.basename(videos[0]))
+            target_path = os.path.join(release_video_dir, os.path.basename(videos[0]))
             shutil.copy(videos[0], target_path)
             original_video = target_path
 
@@ -474,13 +471,12 @@ def run_main(url=None,
             print(f"文件 : 存在,有字幕,有水印: {dest_video_path}")
             # print(f"{get_file_name_with_extension(dest_video_path)}已存在，不需要再处理了,直接返回")
             # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ru", "ja"]
-            # audio_paths = get_sorted_vocals_wav_files(download_directory_dir)
+            # audio_paths = get_sorted_vocals_wav_files(release_video_dir)
             # output_zh_srt_path = transcribe_audio_to_srts(audio_paths)
             # subtitle_paths, video_path = process_videos(dest_video_path, ["en"])
             # print_separator()
         else:
             print_separator(f"1.处理视频,切成小块视频,进行处理 <<{sub_directory}>>")
-            output_pattern = os.path.join(os.path.dirname(original_video), 'out_times_%02d.mp4')
             video_dest_result = os.path.join(release_video_dir, f"{sub_directory}{get_file_only_extension(original_video)}")
             print(f"\n原始视频路径: {original_video}")
             video_duration = get_mp4_duration(original_video)
@@ -488,7 +484,7 @@ def run_main(url=None,
             keyframeextractor = KeyFrameExtractor(original_video, cache_util)
             keyframe_times = keyframeextractor.extract_keyframes()
             split_points = find_split_points(keyframe_times, split_time_ms)
-            video_clips = segment_video_times(original_video, split_points, output_pattern)
+            video_clips = segment_video_times(original_video, split_points)
             print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
 
             print_separator(f"2.对视频人声分离 <<{sub_directory}>>")

@@ -10,11 +10,11 @@ import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
 
-
 import subprocess
 import threading
 import time
 import re
+
 
 class CommandExecutor:
     @staticmethod
@@ -75,8 +75,6 @@ class CommandExecutor:
             command_str = command
         print(f"\n命令: {command_str}\n")
         print(f"命令执行时间: {elapsed_time:.2f} 秒")
-
-
 
 
 def print_separator(text='', char='=', length=150):
@@ -533,12 +531,14 @@ def files_exist(file_list):
     return all(os.path.exists(file) for file in file_list)
 
 
-def segment_video_times(original_video, split_points, output_pattern):
+def segment_video_times(original_video, split_points):
     start_time = time.time()
     print("开始分割视频")
 
+    out_times_dir = os.path.join(os.path.dirname(original_video), 'out_times')
+    os.makedirs(out_times_dir, exist_ok=True)
+    output_pattern = os.path.join(out_times_dir, 'out_times_%02d.mp4')
     cache_util = DiskCacheUtil()
-
     # 计算命令的MD5哈希值
     times_str = ",".join(map(str, split_points))
     command = f'ffmpeg -i "{original_video}" -f segment -segment_times {times_str} -c copy -map 0 "{output_pattern}" -loglevel quiet'
@@ -557,11 +557,9 @@ def segment_video_times(original_video, split_points, output_pattern):
         else:
             print(f"执行命令: {command}")
             subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-
             # 生成输出文件列表
             num_segments = len(split_points) + 1
             file_list = [output_pattern.replace('%02d', f'{i:02d}') for i in range(num_segments)]
-
             # 保存结果到缓存
             cache_util.set_to_cache(command_hash, file_list)
 

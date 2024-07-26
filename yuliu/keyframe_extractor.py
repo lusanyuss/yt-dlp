@@ -156,7 +156,7 @@ class KeyFrameExtractor:
 
 if __name__ == "__main__":
     # 使用示例
-    video_path = './download_directory/aa测试目录/1.mp4'
+    video_path = './release_video/aa测试目录/1.mp4'
     cache_util = DiskCacheUtil()
     extractor = KeyFrameExtractor(video_path, cache_util)
 

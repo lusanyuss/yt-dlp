@@ -131,6 +131,6 @@ if __name__ == '__main__':
     download_videos(URLS, '下山后我成了包租公')
 #
 #
-#  whisper ./yuliu/download_directory/aa测试目录/out_times_00_processed.mp4 --language Chinese --task translate
+#  whisper ./yuliu/release_video/aa测试目录/out_times_00_processed.mp4 --language Chinese --task translate
 #
 #
