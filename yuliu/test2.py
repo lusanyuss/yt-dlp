@@ -60,7 +60,7 @@ def clear_directory(path):
 
 
 # 生成偏移量列表
-def generate_offsets(start_seconds, end_seconds, step=0.2):
+def generate_offsets(start_seconds, end_seconds, step=0.4):
     offsets = []
     current_time = end_seconds
     while current_time > start_seconds + (end_seconds - start_seconds) * 0.25:
@@ -107,7 +107,7 @@ def merge_texts(texts):
 
 # 修正字幕内容
 def correct_subtitles(video_file_path, srt_content, output_path, is_test):
-    if not is_test:
+    if is_test:
         for offset in generate_offsets(0, 1):  # 生成一个虚拟的偏移量列表用于清理目录
             specific_output_path = os.path.join(output_path, f'offset_{offset}')
             clear_directory(specific_output_path)
@@ -149,13 +149,11 @@ def correct_subtitles(video_file_path, srt_content, output_path, is_test):
                         detected_texts.append(text)  # 从右向左拼接内容
                         last_text = text
                         # 保存图片
-                        specific_output_path = os.path.join(output_path, f'offset_{offset}')
-                        os.makedirs(specific_output_path, exist_ok=True)
                         roi_file = f'roi_{index}.jpg'
                         if cv2.imwrite(roi_file, roi):
-                            full_roi_file_path = os.path.join(specific_output_path, roi_file)
-                            os.replace(roi_file, full_roi_file_path)
-                            print(f"Saving ROI to: {full_roi_file_path}")  # 打印路径信息
+                            print(f"Saved ROI: {roi_file}")  # 打印路径信息
+                            os.remove(roi_file)  # 删除保存的文件
+                            print(f"Deleted ROI: {roi_file}")  # 打印删除信息
                         else:
                             raise FileNotFoundError(f"文件未能成功保存: {roi_file}")
 
