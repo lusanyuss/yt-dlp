@@ -708,11 +708,11 @@ def calculate_font_size(char_count):
         font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 3)
 
     elif char_count <= 11:
-        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1.5)
     elif char_count <= 12:
-        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1.5)
     elif char_count <= 13:
-        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1)
+        font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 1.5)
     elif char_count <= 14:
         font_size, subtitle_font_size = calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, 2)
     elif char_count <= 15:
