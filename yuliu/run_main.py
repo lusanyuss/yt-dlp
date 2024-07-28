@@ -479,7 +479,7 @@ def run_main(url=None,
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
 
-    video_final = os.path.join(release_video_dir, f"{sub_directory}_nobgm_zimu{get_file_only_extension(original_video)}")
+    video_final = os.path.join(release_video_dir, f"{sub_directory}_nobgm_zimu.mp4")
     cache_util = DiskCacheUtil()
 
     split_time_ms = minutes_to_milliseconds(split_time_min)
