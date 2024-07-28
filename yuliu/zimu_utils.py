@@ -12,15 +12,14 @@ def read_output(pipe, log_file):
     pipe.close()
 
 
-def add_zimu_shuiyin_to_video(video_nobgm, subtitles_path):
+def add_zimu_shuiyin_to_video(video_nobgm, srt_path=None):
     if not os.path.exists(video_nobgm):
         raise Exception("无背景音乐视频不存在")
 
-    if not os.path.exists(subtitles_path):
-        raise Exception("字幕不存在")
+    if not srt_path or not os.path.exists(srt_path):
+        print("字幕不存在")
 
     video_final = add_zimu_suffix(video_nobgm)
-    subtitles_path = get_relative_path(subtitles_path)
     if os.path.exists(video_final) and has_zimu_suffix(video_final):
         print(f"文件已存在且已添加字幕和水印: {video_nobgm}")
         return video_nobgm, video_final
@@ -37,15 +36,22 @@ def add_zimu_shuiyin_to_video(video_nobgm, subtitles_path):
     # 设置黄色的PrimaryColour值为&H00FFFF00
     primary_colour = '&H0000FFFF'
     outline_colour = '&H00000000'
-    margin_v = 30  # 调整字幕离底部的距离
+    margin_v = 25  # 调整字幕离底部的距离
 
-    command = (
-        f'ffmpeg -loglevel info -hwaccel cuda -i "{video_nobgm}" -vf "subtitles=\'{get_relative_path(subtitles_path)}\':force_style='
-        f'\'FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}\', '
-        f'drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
-        f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-        f'-c:v h264_nvenc -c:a copy -y "{video_final}"'
-    )
+    if srt_path and os.path.exists(srt_path):
+        command = (
+            f'ffmpeg -loglevel info -hwaccel cuda -i "{video_nobgm}" -vf "subtitles=\'{get_relative_path(srt_path)}\':force_style='
+            f'\'FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}\', '
+            f'drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
+            f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
+            f'-c:v h264_nvenc -c:a copy -y "{video_final}"'
+        )
+    else:
+        command = (
+            f'ffmpeg -hwaccel cuda -i "{video_nobgm}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
+            f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
+            f'-c:v h264_nvenc -c:a copy -y "{video_final}"'
+        )
 
     # 打印命令以便手动检查
     print("运行命令,加字幕和水印: \n", command)
@@ -65,7 +71,7 @@ def add_zimu_shuiyin_to_video(video_nobgm, subtitles_path):
 
 if __name__ == '__main__':
     print("===============相对==================")
-    video_path = 'release_video/aa测试目录/aa测试目录.mp4'
+    video_path = 'release_video/aa测试目录big/aa测试目录.mp4'
     srt_path = 'release_video/aa测试目录/aa测试目录_eng.srt'
     result = 'release_video/aa测试目录/aa测试目录_zimu.mp4'
 

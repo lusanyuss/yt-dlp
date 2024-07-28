@@ -262,7 +262,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
     if os.path.exists(output_path):
         with lock:
             frame_paths[index] = output_path
-            print(f"文件 frame_{index + 1}.jpg 已存在,直接返回: {output_path}")
+            # print(f"文件 frame_{index + 1}.jpg 已存在,直接返回: {output_path}")
             return
 
     while True:

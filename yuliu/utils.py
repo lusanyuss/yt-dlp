@@ -1,6 +1,7 @@
 import concurrent.futures
 import hashlib
 import json
+import re
 import subprocess
 import threading
 import time
@@ -9,11 +10,6 @@ from concurrent.futures import ThreadPoolExecutor
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
-
-import subprocess
-import threading
-import time
-import re
 
 
 class CommandExecutor:
@@ -77,6 +73,13 @@ class CommandExecutor:
         print(f"命令执行时间: {elapsed_time:.2f} 秒")
 
 
+def print_red(text):
+    print(f"\033[91m{text}\033[0m")
+
+def print_yellow(text):
+    print(f"\033[93m{text}\033[0m")
+
+
 def print_separator(text='', char='=', length=150):
     """
     打印一个带有文本的分隔符线。
@@ -92,7 +95,7 @@ def print_separator(text='', char='=', length=150):
             separator += char * (length - len(separator))
     else:
         separator = char * length
-    print(f'\n\n{separator}\n')
+    print_red(f'\n\n{separator}\n')
 
 
 def get_file_creation_time(file_path):
@@ -609,7 +612,6 @@ def extract_first_5_minutes(original_video, release_video_dir):
     base_name, ext = os.path.splitext(os.path.basename(original_video))
     output_video = f"{base_name}_5min{ext}"
     output_path = os.path.join(release_video_dir, output_video)
-    print_separator("截取前5分钟的视频")
     # 确保输出目录存在
     os.makedirs(release_video_dir, exist_ok=True)
 

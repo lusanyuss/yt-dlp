@@ -1,3 +1,4 @@
+import glob
 import os
 import re
 import shutil
@@ -7,16 +8,14 @@ import time
 from torchvision.datasets.utils import calculate_md5
 
 import yt_dlp
-import yuliu.transcribe_srt
 from utils import get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
     find_split_points, \
     print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor
+    separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, print_red, print_yellow
 from yuliu.DiskCacheUtil import DiskCacheUtil
-from yuliu.check_utils import check_duplicates, is_banned
+from yuliu.check_utils import is_banned
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
-from yuliu.transcribe_video import transcribe_audio_to_srt
 from yuliu.zimu_utils import add_zimu_shuiyin_to_video
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
@@ -84,9 +83,17 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
     elapsed_time = time.time() - start_time
     print(f"除背景音乐耗时: {elapsed_time:.2f} 秒")
 
+    out_times_dir = os.path.join(release_video_dir, "out_times")
+    os.makedirs(out_times_dir, exist_ok=True)
+    # # 清楚以前的,添加到images 目录中去
+    # for audio_file in audio_files:
+    #     temp_file = os.path.join(release_video_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
+    #     if os.path.exists(temp_file):
+    #         os.remove(temp_file)
+
     for output_file_vocals in output_file_vocals_list:
         if os.path.exists(output_file_vocals):
-            destination = shutil.copy(output_file_vocals, release_video_dir)
+            destination = shutil.copy(output_file_vocals, out_times_dir)
             destination_vocals_list.append(destination)
     return destination_vocals_list
 
@@ -129,12 +136,20 @@ def check_files_exist(file_list):
 def process_video_files_list(video_origin_clips):
     start_time = time.time()
     video_dest_list = []
+    audio_origin_list = []
+    video_origin_list = []
+    audio_vocals_list = []
+
     for index, video_file_item in enumerate(video_origin_clips, start=1):
-        video_dest_list.append(os.path.splitext(video_file_item)[0] + '_processed.mp4')
+        pre_name = os.path.splitext(video_file_item)[0]
+        video_dest_list.append(pre_name + '_processed.mp4')
+        audio_origin_list.append(pre_name + '_audio.mp3')
+        video_origin_list.append(pre_name + '_video.mp4')
+        audio_vocals_list.append(pre_name + '_audio_vocals.wav')
 
     if all(os.path.isfile(file) for file in video_dest_list):
         process_video_time = time.time() - start_time
-        return video_dest_list, [], [], [], [], process_video_time
+        return video_dest_list, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, process_video_time
     else:
         # 多线程分割视频
         audio_origin_list, video_origin_list = separate_audio_and_video_list(video_origin_clips)
@@ -411,12 +426,21 @@ def get_mvsep_base_dir(is_high_quality, sub_directory):
         return base_dir1 if is_high_quality else base_dir2
 
 
+def check_files(release_video_dir, num_of_covers):
+    frame_pattern = os.path.join(release_video_dir, 'images', 'frame_*.jpg')
+    input_img_pattern = os.path.join(release_video_dir, 'images', 'input_img*.png')
+
+    frame_files = glob.glob(frame_pattern)
+    input_img_files = glob.glob(input_img_pattern)
+
+    return len(frame_files) == num_of_covers * 3 and len(input_img_files) == num_of_covers
+
+
 def run_main(url=None,
              videos=None,
 
              cover_title=None,
              split_time_min=15,
-             is_clear_cache=False,
 
              is_only_download=False,
              sub_directory=None,
@@ -431,12 +455,15 @@ def run_main(url=None,
              ):
     global download_cache_dir, release_video_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
 
+    print_separator("")
+    print_separator("")
+    print_separator(f"{sub_directory} : 初始化路径")
+
     if is_banned(sub_directory):
-        raise Exception(f"{sub_directory} 这个视频被禁播了,不能上传")
+        print_red(f"{sub_directory} 这个视频被禁播了,不能上传")
+        return
     else:
         print(f"{sub_directory} 这个视频能上传")
-
-    print_separator(f"初始化路径 <<{sub_directory}>>")
 
     download_cache_dir = get_dir("download_cache", sub_directory)
     release_video_dir = get_dir("release_video", sub_directory)
@@ -452,7 +479,7 @@ def run_main(url=None,
     ensure_directory_exists(mvsep_input_dir)
     ensure_directory_exists(mvsep_output_dir)
 
-    video_final = os.path.join(release_video_dir, f"{sub_directory}_zimu.mp4")
+    video_final = os.path.join(release_video_dir, f"{sub_directory}_nobgm_zimu{get_file_only_extension(original_video)}")
     cache_util = DiskCacheUtil()
 
     split_time_ms = minutes_to_milliseconds(split_time_min)
@@ -492,19 +519,23 @@ def run_main(url=None,
         # 记录开始时间
         try:
             start_time = time.time()
-            print_separator(f"获取封面图 <<{sub_directory}>>")
+            print_separator(f"{sub_directory} : 获取封面图")
             title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
             subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
-            frame_image_list = extract_thumbnail_main(original_video,
-                                                      release_video_dir,
-                                                      cover_title,
-                                                      title_font,
-                                                      subtitle_font,
-                                                      num_of_covers=num_of_covers,
-                                                      crop_height=100,
-                                                      isTest=False,
-                                                      cover_title_split_postion=cover_title_split_postion
-                                                      )
+
+            os.path.join(release_video_dir, 'images')
+
+            if not check_files(release_video_dir, num_of_covers):
+                frame_image_list = extract_thumbnail_main(original_video,
+                                                          release_video_dir,
+                                                          cover_title,
+                                                          title_font,
+                                                          subtitle_font,
+                                                          num_of_covers=num_of_covers,
+                                                          crop_height=100,
+                                                          isTest=False,
+                                                          cover_title_split_postion=cover_title_split_postion
+                                                          )
             generate_video_metadata(release_video_dir, sub_directory)
             print(
                 f"获取封面情况:获取{num_of_covers}张图片时间: {(time.time() - start_time):.2f} 秒, 平均每张: {(time.time() - start_time) / num_of_covers:.2f} 秒")
@@ -514,34 +545,43 @@ def run_main(url=None,
 
     if is_get_fanyi:
         try:
-            zh_srt = os.path.join(release_video_dir, f"{sub_directory}_cmn.srt")
-            if os.path.exists(zh_srt):
-                print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
-                start_time = time.time()
-                print(f"1.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
-                video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
-                en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
-                ##以上步骤保证一定有英文字幕了
+            start_time = time.time()
+            video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
+            # print(f"提取音频(只含人声)({cover_title})")
+            # audio_path_wav = extract_audio_only(video_nobgm)
+            # print(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
+            # 音频 转录 生成 中文字幕
+            # print(f"生成中文字幕文件({cover_title})")
+            # zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
+            # 字幕检测
+            # check_duplicates(zh_srt)
 
-                print(f"2.视频添加字幕,水印 <<{sub_directory}>>")
-                # 添加英文字幕和水印
-                video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
+            # print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
+            # print(f"1.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
+            # en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
+            ##以上步骤保证一定有英文字幕了
+            # print(f"2.视频添加字幕,水印 <<{sub_directory}>>")
+            # 添加英文字幕和水印
+            video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm)
+            # print(f"3.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
+            # target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
+            # for code in target_languages:
+            #     yuliu.transcribe_srt.translate_srt_file(zh_srt, code, max_payload_size=2048)
 
-                print(f"3.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
-                target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
-                for code in target_languages:
-                    yuliu.transcribe_srt.translate_srt_file(zh_srt, code, max_payload_size=2048)
-
-                print(f"\n总耗时情况:{(time.time() - start_time)}")
+            print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
             print(f'出错: {e}')
 
     if is_get_video:
         try:
             start_time = time.time()
-            print_separator(f"获取无背景音乐视频 <<{sub_directory}>>")
-            print(f"1.处理视频,切成小块视频,进行处理 <<{sub_directory}>>")
             video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm{get_file_only_extension(original_video)}")
+
+            if os.path.exists(video_final):
+                print_yellow(f"{sub_directory} 已经存在")
+                return
+            print_separator(f"{sub_directory} : 获取无背景音乐视频")
+            print(f"1.处理视频,切成小块视频,进行处理 <<{sub_directory}>>")
             print(f"\n原始视频路径: {original_video}")
             video_duration = get_mp4_duration(original_video)
             print(f"\n原始视频时长: {video_duration}")
@@ -552,27 +592,20 @@ def run_main(url=None,
             print(f"\n原始视频已拆分成{len(video_clips)}份,将逐一进行音频处理")
 
             print(f"2.对视频人声分离 <<{sub_directory}>>")
-
             (video_dest_list, audio_origin_list,
              video_origin_list, audio_vocals_list,
              video_origin_clips, process_video_time) = process_video_files_list(video_clips)
 
             video_nobgm = merge_videos(video_dest_list, video_nobgm)
 
-            print(f"提取音频(只含人声)({cover_title})")
-            audio_path_wav = extract_audio_only(video_nobgm)
-            print(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
+            # print(f"提取音频(只含人声)({cover_title})")
+            # print(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
             # 音频 转录 生成 中文字幕
 
-            print(f"生成中文字幕文件({cover_title})")
-            zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
-
-            # 字幕检测
-            check_duplicates(zh_srt)
-
             # process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
-            print(f"总结:此步骤主要生成了:\n1.无背景音乐的视频\n2.中文字幕")
-            print(f"(字幕需要人工进行核对,确保 中文字幕 毫无缺陷 以供翻译程序使用)")
+            # print(f"总结:此步骤主要生成了:\n1.无背景音乐的视频\n2.中文字幕")
+            # print(f"(字幕需要人工进行核对,确保 中文字幕 毫无缺陷 以供翻译程序使用)")
+            # delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
 
             print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
@@ -587,6 +620,5 @@ def run_main(url=None,
         # video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
 
         # 删除多余文件
-        # delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips)
 
     cache_util.close_cache()

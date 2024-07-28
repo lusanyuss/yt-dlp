@@ -4,7 +4,7 @@ import os
 from yuliu.run_main import run_main
 
 
-def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_clear_cache=False, is_get_video=True, num_of_covers=1,
+def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_get_video=True, num_of_covers=1,
                   is_get_cover=False, is_get_fanyi=False, is_high_quality=False, cover_title_split_postion=0):
     video_template = '{}.mp4'
     # 生成所有视频文件的路径
@@ -25,7 +25,6 @@ def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_
                      videos=videos,
                      split_time_min=split_time_min,
                      is_only_download=is_only_download,
-                     is_clear_cache=is_clear_cache,
                      is_get_video=is_get_video,
                      num_of_covers=num_of_covers,
                      is_get_cover=is_get_cover,

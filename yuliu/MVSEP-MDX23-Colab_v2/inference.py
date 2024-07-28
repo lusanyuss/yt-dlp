@@ -26,6 +26,7 @@ import librosa
 from scipy import signal
 import gc
 import yaml
+import time
 from ml_collections import ConfigDict
 
 from modules.tfc_tdf_v2 import Conv_TDF_net_trim_model
@@ -592,33 +593,45 @@ class EnsembleDemucsMDXMusicSeparationModel:
 
         vocals_model_outputs = []
         weights = []
+        import time
+        total_start_time = time.time()
 
         for model_name in vocals_model_names:
 
             if options[f"use_{model_name}"]:
 
                 if model_name == "BSRoformer":
+                    start_time = time.time()
                     print(f'Processing vocals with {model_name} model...')
                     sources_bs = demix_new_wrapper(mixed_sound_array.T, self.device, self.model_bsrofo, self.config_bsrofo, dim_t=1101)
                     vocals_bs = match_array_shapes(sources_bs, mixed_sound_array.T)
                     vocals_model_outputs.append(vocals_bs)
                     weights.append(options.get(f"weight_{model_name}"))
+                    end_time = time.time()
+                    print(f'Time taken for {model_name}: {end_time - start_time} seconds')
 
                 if model_name == "InstVoc":
+                    start_time = time.time()
                     print(f'Processing vocals with {model_name} model...')
                     sources3 = demix_new_wrapper(mixed_sound_array.T, self.device, self.model_mdxv3, self.config_mdxv3, dim_t=1024)
                     vocals3 = match_array_shapes(sources3, mixed_sound_array.T)
                     vocals_model_outputs.append(vocals3)
                     weights.append(options.get(f"weight_{model_name}"))
+                    end_time = time.time()
+                    print(f'Time taken for {model_name}: {end_time - start_time} seconds')
 
                 elif model_name == "VitLarge":
+                    start_time = time.time()
                     print(f'Processing vocals with {model_name} model...')
                     vocals4, instrum4 = demix_full_vitlarge(mixed_sound_array.T, self.device, self.model_vl)  # , self.config_vl, dim_t=512)
                     vocals4 = match_array_shapes(vocals4, mixed_sound_array.T)
                     vocals_model_outputs.append(vocals4)
                     weights.append(options.get(f"weight_{model_name}"))
+                    end_time = time.time()
+                    print(f'Time taken for {model_name}: {end_time - start_time} seconds')
 
                 elif model_name == "VOCFT":
+                    start_time = time.time()
                     print(f'Processing vocals with {model_name} model...')
                     overlap = overlap_MDX
                     sources1 = 0.5 * demix_wrapper(
@@ -642,8 +655,11 @@ class EnsembleDemucsMDXMusicSeparationModel:
                     vocals_mdxb1 = sources1
                     vocals_model_outputs.append(vocals_mdxb1)
                     weights.append(options.get(f"weight_{model_name}"))
+                    end_time = time.time()
+                    print(f'Time taken for {model_name}: {end_time - start_time} seconds')
 
                 elif model_name == "InstHQ4":
+                    start_time = time.time()
                     print(f'Processing vocals with {model_name} model...')
                     overlap = overlap_MDX
                     sources2 = 0.5 * demix_wrapper(
@@ -667,10 +683,16 @@ class EnsembleDemucsMDXMusicSeparationModel:
                     vocals_mdxb2 = mixed_sound_array.T - sources2
                     vocals_model_outputs.append(vocals_mdxb2)
                     weights.append(options.get(f"weight_{model_name}"))
+                    end_time = time.time()
+                    print(f'Time taken for {model_name}: {end_time - start_time} seconds')
 
                 else:
                     # No more model to process or unknown one
                     pass
+
+        # 总时间结束
+        total_end_time = time.time()
+        print(f'Total time taken for all models: {total_end_time - total_start_time} seconds')
 
         print('Processing vocals: DONE!')
 
@@ -898,7 +920,7 @@ def dBgain(audio, volume_gain_dB):
 
 
 if __name__ == '__main__':
-    start_time = time()
+    start_time_all = time.time()
     print("started!\n")
     m = argparse.ArgumentParser()
     m.add_argument("--input_audio", "-i", nargs='+', type=str, help="Input audio location. You can provide multiple files at once", required=True)
@@ -963,4 +985,4 @@ if __name__ == '__main__':
 
     print(f'output_format: {options["output_format"]}\n')
     predict_with_model(options)
-    print('Time: {:.0f} sec'.format(time() - start_time))
+    print('Time: {:.0f} sec'.format(time.time() - start_time_all))

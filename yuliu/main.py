@@ -45,13 +45,22 @@ if __name__ == "__main__":
     videos = [
         ################### 已经部分 #######################
 
-
         ################### 未传部分 #######################
 
-        '我的女儿是至尊',
+        # '工业之光',
+        # '傻了吧我有,一屋子美女房客',
+
+
         '巾帼修罗',
-        '工业之光',
+        '得癌症后,这个渣女我当定了',
+        '我的女儿是至尊',
         '剑豪',
+        '我以我血荐轩辕',
+        '首富老爸抓娃娃',
+        '天命之上',
+        '带着老爸回,古代我竟是太子', #?
+
+
 
         # '闪婚对象竟是豪门大佬',
         # '浪子回头,浪子回头金不换',
@@ -70,7 +79,6 @@ if __name__ == "__main__":
         # '闪婚对象竟是豪门大佬',
         # '隐婚后,我的下属老公掉马甲了',
 
-
     ]
     for video_name in videos:
         cover_title_split_postion = 0
@@ -83,13 +91,12 @@ if __name__ == "__main__":
                              cover_title=yuliu.utils.replace_comma_with_newline(video_name),
                              juji_num=1,
                              split_time_min=15,
-                             # is_clear_cache=True,
 
                              is_get_video=True,
                              is_get_cover=True,
-                             num_of_covers=8,
+                             is_get_fanyi=True,
 
-                             is_get_fanyi=False,
+                             num_of_covers=8,
                              is_high_quality=True,
                              cover_title_split_postion=cover_title_split_postion
                              )

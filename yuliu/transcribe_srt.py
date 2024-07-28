@@ -255,7 +255,7 @@ if __name__ == "__main__":
     # source_file_path = 'release_video/豪门狂少归来/豪门狂少归来_cmn.srt'
     # traget_file_path = 'release_video/豪门狂少归来/豪门狂少归来_eng.srt'
 
-    source_file_path = 'release_video/aa测试目录/aa测试目录_cmn.srt'
+    source_file_path = 'release_video/aa测试目录big/aa测试目录_cmn.srt'
     traget_file_path = 'release_video/aa测试目录/aa测试目录_eng.srt'
 
     if os.path.exists(traget_file_path):
