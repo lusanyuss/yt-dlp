@@ -40,7 +40,6 @@ def check_duplicates(zh_srt_path):
     print("检查完成，没有发现异常")
 
 
-
 def convert_simplified_to_traditional(text):
     try:
         cc = OpenCC('s2t')
@@ -50,22 +49,20 @@ def convert_simplified_to_traditional(text):
 
 
 def read_banned_list(file_path):
-    banned_list = []
     with open(file_path, 'r', encoding='utf-8') as file:
-        for line in file:
-            line = line.strip()
-            if line:  # 忽略空行
-                banned_list.append(line)
+        lines = file.readlines()
+    # 去掉每一行的多余字符，并忽略空行
+    banned_list = [line.strip().strip("',").strip("'") for line in lines if line.strip().strip("',").strip("'")]
     return banned_list
 
 
+# 示例调用
+
+
 def is_banned(title):
-    banned_list = read_banned_list('banned_list.txt')
+    banned_list = read_banned_list('banned_list.sh')
     traditional_title = convert_simplified_to_traditional(title)
-    if title in banned_list or traditional_title in banned_list:
-        return True
-    else:
-        return False
+    return title in banned_list or traditional_title in banned_list
 
 
 if __name__ == '__main__':

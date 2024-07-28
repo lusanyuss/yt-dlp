@@ -302,7 +302,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
                     enhanced_image.save(output_path)
                     with lock:
                         frame_paths[index] = output_path
-                        print(f"重新生成 frame_{index + 1}.jpg 图片: {output_path}")
+                        # print(f"重新生成 frame_{index + 1}.jpg 图片: {output_path}")
                     break
             except Exception as e:
                 print(f"Error processing image {output_path}: {e}")
@@ -610,8 +610,8 @@ def process_image(image, cover_path):
 
 
 def adjust_title(title, kongge='　'):
-    if ',' in title:
-        return title
+    # if ',' in title:
+    #     return title
     title_len = len(title)
     if title_len == 2:
         return title[0] + kongge * 2 + title[1]

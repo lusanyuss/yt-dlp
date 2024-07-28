@@ -50,11 +50,6 @@ if __name__ == "__main__":
         # '工业之光',
         # '傻了吧我有,一屋子美女房客',
 
-
-
-
-
-
         # '闪婚对象竟是豪门大佬',
         # '浪子回头,浪子回头金不换',
         # '以我晚星映海川',
@@ -64,13 +59,13 @@ if __name__ == "__main__":
         # '青春不死常胜不衰',
         # '我们都要活下去',
         # '新版-为母则刚',
-
         # '爱意随风起',
         # '愤怒的父亲',
         # '我的傻父',
-
         # '闪婚对象竟是豪门大佬',
         # '隐婚后,我的下属老公掉马甲了',
+        '游子身上针',
+        '隐龙之保安老爸不好惹',
 
     ]
     for video_name in videos:
@@ -85,9 +80,12 @@ if __name__ == "__main__":
                              juji_num=1,
                              split_time_min=15,
 
-                             is_get_video=True,
                              is_get_cover=True,
+                             is_get_video=True,
                              is_get_fanyi=True,
+
+                             # is_get_video=False,
+                             # is_get_fanyi=False,
 
                              num_of_covers=8,
                              is_high_quality=True,
