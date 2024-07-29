@@ -18,7 +18,7 @@ PROXIES = {
     "http": "http://127.0.0.1:7890",
     "https": "http://127.0.0.1:7890",
 }
-DEFAULT_MAX_PAYLOAD_SIZE = 2048  # 默认每次请求的最大负载大小（字节）
+DEFAULT_MAX_PAYLOAD_SIZE = 1536  # 默认每次请求的最大负载大小（字节）
 
 # 定义ISO 639-3到ISO 639-1的映射
 iso639_3_to_2_map = {

@@ -559,15 +559,15 @@ def run_main(url=None,
             # video_file_path = 'release_video/aa测试目录big/aa测试目录big.mp4'
             corrected_zh_srt = correct_subtitles(video_nobgm, False)
             # print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
-            print(f"1.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
+            print(f"\n1.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
             en_srt = transcribe_srt.translate_srt_file(corrected_zh_srt, 'en', max_payload_size=2048)
             ##以上步骤保证一定有英文字幕了
 
-            # print(f"2.视频添加字幕,水印 <<{sub_directory}>>")
             # 添加英文字幕和水印
+            print(f"2.视频添加字幕,水印 <<{sub_directory}>>")
             video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
 
-            # print(f"3.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
+            print(f"3.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
             target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
             for code in target_languages:
                 transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=2048)
