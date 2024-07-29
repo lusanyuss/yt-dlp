@@ -112,11 +112,16 @@ def merge_texts(texts):
 
 # 修正字幕内容
 def correct_subtitles(video_file_path, is_test):
-    start_time = time.time()
+    start_time_correct_subtitles = time.time()
     file_name = os.path.splitext(os.path.basename(video_file_path))[0]
+    video_name = file_name.split('_')[0]
     output_image_path = os.path.dirname(video_file_path)
-    output_srt_file_path = os.path.join(output_image_path, f'{file_name}_cmn_corrected.srt')
-    srt_file_path = os.path.join(output_image_path, f'{file_name}_cmn.srt')
+    output_srt_file_path = os.path.join(output_image_path, f'{video_name}_cmn_corrected.srt')
+
+    if os.path.exists(output_srt_file_path):
+        return output_srt_file_path
+
+    srt_file_path = os.path.join(output_image_path, f'{video_name}_cmn.srt')
     srt_content = read_srt_file(srt_file_path)
     if not is_test:
         for offset in generate_offsets('', 0, 1):  # 生成一个虚拟的偏移量列表用于清理目录
@@ -193,10 +198,12 @@ def correct_subtitles(video_file_path, is_test):
         else:
             corrected_srt_content.append(line + '\n')
             i += 1
+    # 清空
 
     write_srt_file(output_srt_file_path, corrected_srt_content)
-    print(f"核对字幕耗时:{time.time() - start_time}")
-    return corrected_srt_content
+
+    print(f"核对字幕耗时:{time.time() - start_time_correct_subtitles}")
+    return output_srt_file_path
 
 
 if __name__ == "__main__":

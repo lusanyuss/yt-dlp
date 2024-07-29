@@ -37,7 +37,6 @@ if __name__ == "__main__":
     # check_and_run('御龙刀主 举世欠我赊刀债', 1, 15, is_clear_cache=True)#有3家
     #
     # exit()
-
     common.check_and_run(sub_directory='aa测试目录',
                          cover_title="天龙八部",
                          juji_num=1,

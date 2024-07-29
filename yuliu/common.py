@@ -3,7 +3,6 @@ import os
 
 from yuliu.run_main import run_main
 
-
 def check_and_run(sub_directory, cover_title, juji_num, split_time_min, is_only_download=False, is_get_video=True, num_of_covers=1,
                   is_get_cover=False, is_get_fanyi=False, is_high_quality=False, cover_title_split_postion=0):
     video_template = '{}.mp4'

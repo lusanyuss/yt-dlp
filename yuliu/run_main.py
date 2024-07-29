@@ -12,10 +12,13 @@ from utils import get_file_only_name, get_file_only_extension, generate_md5_file
     find_split_points, \
     print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
     separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, print_red, print_yellow
+from yuliu import transcribe_srt
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.check_utils import is_banned
+from yuliu.check_zimu import correct_subtitles
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
+from yuliu.transcribe_video import transcribe_audio_to_srt
 from yuliu.zimu_utils import add_zimu_shuiyin_to_video
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
@@ -31,7 +34,7 @@ def clear_directory_contents(directory):
                 elif os.path.isdir(file_path):
                     shutil.rmtree(file_path)
             except Exception as e:
-                print(f'删除 {file_path} 时出错: {e}')
+                print_red(f'删除 {file_path} 时出错: {e}')
         print(f'已清空目录: {directory}')
     else:
         print(f'目录不存在: {directory}')
@@ -77,7 +80,7 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
             CommandExecutor.run_command(command)
             # subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         except Exception as e:
-            print(f"处理音频文件时发生错误: {e}")
+            print_red(f"处理音频文件时发生错误: {e}")
     else:
         print("所有文件都存在。")
     elapsed_time = time.time() - start_time
@@ -541,36 +544,38 @@ def run_main(url=None,
                 f"获取封面情况:获取{num_of_covers}张图片时间: {(time.time() - start_time):.2f} 秒, 平均每张: {(time.time() - start_time) / num_of_covers:.2f} 秒")
             print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
-            print(f'出错: {e}')
+            print_red(f'出错: {e}')
 
     if is_get_fanyi:
         try:
             start_time = time.time()
             video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
             # print(f"提取音频(只含人声)({cover_title})")
-            # audio_path_wav = extract_audio_only(video_nobgm)
-            # print(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
+            audio_path_wav = extract_audio_only(video_nobgm)
+            print(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
             # 音频 转录 生成 中文字幕
             # print(f"生成中文字幕文件({cover_title})")
-            # zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
+            zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
             # 字幕检测
-            # check_duplicates(zh_srt)
-
+            # video_file_path = 'release_video/aa测试目录big/aa测试目录big.mp4'
+            corrected_zh_srt = correct_subtitles(video_nobgm, False)
             # print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
-            # print(f"1.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
-            # en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
+            print(f"1.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
+            en_srt = transcribe_srt.translate_srt_file(corrected_zh_srt, 'en', max_payload_size=2048)
             ##以上步骤保证一定有英文字幕了
+
             # print(f"2.视频添加字幕,水印 <<{sub_directory}>>")
             # 添加英文字幕和水印
-            video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm)
+            video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
+
             # print(f"3.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
-            # target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
-            # for code in target_languages:
-            #     yuliu.transcribe_srt.translate_srt_file(zh_srt, code, max_payload_size=2048)
+            target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
+            for code in target_languages:
+                transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=2048)
 
             print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
-            print(f'出错: {e}')
+            print_red(f'出错: {e}')
 
     if is_get_video:
         try:
@@ -595,21 +600,17 @@ def run_main(url=None,
             (video_dest_list, audio_origin_list,
              video_origin_list, audio_vocals_list,
              video_origin_clips, process_video_time) = process_video_files_list(video_clips)
-
             video_nobgm = merge_videos(video_dest_list, video_nobgm)
-
             # print(f"提取音频(只含人声)({cover_title})")
             # print(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
             # 音频 转录 生成 中文字幕
-
             # process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
             # print(f"总结:此步骤主要生成了:\n1.无背景音乐的视频\n2.中文字幕")
             # print(f"(字幕需要人工进行核对,确保 中文字幕 毫无缺陷 以供翻译程序使用)")
             # delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
-
             print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
-            print(f'出错: {e}')
+            print_red(f'出错: {e}')
         # 用 中文字幕 翻译 生成 英文字幕
         # print_separator(f"生成英文字幕文件({cover_title})")
         # en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
