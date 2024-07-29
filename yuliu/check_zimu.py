@@ -112,6 +112,7 @@ def merge_texts(texts):
 
 # 修正字幕内容
 def correct_subtitles(video_file_path, is_test):
+    start_time = time.time()
     file_name = os.path.splitext(os.path.basename(video_file_path))[0]
     output_image_path = os.path.dirname(video_file_path)
     output_srt_file_path = os.path.join(output_image_path, f'{file_name}_cmn_corrected.srt')
@@ -194,12 +195,12 @@ def correct_subtitles(video_file_path, is_test):
             i += 1
 
     write_srt_file(output_srt_file_path, corrected_srt_content)
+    print(f"核对字幕耗时:{time.time() - start_time}")
     return corrected_srt_content
 
 
 if __name__ == "__main__":
     # 文件路径
-    start_time = time.time()
+
     video_file_path = 'release_video/aa测试目录big/aa测试目录big.mp4'
     corrected_srt_content = correct_subtitles(video_file_path, False)
-    print(time.time() - start_time)
