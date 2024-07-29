@@ -60,12 +60,17 @@ def clear_directory(path):
 
 
 # 生成偏移量列表
-def generate_offsets(start_seconds, end_seconds, step=0.4):
+def generate_offsets(next_line, start_seconds, end_seconds, step=0.5):
+    if len(next_line) > 0:
+        print(f"每个字的时间:{(end_seconds - start_seconds) / len(next_line)}")
     offsets = []
     current_time = end_seconds
     while current_time > start_seconds + (end_seconds - start_seconds) * 0.25:
+        if current_time == end_seconds:
+            current_time -= (end_seconds - start_seconds) * step
+            continue
         offsets.append(round(current_time, 1))
-        current_time -= step
+        current_time -= (end_seconds - start_seconds) * step
     return offsets
 
 
@@ -108,7 +113,7 @@ def merge_texts(texts):
 # 修正字幕内容
 def correct_subtitles(video_file_path, srt_content, output_path, is_test):
     if is_test:
-        for offset in generate_offsets(0, 1):  # 生成一个虚拟的偏移量列表用于清理目录
+        for offset in generate_offsets('', 0, 1):  # 生成一个虚拟的偏移量列表用于清理目录
             specific_output_path = os.path.join(output_path, f'offset_{offset}')
             clear_directory(specific_output_path)
 
@@ -134,7 +139,7 @@ def correct_subtitles(video_file_path, srt_content, output_path, is_test):
             end_seconds = convert_to_seconds(end_time)
 
             # 生成偏移量列表
-            offsets = generate_offsets(start_seconds, end_seconds)
+            offsets = generate_offsets(next_line, start_seconds, end_seconds)
 
             # 获取视频帧并进行 OCR 识别
             detected_texts = []
@@ -187,7 +192,7 @@ if __name__ == "__main__":
     srt_file_path = 'release_video/aa测试目录/aa测试目录_cmn.srt'
     output_srt_file_path = 'release_video/aa测试目录/aa测试目录_cmn_corrected.srt'
     output_image_path = 'release_video/aa测试目录'  # 指定输出目录
-    is_test = False  # 设置是否为测试模式
+    is_test = True  # 设置是否为测试模式
 
     srt_content = read_srt_file(srt_file_path)
     corrected_srt_content = correct_subtitles(video_file_path, srt_content, output_image_path, is_test)
