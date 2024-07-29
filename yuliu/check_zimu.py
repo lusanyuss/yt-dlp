@@ -27,19 +27,17 @@ def convert_to_seconds(time_str):
 
 
 # 获取 OCR 结果
-def get_ocr_text(frame, index, offset, jianju=450):
+def get_ocr_text(frame, index, offset, bfb=8):
     height, width = frame.shape[:2]
-    y_start = height - jianju
-    y_end = height - jianju + 250
     x_start = 0
     x_end = width
-
+    y_start = int((75 - bfb) % 100 * height / 100)
+    y_end = int((75 + bfb) % 100 * height / 100)
     # 裁剪指定区域
     roi = frame[y_start:y_end, x_start:x_end]
 
     # 进行 OCR 识别
     result = ocr.ocr(roi, cls=True)
-
     # 提取识别结果的文字
     detected_text = ''
     if result:
@@ -48,7 +46,6 @@ def get_ocr_text(frame, index, offset, jianju=450):
                 for word in line:
                     if word and isinstance(word, list) and len(word) > 1:
                         detected_text += word[1][0]
-
     return detected_text, roi
 
 
@@ -61,11 +58,13 @@ def clear_directory(path):
 
 # 生成偏移量列表
 def generate_offsets(next_line, start_seconds, end_seconds, step=0.5):
-    if len(next_line) > 0:
-        print(f"每个字的时间:{(end_seconds - start_seconds) / len(next_line)}")
+    # if len(next_line) > 0:
+    #     print(f"每个字的时间:{(end_seconds - start_seconds) / len(next_line)}")
+    if len(next_line) >= 10:
+        step=0.25
     offsets = []
     current_time = end_seconds
-    while current_time > start_seconds + (end_seconds - start_seconds) * 0.25:
+    while current_time > start_seconds + (end_seconds - start_seconds) * 0.24:
         if current_time == end_seconds:
             current_time -= (end_seconds - start_seconds) * step
             continue
@@ -111,10 +110,15 @@ def merge_texts(texts):
 
 
 # 修正字幕内容
-def correct_subtitles(video_file_path, srt_content, output_path, is_test):
-    if is_test:
+def correct_subtitles(video_file_path, is_test):
+    file_name = os.path.splitext(os.path.basename(video_file_path))[0]
+    output_image_path = os.path.dirname(video_file_path)
+    output_srt_file_path = os.path.join(output_image_path, f'{file_name}_cmn_corrected.srt')
+    srt_file_path = os.path.join(output_image_path, f'{file_name}_cmn.srt')
+    srt_content = read_srt_file(srt_file_path)
+    if not is_test:
         for offset in generate_offsets('', 0, 1):  # 生成一个虚拟的偏移量列表用于清理目录
-            specific_output_path = os.path.join(output_path, f'offset_{offset}')
+            specific_output_path = os.path.join(output_image_path, f'offset_{offset}')
             clear_directory(specific_output_path)
 
     corrected_srt_content = []
@@ -157,8 +161,9 @@ def correct_subtitles(video_file_path, srt_content, output_path, is_test):
                         roi_file = f'roi_{index}.jpg'
                         if cv2.imwrite(roi_file, roi):
                             print(f"Saved ROI: {roi_file}")  # 打印路径信息
-                            os.remove(roi_file)  # 删除保存的文件
-                            print(f"Deleted ROI: {roi_file}")  # 打印删除信息
+                            if not is_test:
+                                os.remove(roi_file)  # 删除保存的文件
+                                print(f"Deleted ROI: {roi_file}")  # 打印删除信息
                         else:
                             raise FileNotFoundError(f"文件未能成功保存: {roi_file}")
 
@@ -183,17 +188,11 @@ def correct_subtitles(video_file_path, srt_content, output_path, is_test):
             corrected_srt_content.append(line + '\n')
             i += 1
 
+    write_srt_file(output_srt_file_path, corrected_srt_content)
     return corrected_srt_content
 
 
 if __name__ == "__main__":
     # 文件路径
     video_file_path = 'release_video/aa测试目录/aa测试目录.mp4'
-    srt_file_path = 'release_video/aa测试目录/aa测试目录_cmn.srt'
-    output_srt_file_path = 'release_video/aa测试目录/aa测试目录_cmn_corrected.srt'
-    output_image_path = 'release_video/aa测试目录'  # 指定输出目录
-    is_test = True  # 设置是否为测试模式
-
-    srt_content = read_srt_file(srt_file_path)
-    corrected_srt_content = correct_subtitles(video_file_path, srt_content, output_image_path, is_test)
-    write_srt_file(output_srt_file_path, corrected_srt_content)
+    corrected_srt_content = correct_subtitles(video_file_path, False)
