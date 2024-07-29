@@ -153,7 +153,7 @@ def translate_srt_file(zimu_srt, target_language, max_payload_size=DEFAULT_MAX_P
     new_file_name = f"{os.path.dirname(zimu_srt)}/{base_name}_{target_lang_code}.srt"
 
     if os.path.exists(new_file_name):
-        print(f"{new_file_name}字幕存在,缓存返回")
+        print_yellow(f"{new_file_name}字幕存在,缓存返回")
         return new_file_name
 
     def read_lines(file_path):

@@ -2,7 +2,7 @@ import os
 import shutil
 import time
 
-from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor
+from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor, print_yellow
 
 
 def read_output(pipe, log_file):
@@ -21,7 +21,7 @@ def add_zimu_shuiyin_to_video(video_nobgm, srt_path=None):
 
     video_final = add_zimu_suffix(video_nobgm)
     if os.path.exists(video_final) and has_zimu_suffix(video_final):
-        print(f"文件已存在且已添加字幕和水印: {video_nobgm}")
+        print_yellow(f"文件已存在且已添加字幕和水印: {video_nobgm}")
         return video_nobgm, video_final
 
     start_time = time.time()

@@ -5,6 +5,8 @@ import time
 import cv2
 from paddleocr import PaddleOCR
 
+from yuliu.utils import print_yellow
+
 # 初始化 PaddleOCR
 ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=True, show_log=False)
 
@@ -119,6 +121,7 @@ def correct_subtitles(video_file_path, is_test):
     output_srt_file_path = os.path.join(output_image_path, f'{video_name}_cmn_corrected.srt')
 
     if os.path.exists(output_srt_file_path):
+        print_yellow(f"\n纠正文件已经存在 : {output_srt_file_path}")
         return output_srt_file_path
 
     srt_file_path = os.path.join(output_image_path, f'{video_name}_cmn.srt')
