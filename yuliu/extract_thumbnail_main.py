@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 from paddleocr import PaddleOCR
 
-from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator
+from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator, print_yellow, print_red
 
 
 def is_resolution_gte_1920x1080(image_path):
@@ -380,7 +380,7 @@ def print_image_size(image_path):
             image_name = os.path.basename(image_path)
             print(f"图像名称: {image_name}, 图像尺寸: {width}x{height}")
     except Exception as e:
-        print(f"无法打开图像。错误信息：{e}")
+        print_red(f"无法打开图像。错误信息：{e}")
 
 
 def check_and_crop_images(frame_paths):
@@ -450,7 +450,7 @@ def delete_files(file_paths):
             else:
                 print(f"文件不存在: {file_path}")
         except Exception as e:
-            print(f"删除 {file_path} 时出错: {e}")
+            print_red(f"删除 {file_path} 时出错: {e}")
 
 
 def move_images_to_release(cover_images, frame_images, release_video_dir):
@@ -637,7 +637,7 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
 
     cover_images_list, frame_images_list = extract_covers_and_frames(original_video, release_video_dir, 3 * num_of_covers, crop_height)
     if len(cover_images_list) != num_of_covers:
-        print("制作封面图超过设定时间，退出不获取了")
+        print_yellow("制作封面图超过设定时间，退出不获取了")
         return frame_image_list
     # 示例调用
     resize_images_if_needed(cover_images_list)
@@ -652,7 +652,7 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
                     img_resized = img.resize((1920, 1080), Image.Resampling.LANCZOS)
                     img_resized.save(cover_path)
         except Exception as e:
-            print(f"无法处理图像 {cover_path}。错误信息：{e}")
+            print_red(f"无法处理图像 {cover_path}。错误信息：{e}")
 
     for cover_path in cover_images_list:
         if is_resolution_gte_1920x1080(cover_path):

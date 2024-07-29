@@ -69,8 +69,8 @@ class CommandExecutor:
             command_str = ' '.join(command)
         else:
             command_str = command
-        print(f"\n命令: {command_str}\n")
-        print(f"命令执行时间: {elapsed_time:.2f} 秒")
+        print(f"\n命令执行成功\n: {command_str}\n")
+        print(f"命令执行耗时: {elapsed_time:.2f} 秒")
 
 
 def print_red(text):

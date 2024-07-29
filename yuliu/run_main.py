@@ -48,7 +48,7 @@ def clear_cache():
         mvsep_input_dir,
         # mvsep_output_dir
     ]
-    print_separator("clear_cache")
+    print("clear_cache")
     for directory in directories_to_clear:
         clear_directory_contents(directory)
 
@@ -364,7 +364,7 @@ def extract_audio_only(video_path):
 
     # 如果文件已存在，直接返回
     if os.path.exists(audio_only_path):
-        print(f"音频文件已存在: {audio_only_path}")
+        print_yellow(f"音频文件已存在: {audio_only_path}")
         return audio_only_path
 
     # 构建单个提取音频流的ffmpeg命令，使用-y选项覆盖现有文件
@@ -421,12 +421,13 @@ def get_mvsep_base_dir(is_high_quality, sub_directory):
     base_dir2_out = os.path.join(base_dir2, "output", sub_directory)
 
     # 判断 base_dir1_out 下面是否有文件
-    if os.path.exists(base_dir1_out) and os.listdir(base_dir1_out):
-        return base_dir1
-    elif os.path.exists(base_dir2_out) and os.listdir(base_dir2_out):
-        return base_dir2
-    else:
-        return base_dir1 if is_high_quality else base_dir2
+    # if os.path.exists(base_dir1_out) and os.listdir(base_dir1_out):
+    #     return base_dir1
+    # elif os.path.exists(base_dir2_out) and os.listdir(base_dir2_out):
+    #     return base_dir2
+    # else:
+    # return base_dir1 if is_high_quality else base_dir2
+    return base_dir1
 
 
 def check_files(release_video_dir, num_of_covers):
@@ -458,8 +459,6 @@ def run_main(url=None,
              ):
     global download_cache_dir, release_video_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
 
-    print_separator("")
-    print_separator("")
     print_separator(f"{sub_directory} : 初始化路径")
 
     if is_banned(sub_directory):
@@ -521,8 +520,8 @@ def run_main(url=None,
     if is_get_cover:
         # 记录开始时间
         try:
-            start_time = time.time()
             print_separator(f"{sub_directory} : 获取封面图")
+            start_time = time.time()
             title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
             subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
 
@@ -548,11 +547,11 @@ def run_main(url=None,
 
     if is_get_fanyi:
         try:
+            print_separator(f"翻译,字幕,水印 : <<{sub_directory}>>")
             start_time = time.time()
             video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
             # print(f"提取音频(只含人声)({cover_title})")
             audio_path_wav = extract_audio_only(video_nobgm)
-            print(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
             # 音频 转录 生成 中文字幕
             # print(f"生成中文字幕文件({cover_title})")
             zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
@@ -579,13 +578,13 @@ def run_main(url=None,
 
     if is_get_video:
         try:
+            print_separator(f"获取无背景音乐视频 : {sub_directory}")
             start_time = time.time()
             video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm{get_file_only_extension(original_video)}")
 
             if os.path.exists(video_final):
-                print_yellow(f"{sub_directory} 已经存在")
+                print_yellow(f"{os.path.relpath(video_final, './') } 最终视频 已经存在")
                 return
-            print_separator(f"{sub_directory} : 获取无背景音乐视频")
             print(f"1.处理视频,切成小块视频,进行处理 <<{sub_directory}>>")
             print(f"\n原始视频路径: {original_video}")
             video_duration = get_mp4_duration(original_video)

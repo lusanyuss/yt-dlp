@@ -64,6 +64,11 @@ if __name__ == "__main__":
         # '我的傻父',
         # '闪婚对象竟是豪门大佬',
         # '隐婚后,我的下属老公掉马甲了',
+
+        '归来之非凡人生',
+        '我竟然买断了首富的日常',
+        '月光宝镜',
+        '被交换的人生',
         '游子身上针',
         '隐龙之保安老爸不好惹',
 
@@ -72,8 +77,8 @@ if __name__ == "__main__":
         cover_title_split_postion = 0
         # if video_name == '我的爷爷是大佬':
         #     cover_title_split_postion = 2
-        # if video_name == '重启人生我靠败家逆袭':
-        #     cover_title_split_postion = 4
+        if video_name == '我竟然买断了首富的日常':
+            cover_title_split_postion = 3
 
         common.check_and_run(sub_directory=video_name,
                              cover_title=yuliu.utils.replace_comma_with_newline(video_name),

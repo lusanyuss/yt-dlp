@@ -17,7 +17,7 @@ from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from requests.exceptions import JSONDecodeError
 
 from yuliu.transcribe_srt import iso639_3_to_2
-from yuliu.utils import has_zimu_suffix
+from yuliu.utils import has_zimu_suffix, print_yellow
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -33,7 +33,7 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v3", de
     if os.path.exists(temp_srt_path):
         os.remove(temp_srt_path)
     if os.path.exists(output_srt_path):
-        print(f"字幕文件已存在: {output_srt_path}")
+        print_yellow(f"字幕文件已存在: {output_srt_path}")
         return output_srt_path
 
     print("加载模型...")

@@ -9,6 +9,8 @@ from google.oauth2 import service_account
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
+from yuliu.utils import print_yellow
+
 requests.packages.urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 全局变量
 CREDENTIALS_PATH = 'yuliusecret-radiant-works-430523-c8-26198acdb648.json'
@@ -35,11 +37,14 @@ iso639_3_to_2_map = {
 # 创建一个反向映射从ISO 639-1到ISO 639-3
 iso639_2_to_3_map = {v: k for k, v in iso639_3_to_2_map.items()}
 
+
 def iso639_3_to_2(code):
     return iso639_3_to_2_map.get(code, code)
 
+
 def iso639_2_to_3(code):
     return iso639_2_to_3_map.get(code, code)
+
 
 def create_session_with_retries(retries, backoff_factor, status_forcelist):
     session = requests.Session()
@@ -55,6 +60,7 @@ def create_session_with_retries(retries, backoff_factor, status_forcelist):
     session.mount('https://', adapter)
     return session
 
+
 def get_access_token():
     try:
         credentials = service_account.Credentials.from_service_account_file(
@@ -66,6 +72,7 @@ def get_access_token():
     except Exception as e:
         print(f"获取 access token 失败: {e}")
         return None
+
 
 def translate_texts(params):
     url = "https://translation.googleapis.com/language/translate/v2"
@@ -80,6 +87,7 @@ def translate_texts(params):
     except requests.exceptions.RequestException as e:
         print(f"请求失败: {e}")
     return []
+
 
 def translate_text_batch(texts, target_language, source_language=None, max_payload_size=DEFAULT_MAX_PAYLOAD_SIZE):
     all_translations = []
@@ -131,6 +139,7 @@ def translate_text_batch(texts, target_language, source_language=None, max_paylo
 
     return all_translations
 
+
 def translate_srt_file(zimu_srt, target_language, max_payload_size=DEFAULT_MAX_PAYLOAD_SIZE):
     if not os.path.exists(zimu_srt):
         raise Exception("中文字幕不存在")
@@ -144,6 +153,7 @@ def translate_srt_file(zimu_srt, target_language, max_payload_size=DEFAULT_MAX_P
     new_file_name = f"{os.path.dirname(zimu_srt)}/{base_name}_{target_lang_code}.srt"
 
     if os.path.exists(new_file_name):
+        print(f"{new_file_name}字幕存在,缓存返回")
         return new_file_name
 
     def read_lines(file_path):
@@ -198,6 +208,7 @@ def translate_srt_file(zimu_srt, target_language, max_payload_size=DEFAULT_MAX_P
     print(f"翻译字幕耗时{target_language}: {elapsed_time:.2f} 秒")
 
     return new_file_name
+
 
 if __name__ == "__main__":
     source_file_path = 'release_video/aa测试目录/aa测试目录_cmn_corrected.srt'

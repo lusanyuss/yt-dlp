@@ -47,6 +47,6 @@ if __name__ == "__main__":
                          is_get_fanyi=True,
 
                          num_of_covers=1,
-                         is_high_quality=False,
+                         is_high_quality=True,
                          cover_title_split_postion=0
                          )
