@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 
 import cv2
 from paddleocr import PaddleOCR
@@ -61,7 +62,7 @@ def generate_offsets(next_line, start_seconds, end_seconds, step=0.5):
     # if len(next_line) > 0:
     #     print(f"每个字的时间:{(end_seconds - start_seconds) / len(next_line)}")
     if len(next_line) >= 10:
-        step=0.25
+        step = (100 / 6) / 100
     offsets = []
     current_time = end_seconds
     while current_time > start_seconds + (end_seconds - start_seconds) * 0.24:
@@ -174,6 +175,10 @@ def correct_subtitles(video_file_path, is_test):
             # 修正内容
             if next_line == detected_text:
                 corrected_content = next_line
+            elif next_line in detected_text:
+                corrected_content = detected_text
+            elif detected_text in next_line:
+                corrected_content = next_line
             else:
                 corrected_content = detected_text if detected_text else next_line
 
@@ -194,5 +199,7 @@ def correct_subtitles(video_file_path, is_test):
 
 if __name__ == "__main__":
     # 文件路径
-    video_file_path = 'release_video/aa测试目录/aa测试目录.mp4'
+    start_time = time.time()
+    video_file_path = 'release_video/aa测试目录big/aa测试目录big.mp4'
     corrected_srt_content = correct_subtitles(video_file_path, False)
+    print(time.time() - start_time)
