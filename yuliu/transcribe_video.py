@@ -70,8 +70,7 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", de
                 srt_file.write(f"{i}\n{start_time} --> {end_time}\n{text}\n\n")
         print(f"将结果写入临时SRT文件: {time.time() - start_time2:.2f} 秒")
         # 去掉大模型添加的前尾30秒加密信息
-
-        temp_srt_path = process_srt(temp_srt_path)
+        # temp_srt_path = process_srt(temp_srt_path)
         os.replace(temp_srt_path, srt_path)
         print(f"字幕已保存到 {srt_path}")
     except Exception as e:
