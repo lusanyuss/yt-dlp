@@ -702,37 +702,5 @@ def get_path_without_suffix(path):
 
 
 def process_srt(input_file_path: str) -> str:
-    with open(input_file_path, 'r', encoding='utf-8') as file:
-        lines = file.read().strip().split('\n\n')
-
-    # 删除第一条和最后一条数据
-    lines = lines[1:-1]
-
-    new_lines = []
-    index = 1
-
-    for block in lines:
-        parts = block.split('\n')
-        idx = parts[0].strip()
-        time_range = parts[1].strip()
-        content = parts[2:]
-
-        # 更新索引
-        new_idx = str(index)
-        index += 1
-
-        # 更新时间
-        time_parts = time_range.split(' --> ')
-        start_time = (datetime.strptime(time_parts[0], '%H:%M:%S,%f') - timedelta(seconds=30)).strftime('%H:%M:%S,%f')[:-3]
-        end_time = (datetime.strptime(time_parts[1], '%H:%M:%S,%f') - timedelta(seconds=30)).strftime('%H:%M:%S,%f')[:-3]
-        new_time_range = f"{start_time} --> {end_time}"
-
-        new_block = [new_idx, new_time_range] + content
-        new_lines.append('\n'.join(new_block))
-
-    # 先清空文件内容，然后再写入新的内容
-    with open(input_file_path, 'w', encoding='utf-8') as file:
-        file.write('')  # 清空文件内容
-        file.write('\n\n'.join(new_lines))
 
     return input_file_path

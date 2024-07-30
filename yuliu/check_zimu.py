@@ -63,8 +63,19 @@ def clear_directory(path):
 def generate_offsets(next_line, start_seconds, end_seconds, step=0.5):
     # if len(next_line) > 0:
     #     print(f"每个字的时间:{(end_seconds - start_seconds) / len(next_line)}")
-    if len(next_line) >= 10:
-        step = (100 / 6) / 100
+    num = len(next_line)
+    if end_seconds - start_seconds > 5:
+        if 10 <= num < 20:
+            step = (100 / 6) / 100
+        elif 20 <= num < 30:
+            step = (100 / 8) / 100
+        elif 30 <= num < 40:
+            step = (100 / 10) / 100
+        elif 40 <= num < 50:
+            step = (100 / 12) / 100
+        elif num >= 50:
+            step = (100 / 16) / 100
+
     offsets = []
     current_time = end_seconds
     while current_time > start_seconds + (end_seconds - start_seconds) * 0.24:

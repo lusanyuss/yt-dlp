@@ -19,19 +19,18 @@ def delete_dir(directory):
 
 if __name__ == '__main__':
     sub_directory_list = [
-        '新版-护国神帅',
-        '玄门侠女',
-        '萌宝助攻我帮妈妈改嫁总裁大佬',
-        '逃婚当天我抓了个总裁过日子',
-        '隐秘的婚姻',
-        '我无敌于世间',
-        '当丑女遇上总裁'
+        # '新版-护国神帅',
+        # '玄门侠女',
+        # '萌宝助攻我帮妈妈改嫁总裁大佬',
+        # '逃婚当天我抓了个总裁过日子',
+        # '隐秘的婚姻',
+        # '我无敌于世间',
+        # '当丑女遇上总裁',
+        # '我的爷爷是大佬'
     ]
     base_dirs = ["download_cache", "release_video", "release_video",
                  os.path.join("MVSEP-MDX23-Colab_v2", "input"),
-                 os.path.join("MVSEP-MDX23-Colab_v2", "output"),
-                 os.path.join("MVSEP-CDX23-Cinematic-Sound-Demixing", "input"),
-                 os.path.join("MVSEP-CDX23-Cinematic-Sound-Demixing", "output")
+                 os.path.join("MVSEP-MDX23-Colab_v2", "output")
                  ]
 
     for sub_directory in sub_directory_list:

@@ -355,9 +355,42 @@ def delete_files(*args):
 #
 #     return None
 
+def extract_audio_only(video_path):
+    # 生成新的文件路径
+    base, ext = os.path.splitext(video_path)
+    audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
+
+    # 如果文件已存在，直接返回
+    if os.path.exists(audio_only_path):
+        print(f"音频文件已存在: {audio_only_path}")
+        return audio_only_path
+
+    # 构建单个提取音频流的ffmpeg命令，使用-y选项覆盖现有文件
+    command = [
+        'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
+        '-map', '0:a', '-c:a', 'pcm_s16le', '-y', audio_only_path  # 确保使用 WAV 编码器
+    ]
+
+    # 打印命令以便手动检查
+    print("运行命令: \n", " ".join(command))
+
+    try:
+        # 执行命令
+        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+        result.check_returncode()  # 检查命令是否成功
+        print(f"音频流提取成功: {audio_only_path}")
+
+    except subprocess.CalledProcessError as e:
+        print(f"发生错误: {e.stderr}")
+        if os.path.exists(audio_only_path):
+            os.remove(audio_only_path)  # 移除临时文件
+        return None
+
+    return audio_only_path
+
 
 # 检查base是否包含下划线
-def extract_audio_only(video_path):
+def extract_audio_only_add60(video_path):
     # 定义输出文件路径
     base_dir = os.path.dirname(video_path)
     extracted_audio_path = os.path.join(base_dir, 'extracted_audio.wav')
@@ -597,14 +630,13 @@ def run_main(url=None,
             zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='cmn', sub_directory=sub_directory)
             print(f"\n1.纠正中文字幕，({cover_title})")
             corrected_zh_srt = correct_subtitles(video_nobgm, False)
-            print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
-
-            # if not is_test:
-            print(f"\n2.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
-            en_srt = transcribe_srt.translate_srt_file(corrected_zh_srt, 'en', max_payload_size=2048)
-            print(f"\n3.视频添加字幕,水印 <<{sub_directory}>>")
-            video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
-            print(f"\n总耗时情况:{(time.time() - start_time)}")
+            if not is_test:
+                print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
+                print(f"\n2.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
+                en_srt = transcribe_srt.translate_srt_file(corrected_zh_srt, 'en', max_payload_size=2048)
+                print(f"\n3.视频添加字幕,水印 <<{sub_directory}>>")
+                video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
+                print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
             print_red(f'出错: {e}')
 

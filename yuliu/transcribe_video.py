@@ -17,7 +17,7 @@ from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from requests.exceptions import JSONDecodeError
 
 from yuliu.transcribe_srt import iso639_3_to_2
-from yuliu.utils import has_zimu_suffix, print_yellow, process_srt
+from yuliu.utils import has_zimu_suffix, print_yellow, process_srt, get_path_without_suffix
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -27,12 +27,12 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
 
-def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v3", device="cuda", compute_type="float16", sub_directory=""):
+def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", device="cuda", compute_type="float16", sub_directory=""):
     base, ext = os.path.splitext(audio_path)
-    # base_name = get_path_without_suffix(base)
+    base_name = get_path_without_suffix(base)
+    srt_path = f"{base_name}_{language}.srt"
+    temp_srt_path = f"{base_name}_{language}_temp.srt"
 
-    srt_path = f"{base}_{language}.srt"
-    temp_srt_path = f"{base}_{language}_temp.srt"
     if os.path.exists(temp_srt_path):
         os.remove(temp_srt_path)
     if os.path.exists(srt_path):
