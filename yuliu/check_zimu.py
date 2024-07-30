@@ -163,17 +163,14 @@ def correct_subtitles(video_file_path, is_test):
                 ret, frame = cap.read()
                 if ret:
                     text, roi = get_ocr_text(frame, index, offset)
-                    print(f"Offset: {offset}, Text: {text}")  # 调试信息
                     if text and text != last_text:  # 只拼接不相等的文本
                         detected_texts.append(text)  # 从右向左拼接内容
                         last_text = text
                         # 保存图片
                         roi_file = f'roi_{index}.jpg'
                         if cv2.imwrite(roi_file, roi):
-                            print(f"Saved ROI: {roi_file}")  # 打印路径信息
                             if not is_test:
                                 os.remove(roi_file)  # 删除保存的文件
-                                print(f"Deleted ROI: {roi_file}")  # 打印删除信息
                         else:
                             raise FileNotFoundError(f"文件未能成功保存: {roi_file}")
 

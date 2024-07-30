@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+
 import cv2
 from paddleocr import PaddleOCR
 

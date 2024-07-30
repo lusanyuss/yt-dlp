@@ -17,7 +17,7 @@ from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from requests.exceptions import JSONDecodeError
 
 from yuliu.transcribe_srt import iso639_3_to_2
-from yuliu.utils import has_zimu_suffix, print_yellow
+from yuliu.utils import has_zimu_suffix, print_yellow, process_srt
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -28,13 +28,16 @@ change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-
 
 
 def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v3", device="cuda", compute_type="float16", sub_directory=""):
-    output_srt_path = os.path.join(os.path.dirname(audio_path), f"{sub_directory}_{language}.srt")
-    temp_srt_path = os.path.join(os.path.dirname(audio_path), f"{sub_directory}_{language}_temp.srt")
+    base, ext = os.path.splitext(audio_path)
+    # base_name = get_path_without_suffix(base)
+
+    srt_path = f"{base}_{language}.srt"
+    temp_srt_path = f"{base}_{language}_temp.srt"
     if os.path.exists(temp_srt_path):
         os.remove(temp_srt_path)
-    if os.path.exists(output_srt_path):
-        print_yellow(f"字幕文件已存在: {output_srt_path}")
-        return output_srt_path
+    if os.path.exists(srt_path):
+        print_yellow(f"字幕文件已存在: {srt_path}")
+        return srt_path
 
     print("加载模型...")
     logging.basicConfig()
@@ -66,15 +69,17 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v3", de
 
                 srt_file.write(f"{i}\n{start_time} --> {end_time}\n{text}\n\n")
         print(f"将结果写入临时SRT文件: {time.time() - start_time2:.2f} 秒")
-        os.replace(temp_srt_path, output_srt_path)
-        print(f"字幕已保存到 {output_srt_path}")
+        # 去掉大模型添加的前尾30秒加密信息
+
+        temp_srt_path = process_srt(temp_srt_path)
+        os.replace(temp_srt_path, srt_path)
+        print(f"字幕已保存到 {srt_path}")
     except Exception as e:
         if os.path.exists(temp_srt_path):
             os.remove(temp_srt_path)
         print(f"发生异常: {str(e)}")
         raise e
-
-    return output_srt_path
+    return srt_path
 
 
 def translate_text_bygoogle(text, source_lang='zh', target_lang='en'):

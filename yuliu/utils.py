@@ -6,6 +6,7 @@ import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 
 import psutil
 
@@ -75,6 +76,7 @@ class CommandExecutor:
 
 def print_red(text):
     print(f"\033[91m{text}\033[0m")
+
 
 def print_yellow(text):
     print(f"\033[93m{text}\033[0m")
@@ -681,3 +683,56 @@ def replace_comma_with_newline(input_string):
     if ',' in input_string:
         return input_string.replace(',', '\n')
     return input_string
+
+
+def get_path_without_suffix(path):
+    # 使用os.path.basename获取文件名
+    filename = os.path.basename(path)
+    # 检查文件名是否包含下划线
+    if '_' in filename:
+        # 获取下划线前面的部分
+        base_name = filename.split('_')[0]
+        # 获取路径中的目录部分
+        dir_name = os.path.dirname(path)
+        # 返回拼接后的路径
+        return os.path.join(dir_name, base_name)
+    else:
+        # 如果文件名不包含下划线，直接返回原路径
+        return path
+
+
+def process_srt(input_file_path: str) -> str:
+    with open(input_file_path, 'r', encoding='utf-8') as file:
+        lines = file.read().strip().split('\n\n')
+
+    # 删除第一条和最后一条数据
+    lines = lines[1:-1]
+
+    new_lines = []
+    index = 1
+
+    for block in lines:
+        parts = block.split('\n')
+        idx = parts[0].strip()
+        time_range = parts[1].strip()
+        content = parts[2:]
+
+        # 更新索引
+        new_idx = str(index)
+        index += 1
+
+        # 更新时间
+        time_parts = time_range.split(' --> ')
+        start_time = (datetime.strptime(time_parts[0], '%H:%M:%S,%f') - timedelta(seconds=30)).strftime('%H:%M:%S,%f')[:-3]
+        end_time = (datetime.strptime(time_parts[1], '%H:%M:%S,%f') - timedelta(seconds=30)).strftime('%H:%M:%S,%f')[:-3]
+        new_time_range = f"{start_time} --> {end_time}"
+
+        new_block = [new_idx, new_time_range] + content
+        new_lines.append('\n'.join(new_block))
+
+    # 先清空文件内容，然后再写入新的内容
+    with open(input_file_path, 'w', encoding='utf-8') as file:
+        file.write('')  # 清空文件内容
+        file.write('\n\n'.join(new_lines))
+
+    return input_file_path

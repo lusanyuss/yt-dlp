@@ -11,7 +11,7 @@ import yt_dlp
 from utils import get_file_only_name, get_file_only_extension, generate_md5_filename, close_chrome, get_mp4_duration, \
     find_split_points, \
     print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, print_red, print_yellow
+    separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, print_red, print_yellow, get_path_without_suffix
 from yuliu import transcribe_srt
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.check_utils import is_banned
@@ -314,7 +314,6 @@ def delete_files_by_list(frame_image_list):
     for file in frame_image_list:
         try:
             os.remove(file)
-            print(f"Deleted: {file}")
         except OSError:
             print(f"Failed to delete: {file}")
 
@@ -357,38 +356,56 @@ def delete_files(*args):
 #     return None
 
 
+# 检查base是否包含下划线
 def extract_audio_only(video_path):
-    # 生成新的文件路径
+    # 定义输出文件路径
+    base_dir = os.path.dirname(video_path)
+    extracted_audio_path = os.path.join(base_dir, 'extracted_audio.wav')
+    silence_path = os.path.join(base_dir, 'silence.wav')
+
     base, ext = os.path.splitext(video_path)
-    audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
+    base_name = get_path_without_suffix(base)
+    audio_only_path = f"{base_name}.wav"  # 使用 .wav 扩展名
 
     # 如果文件已存在，直接返回
     if os.path.exists(audio_only_path):
         print_yellow(f"音频文件已存在: {audio_only_path}")
         return audio_only_path
 
-    # 构建单个提取音频流的ffmpeg命令，使用-y选项覆盖现有文件
-    command = [
-        'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
-        '-map', '0:a', '-c:a', 'pcm_s16le', '-y', audio_only_path  # 确保使用 WAV 编码器
-    ]
-
-    # 打印命令以便手动检查
-    print("运行命令: \n", " ".join(command))
-
     try:
-        # 执行命令
-        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
-        result.check_returncode()  # 检查命令是否成功
-        print(f"音频流提取成功: {audio_only_path}")
+        # Step 1: 提取音频
+        subprocess.run([
+            'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
+            '-map', '0:a', '-c:a', 'pcm_s16le', '-y', extracted_audio_path
+        ], check=True)
+
+        # Step 2: 生成 30 秒静音文件
+        subprocess.run([
+            'ffmpeg', '-loglevel', 'quiet', '-f', 'lavfi',
+            '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+            '-t', '30', '-c:a', 'pcm_s16le', '-y', silence_path
+        ], check=True)
+
+        # Step 3: 连接静音和提取的音频
+        subprocess.run([
+            'ffmpeg', '-loglevel', 'quiet',
+            '-i', silence_path, '-i', extracted_audio_path, '-i', silence_path,
+            '-filter_complex', '[0:a][1:a][2:a]concat=n=3:v=0:a=1[a]',
+            '-map', '[a]', '-c:a', 'pcm_s16le', '-y', audio_only_path
+        ], check=True)
+
+        # 清理临时文件
+        os.remove(extracted_audio_path)
+        os.remove(silence_path)
+
+        print(f'生成的音频文件已保存到: {audio_only_path}')
+        return audio_only_path
 
     except subprocess.CalledProcessError as e:
         print(f"发生错误: {e.stderr}")
         if os.path.exists(audio_only_path):
             os.remove(audio_only_path)  # 移除临时文件
         return None
-
-    return audio_only_path
 
 
 def get_user_confirmation():
@@ -448,12 +465,15 @@ def run_main(url=None,
 
              is_only_download=False,
              sub_directory=None,
+             is_test=False,
+
              video_download_name=None,
              is_get_video=True,
              num_of_covers=1,
              is_get_cover=False,
 
              is_get_fanyi=False,
+             is_get_fanyi_other=False,
              is_high_quality=False,
              cover_title_split_postion=0
              ):
@@ -485,14 +505,23 @@ def run_main(url=None,
     cache_util = DiskCacheUtil()
 
     split_time_ms = minutes_to_milliseconds(split_time_min)
-    previous_split_time = cache_util.get_from_cache("split_time_ms", 900 * 1000)
+    if is_test:
+        previous_split_time = cache_util.get_from_cache("test_split_time_ms", 0.5)
+    else:
+        previous_split_time = cache_util.get_from_cache("split_time_ms", 900 * 1000)
+
     print(f"上次切割时间单位:{previous_split_time}毫秒")
     print(f"当前切割时间单位:{split_time_ms}毫秒")
     if previous_split_time is None or previous_split_time != split_time_ms:
         print("更新切割时间")
+        if is_test:
+            clear_cache()
+            cache_util.set_to_cache("test_split_time_ms", split_time_ms)
+        else:
+            clear_cache()
+            cache_util.set_to_cache("split_time_ms", split_time_ms)
+    if is_test:
         clear_cache()
-        cache_util.set_to_cache("split_time_ms", split_time_ms)
-
     result_file_name = "video_processing_results.txt"
 
     download_time = 0
@@ -596,30 +625,40 @@ def run_main(url=None,
             start_time = time.time()
             video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
             # print(f"提取音频(只含人声)({cover_title})")
-            audio_path_wav = extract_audio_only(video_nobgm)
+            audio_only_path = extract_audio_only(video_nobgm)
             # 音频 转录 生成 中文字幕
             # print(f"生成中文字幕文件({cover_title})")
-            zh_srt = transcribe_audio_to_srt(audio_path=audio_path_wav, language='cmn', sub_directory=sub_directory)
+            zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='cmn', sub_directory=sub_directory)
             # 字幕检测
-            # video_file_path = 'release_video/aa测试目录big/aa测试目录big.mp4'
             print(f"\n1.纠正中文字幕，({cover_title})")
             corrected_zh_srt = correct_subtitles(video_nobgm, False)
-            # print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
+            print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
+
+            # if not is_test:
             print(f"\n2.生成英文字幕文件，供上传youtube平台，与视频无关 ({cover_title})")
             en_srt = transcribe_srt.translate_srt_file(corrected_zh_srt, 'en', max_payload_size=2048)
-            ##以上步骤保证一定有英文字幕了
-
-            # 添加英文字幕和水印
             print(f"\n3.视频添加字幕,水印 <<{sub_directory}>>")
             video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
-
-            print(f"\n4.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
-            target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
-            for code in target_languages:
-                transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=2048)
 
             print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
             print_red(f'出错: {e}')
+
+        if is_get_fanyi_other:
+            try:
+                if not is_test:
+                    print_separator(f"翻译其他国际语言 : <<{sub_directory}>>")
+                    start_time = time.time()
+                    video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
+                    audio_only_path = extract_audio_only(video_nobgm)
+                    zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='cmn', sub_directory=sub_directory)
+                    corrected_zh_srt = correct_subtitles(video_nobgm, False)
+                    print(f"\n4.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
+                    target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "rus", "jpn"]
+                    for code in target_languages:
+                        transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=2048)
+                    print(f"\n总耗时情况:{(time.time() - start_time)}")
+            except Exception as e:
+                print_red(f'出错: {e}')
 
     cache_util.close_cache()
