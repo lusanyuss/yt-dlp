@@ -431,22 +431,6 @@ def rename_file(original_video, sub_directory):
     return new_path
 
 
-def get_mvsep_base_dir(is_high_quality, sub_directory):
-    base_dir1 = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2")
-    base_dir2 = os.path.join(os.getcwd(), "MVSEP-CDX23-Cinematic-Sound-Demixing")
-    base_dir1_out = os.path.join(base_dir1, "output", sub_directory)
-    base_dir2_out = os.path.join(base_dir2, "output", sub_directory)
-
-    # 判断 base_dir1_out 下面是否有文件
-    # if os.path.exists(base_dir1_out) and os.listdir(base_dir1_out):
-    #     return base_dir1
-    # elif os.path.exists(base_dir2_out) and os.listdir(base_dir2_out):
-    #     return base_dir2
-    # else:
-    # return base_dir1 if is_high_quality else base_dir2
-    return base_dir1
-
-
 def check_files(release_video_dir, num_of_covers):
     frame_pattern = os.path.join(release_video_dir, 'images', 'frame_*.jpg')
     input_img_pattern = os.path.join(release_video_dir, 'images', 'input_img*.png')
@@ -491,7 +475,7 @@ def run_main(url=None,
     release_video_dir = get_dir("release_video", sub_directory)
 
     # 定义两个目录
-    mvsep_base_dir = get_mvsep_base_dir(is_high_quality, sub_directory)
+    mvsep_base_dir = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2")
     print(f"选择的目录是: {mvsep_base_dir}")
 
     mvsep_input_dir = get_dir(os.path.join(mvsep_base_dir, "input"), sub_directory)
@@ -595,41 +579,22 @@ def run_main(url=None,
                  video_origin_list, audio_vocals_list,
                  video_origin_clips, process_video_time) = process_video_files_list(video_clips)
                 video_nobgm = merge_videos(video_dest_list, video_nobgm)
-                # print(f"提取音频(只含人声)({cover_title})")
-                # print(f"添加英文字幕,如果字幕不存在,就生成,还附带其他语言字幕,主要用到的是英文字幕 <<{sub_directory}>>")
-                # 音频 转录 生成 中文字幕
-                # process_and_save_results(original_video, download_time, process_video_time, result_file_name, sub_directory)
-                # print(f"总结:此步骤主要生成了:\n1.无背景音乐的视频\n2.中文字幕")
-                # print(f"(字幕需要人工进行核对,确保 中文字幕 毫无缺陷 以供翻译程序使用)")
-                # delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
+                if not is_test:
+                    delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
                 print(f"\n总耗时情况:{(time.time() - start_time)}")
 
             else:
                 print_yellow(f"{os.path.relpath(video_final, './')} 最终视频 已经存在")
         except Exception as e:
             print_red(f'出错: {e}')
-        # 用 中文字幕 翻译 生成 英文字幕
-        # print_separator(f"生成英文字幕文件({cover_title})")
-        # en_srt = yuliu.transcribe_srt.translate_srt_file(zh_srt, 'en', max_payload_size=2048)
-
-        ##以上步骤保证一定有英文字幕了
-        # print(f"====================添加英文字幕和水印<<{sub_directory}>>======================")
-        # 添加英文字幕和水印
-        # video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
-
-        # 删除多余文件
 
     if is_get_fanyi:
         try:
             print_separator(f"翻译,字幕,水印 : <<{sub_directory}>>")
             start_time = time.time()
             video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
-            # print(f"提取音频(只含人声)({cover_title})")
             audio_only_path = extract_audio_only(video_nobgm)
-            # 音频 转录 生成 中文字幕
-            # print(f"生成中文字幕文件({cover_title})")
             zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='cmn', sub_directory=sub_directory)
-            # 字幕检测
             print(f"\n1.纠正中文字幕，({cover_title})")
             corrected_zh_srt = correct_subtitles(video_nobgm, False)
             print_separator(f"视频添加字幕,水印 <<{sub_directory}>>")
@@ -639,7 +604,6 @@ def run_main(url=None,
             en_srt = transcribe_srt.translate_srt_file(corrected_zh_srt, 'en', max_payload_size=2048)
             print(f"\n3.视频添加字幕,水印 <<{sub_directory}>>")
             video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
-
             print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
             print_red(f'出错: {e}')
