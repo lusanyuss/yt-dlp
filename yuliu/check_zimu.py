@@ -121,7 +121,7 @@ def correct_subtitles(video_file_path, is_test):
     output_srt_file_path = os.path.join(output_image_path, f'{video_name}_cmn_corrected.srt')
 
     if os.path.exists(output_srt_file_path):
-        print_yellow(f"\n纠正文件已经存在 : {output_srt_file_path}")
+        print_yellow(f"纠正文件已经存在 : {output_srt_file_path}")
         return output_srt_file_path
 
     srt_file_path = os.path.join(output_image_path, f'{video_name}_cmn.srt')
