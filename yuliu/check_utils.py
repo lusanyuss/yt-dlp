@@ -68,5 +68,5 @@ def is_banned(title):
 if __name__ == '__main__':
     # 示例srt字幕内容
     # 示例用法
-    zh_srt_path = '/yuliu/release_video/aa测试目录min/aa测试目录_cmn.srt'
+    zh_srt_path = '/yuliu/release_video/aa测试目录min/aa测试目录_zh.srt'
     check_duplicates(zh_srt_path)

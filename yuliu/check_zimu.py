@@ -131,7 +131,7 @@ def correct_subtitles(video_file_path, is_test=True):
     file_name = os.path.splitext(os.path.basename(video_file_path))[0]
     video_name = file_name.split('_')[0]
     output_image_path = os.path.dirname(video_file_path)
-    output_srt_file_path = os.path.join(output_image_path, f'{video_name}_cmn_corrected.srt')
+    output_srt_file_path = os.path.join(output_image_path, f'{video_name}_zh_corrected.srt')
 
     if os.path.exists(output_srt_file_path):
         print_yellow(f"纠正文件已经存在 : {output_srt_file_path}")
@@ -160,7 +160,7 @@ def correct_subtitles(video_file_path, is_test=True):
         return text1 if score1 < score2 else text2
 
 
-    srt_file_path = os.path.join(output_image_path, f'{video_name}_cmn.srt')
+    srt_file_path = os.path.join(output_image_path, f'{video_name}_zh.srt')
     srt_content = read_srt_file(srt_file_path)
     if not is_test:
         for offset in generate_offsets('', 0, 1):  # 生成一个虚拟的偏移量列表用于清理目录

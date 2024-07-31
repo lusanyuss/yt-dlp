@@ -136,8 +136,8 @@ def process_srt_file(video_path, srt_file_path, output_srt_file_path, interval, 
 
 # 文件路径
 video_file_path = 'release_video/aa测试目录big/aa测试目录.mp4'
-srt_file_path = 'release_video/aa测试目录big/aa测试目录_cmn.srt'
-output_srt_file_path = 'release_video/aa测试目录big/aa测试目录_cmn_corrected.srt'
+srt_file_path = 'release_video/aa测试目录big/aa测试目录_zh.srt'
+output_srt_file_path = 'release_video/aa测试目录big/aa测试目录_zh_corrected.srt'
 output_image_path = 'release_video/aa测试目录'  # 指定输出目录
 
 # 处理SRT文件

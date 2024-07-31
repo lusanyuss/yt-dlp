@@ -21,29 +21,18 @@ PROXIES = {
 DEFAULT_MAX_PAYLOAD_SIZE = 1024  # 默认每次请求的最大负载大小（字节）
 
 # 定义ISO 639-3到ISO 639-1的映射
-iso639_3_to_2_map = {
-    "eng": "en",
-    "cmn": "zh",
-    "spa": "es",
-    "hin": "hi",
-    "arb": "ar",
-    "por": "pt",
-    "fra": "fr",
-    "deu": "de",
-    "jpn": "ja",
-    "kor": "ko"
+language_map = {
+    "en": "英语",
+    "zh": "中文",
+    "es": "西班牙语",
+    "hi": "印地语",
+    "ar": "阿拉伯语",
+    "pt": "葡萄牙语",
+    "fr": "法语",
+    "de": "德语",
+    "ja": "日语",
+    "ko": "韩语"
 }
-
-# 创建一个反向映射从ISO 639-1到ISO 639-3
-iso639_2_to_3_map = {v: k for k, v in iso639_3_to_2_map.items()}
-
-
-def iso639_3_to_2(code):
-    return iso639_3_to_2_map.get(code, code)
-
-
-def iso639_2_to_3(code):
-    return iso639_2_to_3_map.get(code, code)
 
 
 def create_session_with_retries(retries, backoff_factor, status_forcelist):
@@ -149,9 +138,10 @@ def translate_srt_file(zimu_srt, target_language, max_payload_size=DEFAULT_MAX_P
 
     source_language = os.path.splitext(zimu_srt)[0].rsplit('_', 1)[-1]
     base_name = os.path.basename(zimu_srt).rsplit('_', 1)[0]
-    target_lang_code = iso639_2_to_3(target_language)
-    new_file_name = f"{os.path.dirname(zimu_srt)}/{base_name}_{target_lang_code}.srt"
-
+    new_file_name = f"{os.path.dirname(zimu_srt)}/{base_name}_{language_map[target_language]}.srt"
+    new_file_name_code = f"{os.path.dirname(zimu_srt)}/{base_name}_{target_language}.srt"
+    if os.path.exists(new_file_name_code):
+        os.replace(new_file_name_code, new_file_name)
     if os.path.exists(new_file_name):
         print_yellow(f"{new_file_name}字幕存在,缓存返回")
         return new_file_name
@@ -194,7 +184,7 @@ def translate_srt_file(zimu_srt, target_language, max_payload_size=DEFAULT_MAX_P
         block_indices.append(len(translated_content) - len(current_block))
 
     if text_blocks:
-        translations = translate_text_batch(text_blocks, iso639_3_to_2(target_language), iso639_3_to_2(source_language), max_payload_size)
+        translations = translate_text_batch(text_blocks, target_language, source_language, max_payload_size)
         for i, block_index in enumerate(block_indices):
             translated_content[block_index] = translations[i] + '\n'
 
@@ -205,14 +195,14 @@ def translate_srt_file(zimu_srt, target_language, max_payload_size=DEFAULT_MAX_P
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"翻译字幕耗时{target_language}: {elapsed_time:.2f} 秒")
+    print(f"翻译字幕耗时{language_map[target_language]}: {elapsed_time:.2f} 秒")
 
     return new_file_name
 
 
 if __name__ == "__main__":
-    source_file_path = 'release_video/aa测试目录/aa测试目录_cmn_corrected.srt'
-    traget_file_path = 'release_video/aa测试目录/aa测试目录_eng.srt'
+    source_file_path = 'release_video/aa测试目录/aa测试目录_zh_corrected.srt'
+    traget_file_path = 'release_video/aa测试目录/aa测试目录_en.srt'
 
     if os.path.exists(traget_file_path):
         os.remove(traget_file_path)

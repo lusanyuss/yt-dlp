@@ -72,7 +72,7 @@ def add_zimu_shuiyin_to_video(video_nobgm, srt_path=None):
 if __name__ == '__main__':
     print("===============相对==================")
     video_path = 'release_video/aa测试目录big/aa测试目录.mp4'
-    srt_path = 'release_video/aa测试目录/aa测试目录_eng.srt'
+    srt_path = 'release_video/aa测试目录/aa测试目录_en.srt'
     result = 'release_video/aa测试目录/aa测试目录_zimu.mp4'
 
     shutil.copy2('download_cache/aa测试目录/1.mp4', video_path)

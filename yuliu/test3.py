@@ -4,7 +4,7 @@ command = [
     "ffmpeg",
     "-hwaccel", "cuda",
     "-i", "release_video/aa测试目录/aa测试目录.mp4",
-    "-vf", "subtitles='release_video/aa测试目录/aa测试目录_eng.srt':force_style='FontFile=ziti/fengmian/gwkt-SC-Black.ttf,FontSize=12,PrimaryColour=&H0000FFFF,OutlineColour=&H00000000,Alignment=2,MarginV=30', drawtext=fontfile='ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,50)'",
+    "-vf", "subtitles='release_video/aa测试目录/aa测试目录_en.srt':force_style='FontFile=ziti/fengmian/gwkt-SC-Black.ttf,FontSize=12,PrimaryColour=&H0000FFFF,OutlineColour=&H00000000,Alignment=2,MarginV=30', drawtext=fontfile='ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,50)'",
     "-c:v", "h264_nvenc",
     "-c:a", "copy",
     "-y",

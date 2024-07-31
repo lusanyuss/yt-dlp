@@ -279,10 +279,16 @@ def generate_video_metadata(release_video_dir, sub_directory):
 请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，
 要求如下:
 1.我需10种不同国家语言的版本(一个都不能少),分别是中文繁体,英文,西班牙语,印地语,阿拉伯语,葡萄牙语,法语,德语,日语,韩语
-2.主标题和副标题写一起组合成整个标题,后面再加相关标签(标签可用'|'隔开)到接近100字符(别超过),。说明描述中也包含用|分割的相关标签,别超过500字符
-3.整个标题要便于搜索，足够接地气，容易出现在搜索列表中，
-4.整个标题富有吸引力，让人感兴趣，使人立即点击观看。
-5.说明描述的第一个段落一定是：
+2.整个标题格式:主标题和副标题和标签从左到右顺序一整行,总长度不超过100(必须强制满足),标签可用'|'隔开。
+3.说明描述中也包含用|分割的相关标签,别超过500字符
+4.整个标题要便于搜索，足够接地气，容易出现在搜索列表中，
+5.整个标题富有吸引力，让人感兴趣，使人立即点击观看。
+6.我只认识中文,你返回的格式都按照下面格式返回,如下:
+标题:
+xxx
+说明描述:
+xxx
+7.说明描述的第一个段落一定是：
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持！
 
@@ -587,7 +593,6 @@ def run_main(url=None,
                                                           isTest=False,
                                                           cover_title_split_postion=cover_title_split_postion
                                                           )
-            generate_video_metadata(release_video_dir, sub_directory)
             print(
                 f"获取封面情况:获取{num_of_covers}张图片时间: {(time.time() - start_time):.2f} 秒, 平均每张: {(time.time() - start_time) / num_of_covers:.2f} 秒")
             print(f"\n总耗时情况:{(time.time() - start_time)}")
@@ -617,7 +622,7 @@ def run_main(url=None,
                 video_nobgm = merge_videos(video_dest_list, video_nobgm)
                 # video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
                 audio_only_path = extract_audio_only(video_nobgm)
-                zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='cmn', sub_directory=sub_directory)
+                zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='zh', sub_directory=sub_directory)
                 corrected_zh_srt = correct_subtitles(video_nobgm, False)
 
                 if not is_test:
@@ -635,17 +640,19 @@ def run_main(url=None,
             start_time = time.time()
             video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
             audio_only_path = extract_audio_only(video_nobgm)
-            zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='cmn', sub_directory=sub_directory)
+            zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='zh', sub_directory=sub_directory)
             corrected_zh_srt = correct_subtitles(video_nobgm, False)
 
             en_srt = transcribe_srt.translate_srt_file(corrected_zh_srt, 'en', max_payload_size=1536)
             video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
 
             print(f"\n4.翻译 9 国翻译 srt文件 <<{sub_directory}>>")
-            target_languages = ["spa", "hin", "arb", "por", "fra", "deu", "jpn", "kor"]
+
+            target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ja", "ko"]
             for code in target_languages:
                 transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=1536)
 
+            generate_video_metadata(release_video_dir, sub_directory)
             print(f"\n总耗时情况:{(time.time() - start_time)}")
         except Exception as e:
             print_red(f'出错: {e}')
