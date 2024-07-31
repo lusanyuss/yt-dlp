@@ -15,7 +15,7 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
 
-def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v3", device="cuda", compute_type="float16", sub_directory=""):
+def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", device="cuda", compute_type="float16", sub_directory=""):
     base, ext = os.path.splitext(audio_path)
     base_name = get_path_without_suffix(base)
     srt_path = f"{base_name}_{language}.srt"
@@ -36,22 +36,24 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v3", de
         model = WhisperModel(model_size_or_path=model_size, device=device, compute_type=compute_type)
         segments, info = model.transcribe(
             audio=audio_path,
-            language="zh",  # 假设对话是中文的
+            language="zh",  # 假设对话是中文
             task="transcribe",
-            beam_size=5,
-            best_of=1,  # 提高处理速度，因为背景噪音较少
-            patience=0.5,  # 更快的响应时间
-            length_penalty=0.8,  # 稍微偏向更短的输出
-            repetition_penalty=1.2,  # 避免重复
-            no_repeat_ngram_size=3,  # 防止3个词的重复
-            temperature=0.5,  # 控制输出的随机性，保持较高的确定性
-            compression_ratio_threshold=1.5,  # 较低的压缩比，以保持对话的完整性
-            no_speech_threshold=0.4,  # 适中的无语音阈值
-            vad_filter=True,  # 启用VAD
-            vad_parameters={"min_silence_duration_ms": 200},  # 200ms的静音识别，适合快速对话
-            word_timestamps=True,  # 为每个单词生成时间戳
-            suppress_blank=True,  # 抑制空白段落
-            without_timestamps=False  # 输出带时间戳的转录
+            beam_size=10,  # 使用较大的beam size以提高识别准确性
+            best_of=3,  # 从多个候选中选择最佳输出，提高质量
+            patience=0.8,  # 增加等待概率改善的时间，以获得更准确的结果
+            length_penalty=1.0,  # 保持标准长度，避免对输出进行惩罚或奖励
+            repetition_penalty=1.1,  # 轻微增加重复惩罚，避免内容的重复
+            no_repeat_ngram_size=4,  # 防止近距离的4个词的重复，提高内容的多样性
+            temperature=[0.0],  # 保持输出的一致性和确定性
+            compression_ratio_threshold=2.0,  # 适当的压缩比，保留更多细节
+            log_prob_threshold=-0.5,  # 设置一个较高的日志概率阈值以确保内容质量
+            no_speech_threshold=0.3,  # 较低的无语音阈值，因为背景已清除
+            condition_on_previous_text=True,  # 使用上下文信息提高连贯性
+            word_timestamps=True,  # 每个单词生成时间戳，提高字幕的时间准确性
+            vad_filter=True,  # 启用VAD来检测有效语音活动
+            vad_parameters={"min_silence_duration_ms": 250},  # 150毫秒的最小静音时长，平衡对话自然停顿和快速响应
+            without_timestamps=False,  # 生成带时间戳的输出，对SRT文件必须
+            suppress_blank=True  # 抑制无语音的输出，减少字幕中的空白
         )
         print(f"开始转录音频: {time.time() - start_time1:.2f} 秒")
         print(f"将结果写入临时SRT文件: {temp_srt_path}")

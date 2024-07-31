@@ -66,11 +66,11 @@ if __name__ == "__main__":
         # '隐婚后,我的下属老公掉马甲了',
 
         '归来之非凡人生',
-        '我竟然买断了首富的日常',
-        '月光宝镜',
-        '被交换的人生',
-        '游子身上针',
-        '隐龙之保安老爸不好惹',
+        # '我竟然买断了首富的日常',
+        # '月光宝镜',
+        # '被交换的人生',
+        # '游子身上针',
+        # '隐龙之保安老爸不好惹',
 
     ]
     for video_name in videos:
@@ -89,12 +89,7 @@ if __name__ == "__main__":
                              is_get_cover=True,
                              is_get_video=True,
                              is_get_fanyi=True,
-                             is_get_fanyi_other=False,
-
-                             # is_get_video=False,
-                             # is_get_fanyi=False,
 
                              num_of_covers=8,
-                             is_high_quality=True,
                              cover_title_split_postion=cover_title_split_postion
                              )

@@ -18,7 +18,7 @@ PROXIES = {
     "http": "http://127.0.0.1:7890",
     "https": "http://127.0.0.1:7890",
 }
-DEFAULT_MAX_PAYLOAD_SIZE = 1536  # 默认每次请求的最大负载大小（字节）
+DEFAULT_MAX_PAYLOAD_SIZE = 1024  # 默认每次请求的最大负载大小（字节）
 
 # 定义ISO 639-3到ISO 639-1的映射
 iso639_3_to_2_map = {
@@ -30,8 +30,8 @@ iso639_3_to_2_map = {
     "por": "pt",
     "fra": "fr",
     "deu": "de",
-    "rus": "ru",
-    "jpn": "ja"
+    "jpn": "ja",
+    "kor": "ko"
 }
 
 # 创建一个反向映射从ISO 639-1到ISO 639-3
@@ -144,7 +144,7 @@ def translate_srt_file(zimu_srt, target_language, max_payload_size=DEFAULT_MAX_P
     if not os.path.exists(zimu_srt):
         raise Exception("中文字幕不存在")
 
-    print("===========================开始翻译字幕===========================")
+    print(f"===========================开始翻译字幕 {target_language}===========================")
     start_time = time.time()
 
     source_language = os.path.splitext(zimu_srt)[0].rsplit('_', 1)[-1]
@@ -218,5 +218,5 @@ if __name__ == "__main__":
         os.remove(traget_file_path)
 
     target_language = 'en'
-    new_srt_path = translate_srt_file(source_file_path, target_language, max_payload_size=2048)
+    new_srt_path = translate_srt_file(source_file_path, target_language, max_payload_size=1536)
     print(f"翻译后的 SRT 文件保存在: {new_srt_path}")
