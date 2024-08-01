@@ -218,9 +218,9 @@ def correct_subtitles(video_file_path, is_test=True):
             if next_line == detected_text:
                 corrected_content = next_line
             elif next_line != detected_text and len(next_line) == len(detected_text):
-                corrected_content = compare_texts(detected_text, next_line)
-            elif next_line in detected_text:
                 corrected_content = detected_text
+            elif next_line in detected_text:
+                corrected_content = next_line
             elif detected_text in next_line:
                 corrected_content = next_line
             else:

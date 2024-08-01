@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
                          is_get_cover=True,
                          is_get_video=True,
-                         is_get_fanyi=False,
+                         is_get_fanyi=True,
 
                          num_of_covers=1,
                          cover_title_split_postion=0

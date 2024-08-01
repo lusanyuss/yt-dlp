@@ -65,8 +65,8 @@ if __name__ == "__main__":
         # '闪婚对象竟是豪门大佬',
         # '隐婚后,我的下属老公掉马甲了',
 
-        '双面美人',
-        '抓娃娃之女儿也要穷养',
+        # '双面美人',
+        # '抓娃娃之女儿也要穷养',
         '超级兵痞',
         '退婚后我继承了万亿家产',
         '重返地球我的圣人身份泄露了',
@@ -89,9 +89,9 @@ if __name__ == "__main__":
                              split_time_min=15,
                              is_test=False,
 
-                             is_get_cover=True,
-                             is_get_video=True,
-                             # is_get_fanyi=True,
+                             # is_get_cover=True,
+                             # is_get_video=True,
+                             is_get_fanyi=True,
 
                              num_of_covers=8,
                              cover_title_split_postion=cover_title_split_postion
