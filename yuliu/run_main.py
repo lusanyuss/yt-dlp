@@ -646,11 +646,11 @@ def run_main(url=None,
             en_srt = transcribe_srt.translate_srt_file(corrected_zh_srt, 'en', max_payload_size=1536)
             video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
 
-            print(f"\n4.翻译 9 国翻译 srt文件 <<{sub_directory}>>")
+            print(f"\n4.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
 
-            target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ja", "ko"]
-            for code in target_languages:
-                transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=1536)
+            # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ja", "ko"]
+            # for code in target_languages:
+            #     transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=1536)
 
             generate_video_metadata(release_video_dir, sub_directory)
             print(f"\n总耗时情况:{(time.time() - start_time)}")

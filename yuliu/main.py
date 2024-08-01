@@ -65,19 +65,22 @@ if __name__ == "__main__":
         # '闪婚对象竟是豪门大佬',
         # '隐婚后,我的下属老公掉马甲了',
 
-        # '归来之非凡人生',
-        '我竟然买断了首富的日常',
-        # '月光宝镜',
-        # '被交换的人生',
-        # '游子身上针',
-        # '隐龙之保安老爸不好惹',
+        '双面美人',
+        '抓娃娃之女儿也要穷养',
+        '超级兵痞',
+        '退婚后我继承了万亿家产',
+        '重返地球我的圣人身份泄露了',
+        '闪婚老公竟想凭子上位',
+
 
     ]
     for video_name in videos:
         cover_title_split_postion = 0
-        # if video_name == '我的爷爷是大佬':
-        #     cover_title_split_postion = 2
-        if video_name == '我竟然买断了首富的日常':
+        if video_name == '退婚后我继承了万亿家产':
+            cover_title_split_postion = 3
+        if video_name == '重返地球我的圣人身份泄露了':
+            cover_title_split_postion = 4
+        if video_name == '抓娃娃之女儿也要穷养':
             cover_title_split_postion = 3
 
         common.check_and_run(sub_directory=video_name,
@@ -88,7 +91,7 @@ if __name__ == "__main__":
 
                              is_get_cover=True,
                              is_get_video=True,
-                             is_get_fanyi=True,
+                             # is_get_fanyi=True,
 
                              num_of_covers=8,
                              cover_title_split_postion=cover_title_split_postion
