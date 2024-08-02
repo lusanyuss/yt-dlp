@@ -12,7 +12,7 @@ from utils import get_file_only_name, get_file_only_extension, generate_md5_file
     find_split_points, \
     print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
     separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, print_red, print_yellow, get_path_without_suffix
-from yuliu import transcribe_srt
+from yuliu import transcribe_srt, voice_utils
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.check_utils import is_banned
 from yuliu.check_zimu import correct_subtitles
@@ -72,7 +72,7 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
 
     if not all(os.path.exists(file) for file in output_file_vocals_list):
         print(f"并不所有文件都存在。清空目录{mvsep_output_dir}")
-        clear_directory_contents(mvsep_output_dir)
+        # clear_directory_contents(mvsep_output_dir)
         try:
             mvsep_main = os.path.join(mvsep_base_dir, 'mvsep_main.py')
             command = ['python', f'{mvsep_main}', '--input', mvsep_input_dir, '--output', mvsep_output_dir]
@@ -563,18 +563,28 @@ def run_main(url=None,
             subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
 
             os.path.join(release_video_dir, 'images')
+            crop_left = 48
+            crop_bottom = 720 / 426 * crop_left
+
+            crop_dict = {
+                'crop_left': crop_left,
+                'crop_right': 0,
+                'crop_top': 0,
+                'crop_bottom': crop_bottom
+            }
 
             if not check_files(release_video_dir, num_of_covers):
-                frame_image_list = extract_thumbnail_main(original_video,
-                                                          release_video_dir,
-                                                          cover_title,
-                                                          title_font,
-                                                          subtitle_font,
-                                                          num_of_covers=num_of_covers,
-                                                          crop_height=100,
-                                                          isTest=False,
-                                                          cover_title_split_postion=cover_title_split_postion
-                                                          )
+                extract_thumbnail_main(original_video,
+                                       release_video_dir,
+                                       cover_title,
+                                       title_font,
+                                       subtitle_font,
+                                       crop_dict,
+                                       num_of_covers=num_of_covers,
+                                       crop_height=100,
+                                       isTest=False,
+                                       cover_title_split_postion=cover_title_split_postion
+                                       )
             print(
                 f"获取封面情况:获取{num_of_covers}张图片时间: {(time.time() - start_time):.2f} 秒, 平均每张: {(time.time() - start_time) / num_of_covers:.2f} 秒")
             print(f"\n总耗时情况:{(time.time() - start_time)}")
@@ -605,7 +615,6 @@ def run_main(url=None,
                 # video_nobgm = os.path.join(release_video_dir, f"{sub_directory}_nobgm.mp4")
                 audio_only_path = extract_audio_only(video_nobgm)
                 zh_srt = transcribe_audio_to_srt(audio_path=audio_only_path, language='zh', sub_directory=sub_directory)
-
                 # 修正翻译
                 zh_srt = correct_subtitles(video_nobgm, False)
 
@@ -613,6 +622,7 @@ def run_main(url=None,
                     delete_files_by_list(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
                 print(f"\n总耗时情况:{(time.time() - start_time)}")
 
+                # voice_utils.play_voice_message(f'成功合成 {sub_directory} 无背景音乐视频')
             else:
                 print_yellow(f"{os.path.relpath(video_final, './')} 最终视频 已经存在")
         except Exception as e:
@@ -628,7 +638,7 @@ def run_main(url=None,
             # 修正翻译
             zh_srt = correct_subtitles(video_nobgm, False)
 
-            en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 8)
+            en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 6)
             zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256 * 8 / 4)
 
             video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
@@ -641,6 +651,7 @@ def run_main(url=None,
 
             generate_video_metadata(release_video_dir, sub_directory)
             print(f"\n总耗时情况:{(time.time() - start_time)}")
+            voice_utils.play_voice_message(f'成功合成 {sub_directory} 可发布视频')
         except Exception as e:
             print_red(f'出错: {e}')
 

@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 from paddleocr import PaddleOCR
 
-from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_separator, print_yellow, print_red
+from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_yellow, print_red
 
 
 def is_resolution_gte_1920x1080(image_path):
@@ -257,7 +257,7 @@ def get_cover_images(frame_images, output_dir):
             range(0, frame_images_length, batch_size)]
 
 
-def generate_frame(index, video_path, duration, output_dir, crop_height, model_path, frame_paths, lock):
+def generate_frame(index, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock):
     output_path = os.path.join(output_dir, f"frame_{index + 1}.jpg")
     if os.path.exists(output_path):
         with lock:
@@ -277,17 +277,20 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
 
         if os.path.exists(output_path):
             try:
+                crop_left = crop_dict['crop_left']
+                crop_right = crop_dict['crop_right']
+                crop_top = crop_dict['crop_top']
+                crop_bottom = crop_dict['crop_bottom']
+
                 image = Image.open(output_path)
                 original_width, original_height = image.size
-                new_height = original_height - crop_height
-                new_width = int(new_height * original_width / original_height)
 
-                left = (original_width - new_width) // 2
-                top = 0
-                right = left + new_width
-                bottom = top + new_height
-
-                cropped_image = image.crop((left, top, right, bottom))
+                # 计算裁剪后的图像尺寸
+                new_width = original_width - crop_left - crop_right
+                new_height = original_height - crop_top - crop_bottom
+                if new_width <= 0 or new_height <= 0:
+                    raise ValueError("Crop dimensions are too large, resulting in a non-positive dimension image.")
+                cropped_image = image.crop((crop_left, crop_top, crop_left + new_width, crop_top + new_height))
                 cropped_image.save(output_path)
                 chinese_text = extract_and_print_chinese_text(output_path)
 
@@ -310,7 +313,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_height, model_p
             print(f"Failed to generate frame at {output_path}")
 
 
-def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, model_path, timeout_duration):
+def get_frame_images(num_frames, video_path, duration, output_dir, crop_dict, model_path, timeout_duration):
     frame_paths = [None] * num_frames
     lock = threading.Lock()
 
@@ -326,7 +329,7 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, 
 
     with ThreadPoolExecutor(max_workers=12) as executor:
         futures = [
-            executor.submit(generate_frame, i, video_path, duration, output_dir, crop_height, model_path, frame_paths, lock)
+            executor.submit(generate_frame, i, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock)
             for i in range(num_frames)
         ]
         try:
@@ -340,7 +343,7 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_height, 
     return frame_paths
 
 
-def extract_covers_and_frames(video_path, release_video_dir, num_frames=3 * 1, crop_height=0):
+def extract_covers_and_frames(video_path, release_video_dir, crop_dict, num_frames=3 * 1):
     # Get video duration
     command = ['ffprobe', '-v', 'quiet', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', video_path]
     command += ['-loglevel', 'quiet']
@@ -354,7 +357,7 @@ def extract_covers_and_frames(video_path, release_video_dir, num_frames=3 * 1, c
     os.makedirs(images_dir, exist_ok=True)
 
     # 截图列表
-    frame_images = get_frame_images(num_frames, video_path, duration, images_dir, crop_height, model_path, timeout_duration)
+    frame_images = get_frame_images(num_frames, video_path, duration, images_dir, crop_dict, model_path, timeout_duration)
     # 封面图列表
     cover_images = []
     if len(frame_images) == num_frames:
@@ -627,7 +630,7 @@ def replace_subtitle(subtitle):
     return new_subtitle
 
 
-def extract_thumbnail_main(original_video, release_video_dir, cover_title, title_font, subtitle_font, num_of_covers=1,
+def extract_thumbnail_main(original_video, release_video_dir, cover_title, title_font, subtitle_font, crop_dict, num_of_covers=1,
                            crop_height=100, isTest=False, cover_title_split_postion=0):
     # 截取3张没有汉字的截图
     frame_image_list = []
@@ -635,7 +638,7 @@ def extract_thumbnail_main(original_video, release_video_dir, cover_title, title
 
     print(f"开始制作封面图 <<{cover_title}>>")
 
-    cover_images_list, frame_images_list = extract_covers_and_frames(original_video, release_video_dir, 3 * num_of_covers, crop_height)
+    cover_images_list, frame_images_list = extract_covers_and_frames(original_video, release_video_dir, crop_dict, 3 * num_of_covers)
     if len(cover_images_list) != num_of_covers:
         print_yellow("制作封面图超过设定时间，退出不获取了")
         return frame_image_list
@@ -760,7 +763,8 @@ if __name__ == "__main__":
     for fooo in fontts:
         title_font = os.path.join('ziti', fooo[0], fooo[1])  # 标题
         subtitle_font = os.path.join('ziti', fooo[0], fooo[1])  # 副标题
-        extract_thumbnail_main(original_video, release_video_dir, "摊牌了我的五个哥哥是大佬", title_font, subtitle_font, 1, 100, True, 0)
+        crop_dict = {}
+        extract_thumbnail_main(original_video, release_video_dir, "摊牌了我的五个哥哥是大佬", title_font, subtitle_font, crop_dict, 1, 100, True, 0)
         # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", title_font, subtitle_font, 1, 100, True,0)
         # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", title_font, subtitle_font, 1, 100, True,0)
         # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", title_font, subtitle_font, 1, 100, True,0)

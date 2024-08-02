@@ -855,7 +855,16 @@ def predict_with_model(options):
     model = EnsembleDemucsMDXMusicSeparationModel(options)
 
     for i, input_audio in enumerate(options['input_audio']):
+        print("\n\n================================================")
         print('Go for: {}'.format(input_audio))
+        base_filename = os.path.splitext(os.path.basename(input_audio))[0]
+        output_filename = f"{base_filename}_vocals.wav"
+        output_file_path = os.path.join(output_folder, output_filename)
+        # 检查产物文件是否已经存在于输出目录
+        if os.path.exists(output_file_path):
+            print(f"文件已存在，跳过处理: {input_audio}")
+            continue  # 如果文件存在，跳过当前迭代
+
         audio, sr = librosa.load(input_audio, mono=False, sr=44100)
         if len(audio.shape) == 1:
             audio = np.stack([audio, audio], axis=0)
@@ -871,7 +880,7 @@ def predict_with_model(options):
             if options["restore_gain"] is True:  # restoring original gain
                 result[instrum] = dBgain(result[instrum], -options['input_gain'])
             sf.write(output_folder + '/' + output_name, result[instrum], sample_rates[instrum], subtype=output_format)
-            print('File created: {}'.format(output_folder + '/' + output_name))
+            print('File created1: {}'.format(output_folder + '/' + output_name))
 
         # instrumental part 1
         # inst = (audio.T - result['vocals'])
@@ -882,14 +891,14 @@ def predict_with_model(options):
 
         output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.{}'.format('instrum', output_extension)
         sf.write(output_folder + '/' + output_name, inst, sr, subtype=output_format)
-        print('File created: {}'.format(output_folder + '/' + output_name))
+        print('File created2: {}'.format(output_folder + '/' + output_name))
 
         if options['vocals_only'] is False:
             # instrumental part 2
             inst2 = (result['bass'] + result['drums'] + result['other'])
             output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.{}'.format('instrum2', output_extension)
             sf.write(output_folder + '/' + output_name, inst2, sr, subtype=output_format)
-            print('File created: {}'.format(output_folder + '/' + output_name))
+            print('File created3: {}'.format(output_folder + '/' + output_name))
 
 
 # Linkwitz-Riley filter

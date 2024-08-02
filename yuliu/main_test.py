@@ -3,15 +3,15 @@ from yuliu import common
 
 if __name__ == "__main__":
 
-    sub_directory = 'aa归来之非凡人生test'
+    sub_directory = '抓娃娃之女儿也要穷养'
     common.check_and_run(sub_directory=sub_directory,
                          cover_title=sub_directory,
                          juji_num=1,
                          split_time_min=1,
                          is_test=True,
 
-                         # is_get_cover=True,
-                         is_get_video=True,
+                         is_get_cover=True,
+                         # is_get_video=True,
                          # is_get_fanyi=True,
 
                          num_of_covers=1,

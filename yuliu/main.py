@@ -101,8 +101,8 @@ if __name__ == "__main__":
                              split_time_min=15,
                              is_test=False,
 
-                             # is_get_cover=True,
-                             is_get_video=True,
+                             is_get_cover=True,
+                             # is_get_video=True,
                              # is_get_fanyi=True,
 
                              num_of_covers=8,

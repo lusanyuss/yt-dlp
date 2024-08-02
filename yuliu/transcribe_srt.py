@@ -100,7 +100,7 @@ def translate_text_batch(texts, target_language, max_payload_size):
                 params = {
                     'key': os.environ['GOOGLE_API_KEY'],
                     "q": current_texts,
-                    'source': 'zh',
+                    'source': 'zh-CN',
                     "target": target_language,
                     "format": "text"
                 }
@@ -117,7 +117,7 @@ def translate_text_batch(texts, target_language, max_payload_size):
             params = {
                 'key': os.environ['GOOGLE_API_KEY'],
                 "q": current_texts,
-                'source': 'zh',
+                'source': 'zh-CN',
                 "target": target_language,
                 "format": "text"
             }

@@ -1,15 +1,13 @@
-import hashlib
-import http.client as httplib  # 更新为 http.client
-import json
+import http.client as httplib  # updated import for http.client
 import os
 import random
 import sys
 import time
 
 import httplib2
-from googleapiclient.discovery import build  # 更新为 googleapiclient
-from googleapiclient.errors import HttpError  # 更新为 googleapiclient
-from googleapiclient.http import MediaFileUpload  # 更新为 googleapiclient
+from googleapiclient.discovery import build  # updated import for googleapiclient
+from googleapiclient.errors import HttpError  # updated import for googleapiclient
+from googleapiclient.http import MediaFileUpload  # updated import for googleapiclient
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 from oauth2client.tools import argparser, run_flow
@@ -31,7 +29,7 @@ RETRIABLE_EXCEPTIONS = (httplib2.HttpLib2Error, IOError, httplib.NotConnected,
 # codes is raised.
 RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
 
-CLIENT_SECRETS_FILE = "client_secrets.json"
+CLIENT_SECRETS_FILE = "client_secret_lusanyuss.json"
 YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
@@ -59,7 +57,7 @@ PROXIES = {
 }
 
 
-def get_authenticated_service(args):
+def get_authenticated_service():
     flow = flow_from_clientsecrets(CLIENT_SECRETS_FILE,
                                    scope=YOUTUBE_UPLOAD_SCOPE,
                                    message=MISSING_CLIENT_SECRETS_MESSAGE)
@@ -73,6 +71,7 @@ def get_authenticated_service(args):
             proxy_host="127.0.0.1",
             proxy_port=7890
         ), timeout=60)
+        args = argparser.parse_args(args=[])
         credentials = run_flow(flow, storage, args, http=http)
     else:
         http = httplib2.Http(proxy_info=httplib2.ProxyInfo(
@@ -85,81 +84,82 @@ def get_authenticated_service(args):
                  http=credentials.authorize(http))
 
 
-def initialize_upload(youtube, options):
-    tags = None
-    if options.keywords:
-        tags = options.keywords.split(",")
+def upload_video(file, title="Test Title", description="Test Description",
+                 category="24", keywords="", privacy_status="private"):
+    youtube = get_authenticated_service()
+    tags = keywords.split(",") if keywords else None
 
     body = dict(
         snippet=dict(
-            title=options.title,
-            description=options.description,
+            title=title,
+            description=description,
             tags=tags,
-            categoryId=options.category
+            categoryId=category
         ),
         status=dict(
-            privacyStatus=options.privacyStatus
+            privacyStatus=privacy_status
         )
     )
 
     insert_request = youtube.videos().insert(
         part=",".join(body.keys()),
         body=body,
-        media_body=MediaFileUpload(options.file, chunksize=-1, resumable=True)
+        media_body=MediaFileUpload(file, chunksize=-1, resumable=True)
     )
 
-    resumable_upload(insert_request)
-
-
-def resumable_upload(insert_request):
     response = None
     error = None
     retry = 0
     while response is None:
         try:
-            print("Uploading file...")
+            print("正在上传文件...")
             status, response = insert_request.next_chunk()
             if response is not None:
                 if 'id' in response:
-                    print("Video id '%s' was successfully uploaded." % response['id'])
+                    print("视频 ID '%s' 上传成功。" % response['id'])
                 else:
-                    exit("The upload failed with an unexpected response: %s" % response)
+                    raise Exception("上传失败，响应内容: %s" % response)
         except HttpError as e:
             if e.resp.status in RETRIABLE_STATUS_CODES:
-                error = "A retriable HTTP error %d occurred:\n%s" % (e.resp.status, e.content)
+                error = "可重试的 HTTP 错误 %d 发生:\n%s" % (e.resp.status, e.content)
             else:
                 raise
         except RETRIABLE_EXCEPTIONS as e:
-            error = "A retriable error occurred: %s" % e
+            error = "可重试的错误发生: %s" % e
 
         if error is not None:
             print(error)
             retry += 1
             if retry > MAX_RETRIES:
-                exit("No longer attempting to retry.")
+                raise Exception("重试次数过多，放弃上传。")
 
             max_sleep = 2 ** retry
             sleep_seconds = random.random() * max_sleep
-            print("Sleeping %f seconds and then retrying..." % sleep_seconds)
+            print("休眠 %f 秒后重试..." % sleep_seconds)
             time.sleep(sleep_seconds)
 
 
+# 使用示例
 if __name__ == '__main__':
-    argparser.add_argument("--file", required=True, help="Video file to upload")
-    argparser.add_argument("--title", help="Video title", default="Test Title")
-    argparser.add_argument("--description", help="Video description", default="Test Description")
-    argparser.add_argument("--category", default="24", help="Numeric video category.")
-    argparser.add_argument("--keywords", help="Video keywords, comma separated", default="")
-    argparser.add_argument("--privacyStatus", choices=VALID_PRIVACY_STATUSES, default=VALID_PRIVACY_STATUSES[0], help="Video privacy status.")
-    args = argparser.parse_args()
+    videos = [
+        #
+        # '我站在巅峰从收到录取通知书开始',
+        # '死后第三年',
+        # '沉香如雪',
+        # '糟糕我被女神包围了',
+        # '冒牌战尊',
+        # '我生了个小财神爷',
 
-    if not os.path.exists(args.file):
-        exit("Please specify a valid file using the --file= parameter.")
+        '我的富二代人生',
+        '新下山虎',
 
-    youtube = get_authenticated_service(args)
-    try:
-        initialize_upload(youtube, args)
-    except HttpError as e:
-        print("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))
-
-# python upload_youtube.py --file="release_video/aa测试目录/aa测试目录_zimu.mp4" --title="Your Video Upload Test" --description="Your Video Description" --category="24" --keywords="keyword1,keyword2" --privacyStatus="private"
+    ]
+    for video_name in videos:
+        title = video_name
+        description = video_name
+        upload_video(file=f"release_video/{video_name}/{video_name}_nobgm_zimu.mp4",
+                     title=f"{title}",
+                     description=f"{description}",
+                     category="24",
+                     keywords="短剧,中国短剧,修仙,都市,穿越,霸总,战神,古装,重生,神豪",
+                     privacy_status="private")

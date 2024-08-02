@@ -235,7 +235,9 @@ def correct_subtitles(video_file_path, is_test=True):
                         if cv2.imwrite(roi_file, roi):
                             if not is_test:
                                 if moved_count < max_move_count:
-                                    shutil.move(roi_file, specific_output_path)
+                                    # 定义目标文件路径
+                                    target_file_path = os.path.join(specific_output_path, os.path.basename(roi_file))
+                                    os.replace(roi_file, target_file_path)
                                     moved_count += 1
                                 else:
                                     os.remove(roi_file)
