@@ -34,6 +34,7 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", de
     try:
         start_time1 = time.time()
         model = WhisperModel(model_size_or_path=model_size, device=device, compute_type=compute_type)
+        initial_prompt_text = "以下是普通话的句子。"
         segments, info = model.transcribe(
             audio=audio_path,
             language="zh",  # 假设对话是中文
@@ -53,7 +54,8 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", de
             vad_filter=True,  # 启用VAD来检测有效语音活动
             vad_parameters={"min_silence_duration_ms": 250},  # 150毫秒的最小静音时长，平衡对话自然停顿和快速响应
             without_timestamps=False,  # 生成带时间戳的输出，对SRT文件必须
-            suppress_blank=True  # 抑制无语音的输出，减少字幕中的空白
+            suppress_blank=True,  # 抑制无语音的输出，减少字幕中的空白
+            initial_prompt=initial_prompt_text
         )
         print(f"开始转录音频: {time.time() - start_time1:.2f} 秒")
         print(f"将结果写入临时SRT文件: {temp_srt_path}")

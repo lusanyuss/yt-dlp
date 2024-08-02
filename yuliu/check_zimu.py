@@ -3,9 +3,7 @@ import shutil
 import time
 
 import cv2
-import torch
 from paddleocr import PaddleOCR
-from transformers import BertTokenizer, BertForMaskedLM
 
 from yuliu.utils import print_yellow
 
@@ -32,12 +30,12 @@ def convert_to_seconds(time_str):
 
 
 # 获取 OCR 结果
-def get_ocr_text(frame, index, offset, bfb=10):
+def get_ocr_text(frame, bfb=10):
     height, width = frame.shape[:2]
     x_start = 0
     x_end = width
-    y_start = int((75 - bfb) % 100 * height / 100)
-    y_end = int((75 + bfb) % 100 * height / 100)
+    y_start = int((71 - bfb) % 100 * height / 100)
+    y_end = int((71 + bfb) % 100 * height / 100)
     # 裁剪指定区域
     roi = frame[y_start:y_end, x_start:x_end]
 
@@ -125,6 +123,36 @@ def merge_texts(texts):
     return ''.join(merged_text)
 
 
+def is_chinese_char(char):
+    # 判断是否是汉字
+    return '\u4e00' <= char <= '\u9fff'
+
+
+def compare_chinese_strings(t1, t2):
+    # 首先检查长度是否相等
+    if len(t1) != len(t2):
+        return False
+
+    # 检查所有字符是否都是汉字
+    if not all(is_chinese_char(char) for char in t1 + t2):
+        return False
+
+    # 计算不同字符的数量
+    mismatch_count = sum(1 for a, b in zip(t1, t2) if a != b)
+
+    # 根据不同长度和不相等字符数量的条件返回结果
+    if len(t1) == 1 and mismatch_count == 1:
+        return True
+    elif len(t1) == 2 and mismatch_count in (1, 2):
+        return True
+    elif len(t1) == 3 and mismatch_count in (1, 2):
+        return True
+    elif mismatch_count in (1, 2):
+        return True
+
+    return False
+
+
 # 修正字幕内容
 def correct_subtitles(video_file_path, is_test=True):
     start_time_correct_subtitles = time.time()
@@ -137,40 +165,40 @@ def correct_subtitles(video_file_path, is_test=True):
         print_yellow(f"纠正文件已经存在 : {output_srt_file_path}")
         return output_srt_file_path
 
-    tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
-    model = BertForMaskedLM.from_pretrained('bert-base-chinese')
-    model.eval()  # 设置为评估模式
-
-    def compare_texts(text1, text2):
-        # 函数：计算文本的平均对数似然度
-        # 加载分词器和模型
-        def score_text(text):
-            tokenize_input = tokenizer([text], return_tensors="pt", padding=True, truncation=True, max_length=512)
-            input_ids = tokenize_input["input_ids"]
-            with torch.no_grad():
-                outputs = model(input_ids, labels=input_ids)
-            # 返回标量值
-            return outputs.loss.item()
-
-        # 为两个文本计算得分
-        score1 = score_text(text1)
-        score2 = score_text(text2)
-
-        # 比较文本的得分，选择得分较低（更自然）的文本
-        return text1 if score1 < score2 else text2
-
+    # tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
+    # model = BertForMaskedLM.from_pretrained('bert-base-chinese')
+    # model.eval()  # 设置为评估模式
+    #
+    # def compare_texts(text1, text2):
+    #     # 函数：计算文本的平均对数似然度
+    #     # 加载分词器和模型
+    #     def score_text(text):
+    #         tokenize_input = tokenizer([text], return_tensors="pt", padding=True, truncation=True, max_length=512)
+    #         input_ids = tokenize_input["input_ids"]
+    #         with torch.no_grad():
+    #             outputs = model(input_ids, labels=input_ids)
+    #         # 返回标量值
+    #         return outputs.loss.item()
+    #
+    #     # 为两个文本计算得分
+    #     score1 = score_text(text1)
+    #     score2 = score_text(text2)
+    #
+    #     # 比较文本的得分，选择得分较低（更自然）的文本
+    #     return text1 if score1 < score2 else text2
 
     srt_file_path = os.path.join(output_image_path, f'{video_name}_zh.srt')
     srt_content = read_srt_file(srt_file_path)
-    if not is_test:
-        for offset in generate_offsets('', 0, 1):  # 生成一个虚拟的偏移量列表用于清理目录
-            specific_output_path = os.path.join(output_image_path, f'offset_{offset}')
-            clear_directory(specific_output_path)
+    specific_output_path = os.path.join(output_image_path, f'offset')
+    clear_directory(specific_output_path)
 
     corrected_srt_content = []
     cap = cv2.VideoCapture(video_file_path)
     index = 1
     i = 0
+
+    moved_count = 0
+    max_move_count = 5
     while i < len(srt_content):
         line = srt_content[i].strip()
         if line.isdigit():
@@ -198,7 +226,7 @@ def correct_subtitles(video_file_path, is_test=True):
                 cap.set(cv2.CAP_PROP_POS_MSEC, offset * 1000)
                 ret, frame = cap.read()
                 if ret:
-                    text, roi = get_ocr_text(frame, index, offset)
+                    text, roi = get_ocr_text(frame)
                     if text and text != last_text:  # 只拼接不相等的文本
                         detected_texts.append(text)  # 从右向左拼接内容
                         last_text = text
@@ -206,7 +234,11 @@ def correct_subtitles(video_file_path, is_test=True):
                         roi_file = f'roi_{index}.jpg'
                         if cv2.imwrite(roi_file, roi):
                             if not is_test:
-                                os.remove(roi_file)  # 删除保存的文件
+                                if moved_count < max_move_count:
+                                    shutil.move(roi_file, specific_output_path)
+                                    moved_count += 1
+                                else:
+                                    os.remove(roi_file)
                         else:
                             raise FileNotFoundError(f"文件未能成功保存: {roi_file}")
 
@@ -217,7 +249,7 @@ def correct_subtitles(video_file_path, is_test=True):
             # 修正内容
             if next_line == detected_text:
                 corrected_content = next_line
-            elif next_line != detected_text and len(next_line) == len(detected_text):
+            elif compare_chinese_strings(next_line, detected_text):
                 corrected_content = detected_text
             elif next_line in detected_text:
                 corrected_content = next_line

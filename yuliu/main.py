@@ -67,21 +67,33 @@ if __name__ == "__main__":
 
         # '双面美人',
         # '抓娃娃之女儿也要穷养',
-        '超级兵痞',
-        '退婚后我继承了万亿家产',
-        '重返地球我的圣人身份泄露了',
-        '闪婚老公竟想凭子上位',
+
+
+        # '超级兵痞',
+        # '闪婚老公竟想凭子上位',
+        # '退婚后我继承了万亿家产',
+        # '重返地球我的圣人身份泄露了',
+
+        '我站在巅峰从收到录取通知书开始',
+        '死后第三年',
+        '沉香如雪',
+        '糟糕我被女神包围了',
+        '冒牌战尊',
+        '我生了个小财神爷',
+        '我的富二代人生',
+        '新下山虎',
+
 
 
     ]
     for video_name in videos:
         cover_title_split_postion = 0
-        if video_name == '退婚后我继承了万亿家产':
-            cover_title_split_postion = 3
-        if video_name == '重返地球我的圣人身份泄露了':
-            cover_title_split_postion = 4
-        if video_name == '抓娃娃之女儿也要穷养':
-            cover_title_split_postion = 3
+        if video_name == '我站在巅峰从收到录取通知书开始':
+            cover_title_split_postion = 5
+        # if video_name == '重返地球我的圣人身份泄露了':
+        #     cover_title_split_postion = 4
+        # if video_name == '抓娃娃之女儿也要穷养':
+        #     cover_title_split_postion = 3
 
         common.check_and_run(sub_directory=video_name,
                              cover_title=yuliu.utils.replace_comma_with_newline(video_name),
@@ -90,8 +102,8 @@ if __name__ == "__main__":
                              is_test=False,
 
                              # is_get_cover=True,
-                             # is_get_video=True,
-                             is_get_fanyi=True,
+                             is_get_video=True,
+                             # is_get_fanyi=True,
 
                              num_of_covers=8,
                              cover_title_split_postion=cover_title_split_postion

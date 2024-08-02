@@ -89,11 +89,6 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
     out_times_dir = os.path.join(release_video_dir, "out_times")
     os.makedirs(out_times_dir, exist_ok=True)
     # # 清楚以前的,添加到images 目录中去
-    # for audio_file in audio_files:
-    #     temp_file = os.path.join(release_video_dir, f"{os.path.splitext(os.path.basename(audio_file))[0]}_vocals.wav")
-    #     if os.path.exists(temp_file):
-    #         os.remove(temp_file)
-
     for output_file_vocals in output_file_vocals_list:
         if os.path.exists(output_file_vocals):
             destination = shutil.copy(output_file_vocals, out_times_dir)
@@ -253,8 +248,9 @@ def ensure_directory_exists(path):
 
 def delete_file(file_path):
     try:
-        os.remove(file_path)
-        print(f"删除文件: {file_path}")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"删除文件: {file_path}")
     except OSError as e:
         print(f"删除文件时出错: {e}")
 
@@ -322,15 +318,7 @@ def get_sorted_vocals_wav_files(directory):
     return [os.path.join(directory, file) for file in files]
 
 
-def delete_files_by_list(frame_image_list):
-    for file in frame_image_list:
-        try:
-            os.remove(file)
-        except OSError:
-            print(f"Failed to delete: {file}")
-
-
-def delete_files(*args):
+def delete_files_by_list(*args):
     # 合并所有传入的参数到一个列表
     all_files = []
     for arg in args:
@@ -344,11 +332,7 @@ def delete_files(*args):
 
     # 尝试删除每个文件
     for file in all_files:
-        try:
-            os.remove(file)
-            print(f"Deleted: {file}")
-        except OSError as e:
-            print(f"Failed to delete {file}: {e}")
+        delete_file(file)
 
 
 # def check_directory(base_dir):
@@ -394,8 +378,7 @@ def extract_audio_only(video_path):
 
     except subprocess.CalledProcessError as e:
         print(f"发生错误: {e.stderr}")
-        if os.path.exists(audio_only_path):
-            os.remove(audio_only_path)  # 移除临时文件
+        delete_file(audio_only_path)
         return None
 
     return audio_only_path
@@ -440,16 +423,15 @@ def extract_audio_only_add60(video_path):
         ], check=True)
 
         # 清理临时文件
-        os.remove(extracted_audio_path)
-        os.remove(silence_path)
+        delete_file(extracted_audio_path)
+        delete_file(silence_path)
 
         print(f'生成的音频文件已保存到: {audio_only_path}')
         return audio_only_path
 
     except subprocess.CalledProcessError as e:
         print(f"发生错误: {e.stderr}")
-        if os.path.exists(audio_only_path):
-            os.remove(audio_only_path)  # 移除临时文件
+        delete_file(audio_only_path)
         return None
 
 
@@ -468,8 +450,7 @@ def rename_file(original_video, sub_directory):
     # 新的文件路径
     new_path = os.path.join(directory, sub_directory + extension)
     # 如果目标文件已存在，删除它
-    if os.path.exists(new_path):
-        os.remove(new_path)
+    delete_file(new_path)
     # 重命名文件
     os.rename(original_video, new_path)
     # 返回新的文件路径
@@ -629,7 +610,7 @@ def run_main(url=None,
                 zh_srt = correct_subtitles(video_nobgm, False)
 
                 if not is_test:
-                    delete_files(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
+                    delete_files_by_list(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
                 print(f"\n总耗时情况:{(time.time() - start_time)}")
 
             else:
@@ -647,9 +628,8 @@ def run_main(url=None,
             # 修正翻译
             zh_srt = correct_subtitles(video_nobgm, False)
 
-
-            en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256*8)
-            zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256*8/4)
+            en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 8)
+            zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256 * 8 / 4)
 
             video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
 
