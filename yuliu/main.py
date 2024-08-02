@@ -102,8 +102,8 @@ if __name__ == "__main__":
                              is_test=False,
 
                              is_get_cover=True,
-                             # is_get_video=True,
-                             # is_get_fanyi=True,
+                             is_get_video=True,
+                             is_get_fanyi=True,
 
                              num_of_covers=8,
                              cover_title_split_postion=cover_title_split_postion
