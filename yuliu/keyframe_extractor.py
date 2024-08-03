@@ -66,7 +66,7 @@ class KeyFrameExtractor:
                 keyframes = [{"frame": str(index - 1), "pkt_pts_time": f"{time:.6f}"} for index, time in zip(keyframes_indices, keyframes_times)]
                 return keyframes
         except Exception as e:
-            print(f"Error: {e}")
+            print_red(f"Error: {e}")
         return None
 
     def get_keyframes(self):

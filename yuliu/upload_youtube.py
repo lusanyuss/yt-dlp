@@ -161,5 +161,5 @@ if __name__ == '__main__':
                      title=f"{title}",
                      description=f"{description}",
                      category="24",
-                     keywords="短剧,中国短剧,修仙,都市,穿越,霸总,战神,古装,重生,神豪",
+                     keywords="",
                      privacy_status="private")

@@ -308,7 +308,7 @@ def generate_frame(index, video_path, duration, output_dir, crop_dict, model_pat
                         print(f"重新生成 frame_{index + 1}.jpg 图片: {output_path}")
                     break
             except Exception as e:
-                print(f"Error processing image {output_path}: {e}")
+                print_red(f"Error processing image {output_path}: {e}")
         else:
             print(f"Failed to generate frame at {output_path}")
 
@@ -336,7 +336,7 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_dict, mo
             for future in as_completed(futures):
                 future.result()  # 处理可能的异常
         except Exception as e:
-            print(f"任务执行过程中出现异常: {e}")
+            print_red(f"任务执行过程中出现异常: {e}")
         finally:
             timer.cancel()  # 如果任务在超时前完成，取消定时器
 

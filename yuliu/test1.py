@@ -4,6 +4,8 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+from yuliu.utils import print_red
+
 
 def clear_directory(directory):
     if os.path.exists(directory):
@@ -38,8 +40,8 @@ def process_audio_with_mvsep_mdx23_onebyone(audio_file):
             os.chdir(original_directory)
         except Exception as e:
             # 如果这两个文件存在就删除掉
-            print(f"处理音频文件时发生错误: {e}")
-            print(f"删除残缺文件: \n{output_file_vocals}\n{output_file_instrum}\n")
+            print_red(f"处理音频文件时发生错误: {e}")
+            print_red(f"删除残缺文件: \n{output_file_vocals}\n{output_file_instrum}\n")
             if os.path.exists(output_file_vocals):
                 os.remove(output_file_vocals)
             if os.path.exists(output_file_instrum):

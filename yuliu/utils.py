@@ -58,7 +58,7 @@ class CommandExecutor:
                 print(f"错误输出:\n{e.stderr}")
             print(f"返回代码: {e.returncode}")
         except Exception as e:
-            print(f"执行命令时发生未知错误: {e}")
+            print_red(f"执行命令时发生未知错误: {e}")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -97,7 +97,7 @@ def print_separator(text='', char='=', length=150):
             separator += char * (length - len(separator))
     else:
         separator = char * length
-    print_red(f'\n\n{separator}\n')
+    print_yellow(f'\n\n{separator}\n')
 
 
 def get_file_creation_time(file_path):
@@ -460,7 +460,7 @@ def resize_images_if_needed(images, max_width=1920, max_height=1080):
                         img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                         img_resized.save(image)
             except Exception as e:
-                print(f"无法处理图像 {image}。错误信息：{e}")
+                print_red(f"无法处理图像 {image}。错误信息：{e}")
 
 
 from PIL import Image
@@ -492,6 +492,7 @@ def convert_jpeg_to_png(input_imgs):
                     os.remove(input_img)
                     new_image_paths.append(new_file_name)
         except Exception as e:
+            print_red(f"错误: {e}")
             pass
 
     return new_image_paths
@@ -647,7 +648,8 @@ def convert_simplified_to_traditional(text):
     try:
         cc = OpenCC('s2t')
         return cc.convert(text)
-    except Exception:
+    except Exception as e:
+        print_red(f"错误: {e}")
         return text
 
 

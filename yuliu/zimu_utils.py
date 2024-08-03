@@ -2,7 +2,7 @@ import os
 import shutil
 import time
 
-from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor, print_yellow
+from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor, print_yellow, print_red
 
 
 def read_output(pipe, log_file):
@@ -61,7 +61,7 @@ def add_zimu_shuiyin_to_video(video_nobgm, srt_path=None):
         CommandExecutor.run_command(command, pattern)
         print(f"\n\n添加水印和字幕成功{video_final}\n耗时: {time.time() - start_time:.2f} seconds")
     except Exception as e:
-        print(f"添加字幕和水印失败,发生错误: {e}\n")
+        print_red(f"添加字幕和水印失败,发生错误: {e}\n")
         if os.path.exists(video_final):
             os.remove(video_final)
         return None, None

@@ -1,9 +1,9 @@
 # 调用方法
-from yuliu import common
+from yuliu import common, voice_utils
 
 if __name__ == "__main__":
 
-    sub_directory = '抓娃娃之女儿也要穷养'
+    sub_directory = 'aa测试目录'
     common.check_and_run(sub_directory=sub_directory,
                          cover_title=sub_directory,
                          juji_num=1,
@@ -11,9 +11,10 @@ if __name__ == "__main__":
                          is_test=True,
 
                          is_get_cover=True,
-                         # is_get_video=True,
-                         # is_get_fanyi=True,
+                         is_get_video=True,
+                         is_get_fanyi=True,
 
                          num_of_covers=1,
                          cover_title_split_postion=0
                          )
+    voice_utils.play_voice_message(f'测试程序执行完毕!!!')

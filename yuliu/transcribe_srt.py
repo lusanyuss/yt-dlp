@@ -7,7 +7,7 @@ import requests
 import urllib3.exceptions
 from requests.packages.urllib3.util.retry import Retry
 
-from yuliu.utils import print_yellow
+from yuliu.utils import print_yellow, print_red
 
 requests.packages.urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -124,7 +124,7 @@ def translate_text_batch(texts, target_language, max_payload_size):
             translations = translate_texts(params)
             all_translations.extend(translations)
     except Exception as e:
-        print("出错:", str(e))
+        print_red(f"错误: {e}")
         traceback.print_exc()
 
     return all_translations
@@ -208,7 +208,7 @@ def translate_srt_file(zimu_srt, target_language, max_payload_size):
 
         return new_file_name
     except Exception as e:
-        print("出错:", str(e))
+        print_red(f"错误: {e}")
         traceback.print_exc()
 
 

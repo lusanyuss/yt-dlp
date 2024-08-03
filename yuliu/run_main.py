@@ -285,7 +285,7 @@ def generate_video_metadata(release_video_dir, sub_directory):
 xxx
 说明描述:
 xxx
-7.说明描述的第一个段落一定是：
+7.说明描述的第一个段落一定是(需要根据语言进行翻译)：
 歡迎訂閱《爽剧风暴》的頻道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授權短劇，感謝大家支持！
 
@@ -563,8 +563,8 @@ def run_main(url=None,
             subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
 
             os.path.join(release_video_dir, 'images')
-            crop_left = 48
-            crop_bottom = 720 / 426 * crop_left
+            crop_bottom = 150
+            crop_left = 426 / 720 * crop_bottom
 
             crop_dict = {
                 'crop_left': crop_left,

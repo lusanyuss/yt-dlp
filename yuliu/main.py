@@ -1,7 +1,7 @@
 # 调用方法
 
 import yuliu.utils
-from yuliu import common
+from yuliu import common, voice_utils
 
 if __name__ == "__main__":
     # 单视频
@@ -74,14 +74,14 @@ if __name__ == "__main__":
         # '退婚后我继承了万亿家产',
         # '重返地球我的圣人身份泄露了',
 
-        '我站在巅峰从收到录取通知书开始',
-        '死后第三年',
-        '沉香如雪',
-        '糟糕我被女神包围了',
-        '冒牌战尊',
+        # '我站在巅峰从收到录取通知书开始',
+        # '死后第三年',
+        # '沉香如雪',
+        # '糟糕我被女神包围了',
+        # '冒牌战尊',
         '我生了个小财神爷',
-        '我的富二代人生',
-        '新下山虎',
+        # '我的富二代人生',
+        # '新下山虎',
 
 
 
@@ -108,3 +108,7 @@ if __name__ == "__main__":
                              num_of_covers=8,
                              cover_title_split_postion=cover_title_split_postion
                              )
+
+
+
+    voice_utils.play_voice_message(f'程序执行完毕!!!')

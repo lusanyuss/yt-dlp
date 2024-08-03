@@ -5,7 +5,7 @@ import time
 from faster_whisper import WhisperModel  # 假设这是一个已安装的库
 from moviepy.config import change_settings
 
-from yuliu.utils import print_yellow, get_path_without_suffix
+from yuliu.utils import print_yellow, get_path_without_suffix, print_red
 
 # 设置环境变量
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -79,7 +79,7 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", de
     except Exception as e:
         if os.path.exists(temp_srt_path):
             os.remove(temp_srt_path)
-        print(f"发生异常: {str(e)}")
+        print_red(f"发生异常: {str(e)}")
         raise e
     return srt_path
 
