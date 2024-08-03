@@ -198,7 +198,7 @@ def correct_subtitles(video_file_path, is_test=True):
     i = 0
 
     moved_count = 0
-    max_move_count = 5
+    max_move_count = 3
     while i < len(srt_content):
         line = srt_content[i].strip()
         if line.isdigit():
