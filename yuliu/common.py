@@ -17,7 +17,7 @@ def check_and_run(sub_directory, cover_title,  split_time_min, is_only_download=
              cover_title_split_postion=cover_title_split_postion
              )
 
-    voice_utils.play_voice_message(f'程序执行完毕!!!')
+
 
 
 # else:

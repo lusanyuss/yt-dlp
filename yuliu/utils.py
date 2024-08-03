@@ -660,10 +660,10 @@ def add_shuiyin_suffix(video_path):
     return video_path
 
 
-def add_zimu_suffix(video_path):
-    if not has_zimu_suffix(video_path):
+def add_final_suffix(video_path):
+    if not has_final_suffix(video_path):
         base, ext = os.path.splitext(video_path)
-        return f"{base}_zimu{ext}"
+        return f"{base}_final{ext}"
     return video_path
 
 
@@ -671,8 +671,8 @@ def has_shuiyin_suffix(video_path):
     return "_shuiyin" in os.path.basename(video_path)
 
 
-def has_zimu_suffix(video_path):
-    return "_zimu" in os.path.basename(video_path)
+def has_final_suffix(video_path):
+    return "_final" in os.path.basename(video_path)
 
 
 def get_relative_path(path, start=os.curdir):

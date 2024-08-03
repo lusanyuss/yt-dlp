@@ -2,7 +2,7 @@ import os
 import shutil
 import time
 
-from yuliu.utils import get_mp4_duration, add_zimu_suffix, has_zimu_suffix, get_relative_path, CommandExecutor, print_yellow, print_red
+from yuliu.utils import get_mp4_duration, add_final_suffix, has_final_suffix, get_relative_path, CommandExecutor, print_yellow, print_red
 
 
 def read_output(pipe, log_file):
@@ -12,15 +12,15 @@ def read_output(pipe, log_file):
     pipe.close()
 
 
-def add_zimu_shuiyin_to_video(video_nobgm, srt_path=None):
+def add_final_shuiyin_to_video(video_nobgm, srt_path=None):
     if not os.path.exists(video_nobgm):
         raise Exception("无背景音乐视频不存在")
 
     if not srt_path or not os.path.exists(srt_path):
         print("字幕不存在")
 
-    video_final = add_zimu_suffix(video_nobgm)
-    if os.path.exists(video_final) and has_zimu_suffix(video_final):
+    video_final = add_final_suffix(video_nobgm)
+    if os.path.exists(video_final) and has_final_suffix(video_final):
         print_yellow(f"文件已存在且已添加字幕和水印: {video_nobgm}")
         return video_nobgm, video_final
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     print("===============相对==================")
     video_path = 'release_video/aa测试目录big/aa测试目录.mp4'
     srt_path = 'release_video/aa测试目录/aa测试目录_en.srt'
-    result = 'release_video/aa测试目录/aa测试目录_zimu.mp4'
+    result = 'release_video/aa测试目录/aa测试目录_final.mp4'
 
     shutil.copy2('download_cache/aa测试目录/1.mp4', video_path)
 
@@ -87,11 +87,11 @@ if __name__ == '__main__':
     # temp_output = os.path.join(os.path.dirname(video_path), "temp_output.mp4").replace("\\", "/")
     # if os.path.exists(temp_output):
     #     os.remove(temp_output)
-    # add_zimu_to_video(video_path, get_relative_path(srt_path))
+    # add_final_to_video(video_path, get_relative_path(srt_path))
 
     print("==============在转相对===================")
     video_path = get_relative_path(video_path)
     srt_path = get_relative_path(srt_path)
     print(video_path)
     print(srt_path)
-    add_zimu_shuiyin_to_video(video_path, srt_path)
+    add_final_shuiyin_to_video(video_path, srt_path)

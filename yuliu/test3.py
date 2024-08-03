@@ -8,7 +8,7 @@ command = [
     "-c:v", "h264_nvenc",
     "-c:a", "copy",
     "-y",
-    "release_video/aa测试目录/aa测试目录_zimu.mp4"
+    "release_video/aa测试目录/aa测试目录_final.mp4"
 ]
 
 # 打开子进程并实时读取输出

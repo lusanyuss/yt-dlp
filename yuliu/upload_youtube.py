@@ -142,22 +142,15 @@ def upload_video(file, title="Test Title", description="Test Description",
 # 使用示例
 if __name__ == '__main__':
     videos = [
-        #
+        '糟糕我被女神包围了',
         # '我站在巅峰从收到录取通知书开始',
-        # '死后第三年',
         # '沉香如雪',
-        # '糟糕我被女神包围了',
-        # '冒牌战尊',
-        # '我生了个小财神爷',
-
-        '我的富二代人生',
-        '新下山虎',
-
+        # '死后第三年',
     ]
     for video_name in videos:
         title = video_name
         description = video_name
-        upload_video(file=f"release_video/{video_name}/{video_name}_nobgm_zimu.mp4",
+        upload_video(file=f"release_video/{video_name}/{video_name}_nobgm_final.mp4",
                      title=f"{title}",
                      description=f"{description}",
                      category="24",

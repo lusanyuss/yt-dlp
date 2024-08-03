@@ -9,21 +9,21 @@ from torchvision.datasets.utils import calculate_md5
 
 from utils import get_mp4_duration, \
     find_split_points, \
-    print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, convert_simplified_to_traditional, \
-    separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, print_red, print_yellow, get_path_without_suffix
+    print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, \
+    print_red, print_yellow, get_path_without_suffix
 from yuliu import voice_utils, transcribe_srt
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.check_utils import is_banned
-from yuliu.check_zimu import correct_subtitles
+from yuliu.check_final import correct_subtitles
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
 from yuliu.transcribe_video import transcribe_audio_to_srt
-from yuliu.zimu_utils import add_zimu_shuiyin_to_video
+from yuliu.zimu_utils import add_final_shuiyin_to_video
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
-def clear_directory_contents(directory):
+def delete_directory_contents(directory):
     if os.path.exists(directory):
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
@@ -49,7 +49,7 @@ def clear_cache():
     ]
     print("clear_cache")
     for directory in directories_to_clear:
-        clear_directory_contents(directory)
+        delete_directory_contents(directory)
 
 
 def process_audio_with_mvsep_mdx23_list(audio_files):
@@ -65,7 +65,7 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
         output_file_vocals_list.append(output_file_vocals)
 
     # 输入文件处理
-    clear_directory_contents(mvsep_input_dir)
+    delete_directory_contents(mvsep_input_dir)
     for audio_file in audio_files:
         shutil.copy(audio_file, mvsep_input_dir)
 
@@ -410,7 +410,7 @@ def run_main(url=None,
 
     original_video = os.path.join(src_path, f"{sub_directory}.mp4")
     video_nobgm = os.path.join(src_path, f"{sub_directory}_nobgm.mp4")
-    video_final = os.path.join(src_path, f"{sub_directory}_nobgm_zimu.mp4")
+    video_final = os.path.join(src_path, f"{sub_directory}_nobgm_final.mp4")
 
     cache_util = DiskCacheUtil()
 
@@ -471,17 +471,17 @@ def run_main(url=None,
     if is_get_video:
         try:
             print_separator(f"获取无背景音乐视频 : {sub_directory}")
+
+            audio_origin_list = []
+            video_origin_list = []
+            audio_vocals_list = []
+            video_origin_clips = []
+            video_clips = []
+
             if not os.path.exists(video_final):
                 start_time = time.time()
 
                 print(f"1.处理视频,切成小块视频,进行处理 <<{sub_directory}>>")
-
-                audio_origin_list = []
-                video_origin_list = []
-                audio_vocals_list = []
-                video_origin_clips = []
-                video_clips = []
-
                 if not os.path.exists(video_nobgm):
                     print(f"\n原始视频路径: {original_video}")
                     video_duration = get_mp4_duration(original_video)
@@ -507,10 +507,29 @@ def run_main(url=None,
                 # base, ext = os.path.splitext(video_nobgm)
                 # audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
 
-                delete_files_by_list(audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
+                base, ext = os.path.splitext(video_nobgm)
+                audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
+                out_times = os.path.join(release_video_dir, 'out_times')
+                if os.path.exists(video_nobgm):
+                    os.remove(original_video)
+
+                delete_directory_contents(out_times)
+                delete_files_by_list(audio_only_path, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
+
                 print(f"\n总耗时情况:{(time.time() - start_time)}")
 
             else:
+
+                base, ext = os.path.splitext(video_nobgm)
+                audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
+                out_times = os.path.join(release_video_dir, 'out_times')
+                if os.path.exists(video_nobgm):
+                    delete_file(original_video)
+
+                delete_directory_contents(out_times)
+
+                delete_files_by_list(audio_only_path, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
+
                 print_yellow(f"{os.path.relpath(video_final, './')} 最终视频 已经存在")
         except Exception as e:
             print_red(f'出错: {e}')
@@ -525,7 +544,7 @@ def run_main(url=None,
 
             en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 6)
             zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256 * 8 / 4)
-            video_nobgm, video_final = add_zimu_shuiyin_to_video(video_nobgm, en_srt)
+            video_nobgm, video_final = add_final_shuiyin_to_video(video_nobgm, en_srt)
 
             print(f"\n4.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
 

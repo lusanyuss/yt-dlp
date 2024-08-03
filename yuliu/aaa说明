@@ -18,4 +18,4 @@ ffmpeg -hwaccel cuda -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\摊牌了
 ffmpeg -hwaccel cuda -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\摊牌了,我有三个后妈\摊牌了,我有三个后妈.mp4" -vf "drawtext=fontfile='ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,5959)'" -c:v h264_nvenc -c:a copy -y "C:/yuliu/workspace/yt-dlp/yuliu/release_video/摊牌了,我有三个后妈/temp_output.mp4"
 
 
-ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "subtitles=['C:\\yuliu\\workspace\\yt-dlp\\yuliu\\release_video\\aa测试目录\\aa测试目录_en.srt']" -c:a copy "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录_zimu.mp4"
+ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "subtitles=['C:\\yuliu\\workspace\\yt-dlp\\yuliu\\release_video\\aa测试目录\\aa测试目录_en.srt']" -c:a copy "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录_final.mp4"
