@@ -585,15 +585,15 @@ def minutes_to_milliseconds(minutes):
 import shutil
 
 
-def merge_videos(file_list, output_file):
-    if os.path.exists(output_file):
-        print(f"{output_file} 已存在，直接返回")
-        return output_file
+def merge_videos(file_list, video):
+    if os.path.exists(video):
+        print(f"{video} 已存在，直接返回")
+        return video
 
     if len(file_list) == 1:
-        print(f"只有一个文件，无需合并，复制 {file_list[0]} 为 {output_file}")
-        shutil.copy(file_list[0], output_file)
-        return output_file
+        print(f"只有一个文件，无需合并，复制 {file_list[0]} 为 {video}")
+        os.replace(file_list[0], video)
+        return video
     try:
         with open('filelist.txt', 'w', encoding='utf-8') as f:
             for file in file_list:
@@ -601,13 +601,13 @@ def merge_videos(file_list, output_file):
         with open('filelist.txt', 'r', encoding='utf-8') as f:
             print(f"filelist.txt 内容:\n{f.read()}")
         command = [
-            'ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'filelist.txt', '-c', 'copy', output_file,
+            'ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'filelist.txt', '-c', 'copy', video,
             '-loglevel', 'quiet'
         ]
         result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
     finally:
         os.remove('filelist.txt')
-    return output_file
+    return video
 
 
 def extract_first_5_minutes(original_video, release_video_dir):
@@ -706,3 +706,37 @@ def get_path_without_suffix(path):
 def process_srt(input_file_path: str) -> str:
 
     return input_file_path
+
+
+
+def extract_audio_only(video_path):
+    # 生成新的文件路径
+    base, ext = os.path.splitext(video_path)
+    audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
+
+    # 如果文件已存在，直接返回
+    if os.path.exists(audio_only_path):
+        print(f"音频文件已存在: {audio_only_path}")
+        return audio_only_path
+
+    # 构建单个提取音频流的ffmpeg命令，使用-y选项覆盖现有文件
+    command = [
+        'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
+        '-map', '0:a', '-c:a', 'pcm_s16le', '-y', audio_only_path  # 确保使用 WAV 编码器
+    ]
+
+    # 打印命令以便手动检查
+    print("运行命令: \n", " ".join(command))
+
+    try:
+        # 执行命令
+        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+        result.check_returncode()  # 检查命令是否成功
+        print(f"音频流提取成功: {audio_only_path}")
+
+    except subprocess.CalledProcessError as e:
+        print(f"发生错误: {e.stderr}")
+        delete_file(audio_only_path)
+        return None
+
+    return audio_only_path

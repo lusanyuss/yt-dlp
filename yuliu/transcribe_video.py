@@ -5,6 +5,7 @@ import time
 from faster_whisper import WhisperModel  # 假设这是一个已安装的库
 from moviepy.config import change_settings
 
+from yuliu.utils import extract_audio_only
 from yuliu.utils import print_yellow, get_path_without_suffix, print_red
 
 # 设置环境变量
@@ -15,8 +16,8 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
 
-def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", device="cuda", compute_type="float16", sub_directory=""):
-    base, ext = os.path.splitext(audio_path)
+def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", device="cuda", compute_type="float16", sub_directory=""):
+    base, ext = os.path.splitext(video_nobgm)
     base_name = get_path_without_suffix(base)
     srt_path = f"{base_name}_{language}.srt"
     temp_srt_path = f"{base_name}_{language}_temp.srt"
@@ -27,6 +28,7 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", de
         print_yellow(f"字幕文件已存在: {srt_path}")
         return srt_path
 
+    audio_path = extract_audio_only(video_nobgm)
     print("加载模型...")
     logging.basicConfig()
     logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
@@ -81,6 +83,9 @@ def transcribe_audio_to_srt(audio_path, language='zh', model_size="large-v2", de
             os.remove(temp_srt_path)
         print_red(f"发生异常: {str(e)}")
         raise e
+    finally:
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
     return srt_path
 
 

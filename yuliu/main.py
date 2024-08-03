@@ -1,5 +1,6 @@
-# 调用方法
-
+import warnings
+from cryptography.utils import CryptographyDeprecationWarning
+warnings.simplefilter("ignore", CryptographyDeprecationWarning)
 import yuliu.utils
 from yuliu import common, voice_utils
 
@@ -97,8 +98,8 @@ if __name__ == "__main__":
 
         common.check_and_run(sub_directory=video_name,
                              cover_title=yuliu.utils.replace_comma_with_newline(video_name),
-                             juji_num=1,
-                             split_time_min=15,
+
+                             split_time_min=240,
                              is_test=False,
 
                              is_get_cover=True,
@@ -111,4 +112,3 @@ if __name__ == "__main__":
 
 
 
-    voice_utils.play_voice_message(f'程序执行完毕!!!')
