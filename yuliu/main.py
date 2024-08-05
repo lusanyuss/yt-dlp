@@ -1,5 +1,7 @@
 import warnings
+
 from cryptography.utils import CryptographyDeprecationWarning
+
 warnings.simplefilter("ignore", CryptographyDeprecationWarning)
 import yuliu.utils
 from yuliu import common, voice_utils
@@ -48,17 +50,6 @@ if __name__ == "__main__":
 
         ################### 未传部分 #######################
 
-        '退婚后我继承了万亿家产',
-        '重返地球我的圣人身份泄露了',
-        '我站在巅峰从收到录取通知书开始',
-        '我生了个小财神爷',
-        '死后第三年',
-        '沉香如雪',
-        '糟糕我被女神包围了',
-        '冒牌战尊',
-        '我的富二代人生',
-        '新下山虎',
-
         # '为王问鼎,择日登基',
         # '了不起的妈妈',
         # '以我晚星映海川',
@@ -75,20 +66,28 @@ if __name__ == "__main__":
         # '隐婚后,我的下属老公掉马甲了',
         # '青春不死常胜不衰'
 
+        '隐龙之保安老爸不好惹'
+
     ]
+
+    mapping = yuliu.utils.get_title_index_mapping()
+
     for video_name in videos:
         cover_title_split_postion = 0
-        if video_name == '我站在巅峰从收到录取通知书开始':
-            cover_title_split_postion = 5
+        index = mapping[video_name]
+        sub_directory = f"{index}_{video_name}"
+
+        if video_name == '隐龙之保安老爸不好惹':
+            cover_title_split_postion = 3
         # if video_name == '重返地球我的圣人身份泄露了':
         #     cover_title_split_postion = 4
         # if video_name == '抓娃娃之女儿也要穷养':
         #     cover_title_split_postion = 3
 
-        common.check_and_run(sub_directory=video_name,
-                             cover_title=yuliu.utils.replace_comma_with_newline(video_name),
-
-                             split_time_min=240,
+        common.check_and_run(sub_directory=sub_directory,
+                             video_name=video_name,
+                             cover_title=video_name,
+                             split_time_min=60,
                              is_test=False,
 
                              is_get_cover=True,
@@ -99,17 +98,4 @@ if __name__ == "__main__":
                              cover_title_split_postion=cover_title_split_postion
                              )
 
-
-
-
-
-
-
-
-
     voice_utils.play_voice_message(f'程序执行完毕!!!')
-
-
-
-
-

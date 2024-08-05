@@ -39,5 +39,5 @@ def transcribe_to_srt(audio_path, model_type="large-v2", language="zh"):
 
 if __name__ == '__main__':
     # Usage
-    audio_file_path = "release_video/aa归来之非凡人生test/aa归来之非凡人生test_nobgm_audio.wav"
+    audio_file_path = "release_video/aa下山后我被四个绝色师姐包围了/aa归来之非凡人生test_nobgm_audio.wav"
     transcribe_to_srt(audio_file_path)

@@ -257,13 +257,12 @@ def get_cover_images(frame_images, output_dir):
             range(0, frame_images_length, batch_size)]
 
 
-def generate_frame(index, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock):
+def generate_frame(index, video_path, duration, output_dir, crop_dict, model_path, frame_paths):
     output_path = os.path.join(output_dir, f"frame_{index + 1}.jpg")
     if os.path.exists(output_path):
-        with lock:
-            frame_paths[index] = output_path
-            print(f"文件 frame_{index + 1}.jpg 已存在,直接返回: {output_path}")
-            return
+        frame_paths[index] = output_path
+        print(f"文件 frame_{index + 1}.jpg 已存在,直接返回: {output_path}")
+        return
 
     while True:
         command = [
@@ -303,9 +302,8 @@ def generate_frame(index, video_path, duration, output_dir, crop_dict, model_pat
                     enhanced_image_cv = cv2.resize(enhanced_image_cv, (original_width, original_height))
                     enhanced_image = Image.fromarray(cv2.cvtColor(enhanced_image_cv, cv2.COLOR_BGR2RGB))
                     enhanced_image.save(output_path)
-                    with lock:
-                        frame_paths[index] = output_path
-                        print(f"重新生成 frame_{index + 1}.jpg 图片: {output_path}")
+                    frame_paths[index] = output_path
+                    print(f"重新生成 frame_{index + 1}.jpg 图片: {output_path}")
                     break
             except Exception as e:
                 print_red(f"Error processing image {output_path}: {e}")
@@ -315,7 +313,6 @@ def generate_frame(index, video_path, duration, output_dir, crop_dict, model_pat
 
 def get_frame_images(num_frames, video_path, duration, output_dir, crop_dict, model_path, timeout_duration):
     frame_paths = [None] * num_frames
-    lock = threading.Lock()
 
     def timeout_handler():
         print(f"在 {timeout_duration} 秒内未能完成所有任务，返回空的数据。")
@@ -329,14 +326,14 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_dict, mo
 
     with ThreadPoolExecutor(max_workers=12) as executor:
         futures = [
-            executor.submit(generate_frame, i, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock)
+            executor.submit(generate_frame, i, video_path, duration, output_dir, crop_dict, model_path, frame_paths)
             for i in range(num_frames)
         ]
         try:
             for future in as_completed(futures):
                 future.result()  # 处理可能的异常
         except Exception as e:
-            print_red(f"任务执行过程中出现异常: {e}")
+            print(f"任务执行过程中出现异常: {e}")
         finally:
             timer.cancel()  # 如果任务在超时前完成，取消定时器
 
@@ -519,8 +516,8 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, sub
     subtitle_font = ImageFont.truetype(subtitle_font, subtitle_font_size)
 
     beilv = 0.05
-    margin_left = int(cover_image.width * beilv)
-    margin_right = int(cover_image.width * beilv)
+    margin_left = int(cover_image.width * (beilv-0.03))
+    margin_right = int(cover_image.width * (beilv-0.03))
     margin_bottom = int(cover_image.height * beilv)
     text_area_width = cover_image.width - margin_left - margin_right
 
@@ -664,7 +661,7 @@ def extract_thumbnail_main(video, cover_title, title_font, subtitle_font, crop_d
             with Image.open(cover_path) as cover_image:
                 # title = "测试目录测试目录测试"
                 # title = os.path.basename(os.path.dirname(video_path))
-                title = cover_title if cover_title else os.path.basename(os.path.dirname(video))
+                title = cover_title
 
                 if cover_title_split_postion > 0 and isinstance(title, str):
                     title = title[:cover_title_split_postion] + ',' + title[cover_title_split_postion:]
@@ -695,7 +692,7 @@ def extract_thumbnail_main(video, cover_title, title_font, subtitle_font, crop_d
 
 def calculate_font_sizes(base_font_size, base_subtitle_font_size, reduction_step, degrade):
     font_size = (base_font_size - reduction_step * degrade) * 3
-    subtitle_font_size = (base_subtitle_font_size - reduction_step * degrade) * 3
+    subtitle_font_size = base_subtitle_font_size * 3
     return font_size, subtitle_font_size
 
 

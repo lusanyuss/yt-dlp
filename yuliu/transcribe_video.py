@@ -16,7 +16,7 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 change_settings({"IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"})
 
 
-def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", device="cuda", compute_type="float16", sub_directory=""):
+def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", device="cuda", compute_type="float16"):
     base, ext = os.path.splitext(video_nobgm)
     base_name = get_path_without_suffix(base)
     srt_path = f"{base_name}_{language}.srt"
@@ -91,5 +91,5 @@ def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", d
 
 if __name__ == '__main__':
     # Usage
-    audio_file_path = "release_video/aa归来之非凡人生test/aa归来之非凡人生test_nobgm_audio.wav"
+    audio_file_path = "release_video/aa下山后我被四个绝色师姐包围了/aa归来之非凡人生test_nobgm_audio.wav"
     transcribe_audio_to_srt(audio_file_path)

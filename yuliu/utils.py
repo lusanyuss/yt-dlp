@@ -1,12 +1,11 @@
 import concurrent.futures
 import hashlib
 import json
+import multiprocessing
 import re
-import subprocess
+import shutil
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
 
 import psutil
 
@@ -74,6 +73,15 @@ class CommandExecutor:
         print(f"命令执行耗时: {elapsed_time:.2f} 秒")
 
 
+def delete_file(file_path):
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"删除文件: {file_path}")
+    except OSError as e:
+        print(f"删除文件时出错: {e}")
+
+
 def print_red(text):
     print(f"\033[91m{text}\033[0m")
 
@@ -134,6 +142,7 @@ def merge_single_audio_video(video_file, audio_file, result_file):
         '-c:a', 'aac',  # 将音频流编码为AAC格式
         '-b:a', '192k',  # 设置音频比特率
         '-strict', 'experimental',  # 使用实验性AAC编码器
+        '-shortest',  # 保持视频和音频长度一致
         '-y',  # 覆盖输出文件
         result_file
     ]
@@ -191,6 +200,22 @@ def extract_audio_and_video(video_path):
             '-map', '0:v', '-vcodec', 'copy', video_output,
             '-y', '-loglevel', 'quiet'
         ]
+
+        # ffmpeg - i
+        # part1.mp4 - map
+        # 0: a - acodec
+        # copy
+        # part1_audio.aac - map
+        # 0: v - vcodec
+        # copy
+        # part1_video.mp4
+
+        # command = [
+        #     'ffmpeg', '-i', video_path,
+        #     '-map', '0:a', '-acodec', 'copy', audio_output,  # 使用copy操作提取音频
+        #     '-map', '0:v', '-vcodec', 'copy', video_output,  # 使用copy操作提取视频
+        #     '-y', '-loglevel', 'quiet'
+        # ]
         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
         # 联合提取音频和视频，不重新编码
         # (ffmpeg.input(video_path)
@@ -222,9 +247,6 @@ def separate_audio_and_video_list(video_paths):
 # 调用示例
 # video_files = ["path/to/your/video1.mp4", "path/to/your/video2.mp4"]
 # separate_audio_and_video(video_files)
-
-
-import os
 
 
 def separate_audio_and_video(video_path):
@@ -413,7 +435,6 @@ def save_unknown_duration_result(file_name, download_time, process_time, result_
 
 def process_and_save_results(original_video, download_time, process_video_time, result_file_name, video_name):
     video_duration = get_mp4_duration(original_video)
-
     if video_duration:
         duration_seconds = video_duration / 1000.0
         video_duration_minutes = duration_seconds / 60.0
@@ -422,14 +443,12 @@ def process_and_save_results(original_video, download_time, process_video_time, 
         duration_seconds = None
         video_duration_minutes = None
         ratio_value = None
-
     # file_name = os.path.basename(original_video).replace('.mp4', '')
     if video_duration_minutes is not None and ratio_value is not None:
         if ratio_value > 10:
             save_result(video_name, duration_seconds, download_time, process_video_time, ratio_value, result_file_name)
     else:
         save_unknown_duration_result(video_name, download_time, process_video_time, result_file_name)
-
     print(f"结果保存到文件: {result_file_name}")
 
 
@@ -582,9 +601,6 @@ def minutes_to_milliseconds(minutes):
     return minutes * 60 * 1000
 
 
-import shutil
-
-
 def merge_videos(file_list, video):
     if os.path.exists(video):
         print(f"{video} 已存在，直接返回")
@@ -594,20 +610,92 @@ def merge_videos(file_list, video):
         print(f"只有一个文件，无需合并，复制 {file_list[0]} 为 {video}")
         os.replace(file_list[0], video)
         return video
+
     try:
         with open('filelist.txt', 'w', encoding='utf-8') as f:
             for file in file_list:
                 f.write(f"file '{file}'\n")
-        with open('filelist.txt', 'r', encoding='utf-8') as f:
-            print(f"filelist.txt 内容:\n{f.read()}")
+
         command = [
             'ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'filelist.txt', '-c', 'copy', video,
             '-loglevel', 'quiet'
         ]
         result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+
+        if result.returncode != 0:
+            raise RuntimeError(f"合成视频失败: {result.stderr}")
+
     finally:
-        os.remove('filelist.txt')
+        if os.path.exists('filelist.txt'):
+            os.remove('filelist.txt')
+
     return video
+
+
+def concatenate_folder_videos(folder_path):
+    folder_name = os.path.basename(os.path.normpath(folder_path))
+    parent_dir = os.path.dirname(folder_path)
+    output_file = os.path.join(parent_dir, f"{folder_name}.mp4")
+
+    # 获取文件夹中所有的文件名，并筛选出MP4文件
+    files = [f for f in os.listdir(folder_path) if f.endswith('.mp4')]
+
+    # 提取索引并排序
+    indices = sorted([int(os.path.splitext(f)[0]) for f in files])
+
+    # 检查索引是否连续
+    if indices != list(range(1, len(indices) + 1)):
+        raise ValueError("视频文件索引不连续或缺少文件")
+
+    # 按顺序获取文件列表
+    file_list = [os.path.join(folder_path, f"{index}.mp4") for index in indices]
+
+    # 如果输出文件已经存在,就先删除
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    # 合并视频
+    merged_video = merge_videos(file_list, output_file)
+
+    # 删除原始视频文件和目录
+    if 'test' not in os.path.basename(folder_path):
+        shutil.rmtree(folder_path)
+
+    return merged_video
+
+
+import subprocess
+import os
+import time
+
+
+def reencode_video(input_video):
+    # 获取input_video的目录和文件名
+    input_dir = os.path.dirname(input_video)
+    input_name = os.path.basename(input_video)
+
+    # 创建临时文件名
+    temp_video = os.path.join(input_dir, 'temp_' + input_name)
+
+    # 获取系统中的逻辑处理器数量
+    num_threads = multiprocessing.cpu_count()
+
+    # 记录开始时间
+    start_time = time.time()
+
+    # 重新编码视频并输出到临时文件
+    reencode_command = [
+        'ffmpeg', '-i', input_video,
+        '-c:v', 'libx265', '-crf', '28', '-preset', 'ultrafast',
+        '-c:a', 'aac', '-b:a', '128k', temp_video,
+        '-threads', str(num_threads),  # 使用所有可用的逻辑处理器
+        '-loglevel', 'quiet'
+    ]
+    subprocess.run(reencode_command, capture_output=True, text=True, encoding='utf-8')
+    # 替换原始视频文件
+    os.replace(temp_video, input_video)
+
+
+# 示例调用
 
 
 def extract_first_5_minutes(original_video, release_video_dir):
@@ -704,9 +792,7 @@ def get_path_without_suffix(path):
 
 
 def process_srt(input_file_path: str) -> str:
-
     return input_file_path
-
 
 
 def extract_audio_only(video_path):
@@ -740,3 +826,22 @@ def extract_audio_only(video_path):
         return None
 
     return audio_only_path
+
+
+def get_title_index_mapping():
+    # 获取当前目录的上一级目录
+    parent_dir = os.path.abspath(os.path.join(os.getcwd(), 'release_video'))
+
+    # 获取上一级目录中所有以 xxx_title 格式的目录
+    pattern = re.compile(r'^(\d{3})_(.+)$')
+    mapping = {}
+
+    for dir_name in os.listdir(parent_dir):
+        if os.path.isdir(os.path.join(parent_dir, dir_name)):
+            match = pattern.match(dir_name)
+            if match:
+                index = match.group(1)
+                title = match.group(2)
+                mapping[title] = index
+
+    return mapping

@@ -65,7 +65,7 @@ def separate_audio(input,
     else:
 
         # python C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-MDX23-Colab_v2\mvsep_main.py --input C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-MDX23-Colab_v2\input\aa测试目录 --output C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-MDX23-Colab_v2\output\aa测试目录
-        start_time = time.time()
+
         base_dir = os.path.join('C:\yuliu\workspace\yt-dlp\yuliu\MVSEP-MDX23-Colab_v2')
         inference = os.path.join(base_dir, 'inference.py')
         input_dir = args.input
@@ -108,7 +108,7 @@ def separate_audio(input,
                         file_to_delete = os.path.join(output_dir, output_file)
                         os.remove(file_to_delete)
                         print(f"删除文件: {file_to_delete}")
-        print(f"去背景音乐耗时: {time.time() - start_time:.2f} seconds")
+
 
 
 if __name__ == '__main__':

@@ -10,11 +10,11 @@ from torchvision.datasets.utils import calculate_md5
 from utils import get_mp4_duration, \
     find_split_points, \
     print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, \
-    print_red, print_yellow, get_path_without_suffix
+    print_red, print_yellow, get_path_without_suffix, delete_file
 from yuliu import voice_utils, transcribe_srt
 from yuliu.DiskCacheUtil import DiskCacheUtil
-from yuliu.check_utils import is_banned
 from yuliu.check_final import correct_subtitles
+from yuliu.check_utils import is_banned
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
 from yuliu.transcribe_video import transcribe_audio_to_srt
@@ -73,11 +73,17 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
         print(f"并不所有文件都存在。清空目录{mvsep_output_dir}")
         # clear_directory_contents(mvsep_output_dir)
         try:
+            start_time_vocal = time.time()
             mvsep_main = os.path.join(mvsep_base_dir, 'mvsep_main.py')
-            command = ['python', f'{mvsep_main}', '--input', mvsep_input_dir, '--output', mvsep_output_dir]
+            command = ['python', mvsep_main, '--input', mvsep_input_dir, '--output', mvsep_output_dir]
             print(' '.join(command))
             CommandExecutor.run_command(command)
-            # subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+            total_time_seconds = (time.time() - start_time_vocal)
+            total_time_minutes = total_time_seconds / 60
+            video_duration_minutes = video_duration / 60000
+            average_time_per_minute = total_time_seconds / video_duration_minutes
+            print_yellow(f"去背景音乐总耗时: {total_time_minutes:.2f} 分钟")
+            print_yellow(f"    平均每分钟音频耗时: {average_time_per_minute:.2f} 秒/分钟")
         except Exception as e:
             print_red(f"处理音频文件时发生错误: {e}")
     else:
@@ -180,46 +186,38 @@ def ensure_directory_exists(path):
         os.makedirs(path)
 
 
-def delete_file(file_path):
-    try:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            print(f"删除文件: {file_path}")
-    except OSError as e:
-        print(f"删除文件时出错: {e}")
-
-
 import os
 
 
-def generate_video_metadata(release_video_dir, sub_directory):
+def generate_video_metadata(release_video_dir, video_name):
     # 创建目录（如果不存在）
     os.makedirs(release_video_dir, exist_ok=True)
 
     # 文件路径
-    video_dest_result = f"{release_video_dir}/{sub_directory}.txt"
+    video_dest_result = f"{release_video_dir}/{video_name}.txt"
 
     # 保存标题和描述
     content = f"""
 请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，
 要求如下:
-1.我需10种不同国家语言的版本(一个都不能少),分别是英文,中文台湾繁体,西班牙语,印地语,阿拉伯语,葡萄牙语,法语,德语,日语,韩语
-2.整个标题组成:主标题和副标题和标签从左到右顺序一整行,标签最后用' | '隔开,整个标题总长度不超过90个字符。
-3.说明描述中也包含用|分割的相关标签,别超过500字符
-4.整个标题要便于搜索，足够接地气，容易出现在搜索列表中，
-5.整个标题富有吸引力，让人感兴趣，使人立即点击观看。
+1.我需10种不同国家语言的版本(一个都不能少),分别是中文台湾繁体,英文,西班牙语,印地语,阿拉伯语,葡萄牙语,法语,德语,日语,韩语
+2.整个标题组成:主标题和副标题和标签从左到右顺序一整行,标签最后用' | '隔开。参考格式如下(80-95字符):
+《主标题》【高清合集】副标题 | #爽剧风暴 #标签2 #标签3 ...
+3.整个标题要便于搜索，足够接地气，容易出现在搜索列表中，
+4.整个标题富有吸引力，让人感兴趣，使人立即点击观看。
+5.说明描述中也包含用|分割的相关标签,别超过500字符
 6.你回答的格式都按照下面格式返回,如下:
-整个标题:
-xxx
+整个标题 (80-95字符):
+xxx (格式:《主标题》【高清合集】副标题 | #标签1 #标签2 #标签3 ... )
 说明描述:
-xxx(第一个段落)
+xxx (第一个段落)
 xxx
 7.说明描述的第一个段落一定是(需要根据语言进行翻译)：
 欢迎订阅《爽剧风暴》的频道哦 https://www.youtube.com/@SJFengBao?sub_confirmation=1
 正版授权短剧，感谢大家支持！
 
-我的标题是：
-《{sub_directory}》【高清合集】
+我的主标题是：
+《{video_name}》【高清合集】
     """
 
     # 写入文件（覆盖已存在的文件）
@@ -281,57 +279,55 @@ def delete_files_by_list(*args):
 #     return None
 
 
-
-
 # 检查base是否包含下划线
-def extract_audio_only_add60(video_path):
-    # 定义输出文件路径
-    base_dir = os.path.dirname(video_path)
-    extracted_audio_path = os.path.join(base_dir, 'extracted_audio.wav')
-    silence_path = os.path.join(base_dir, 'silence.wav')
-
-    base, ext = os.path.splitext(video_path)
-    base_name = get_path_without_suffix(base)
-    audio_only_path = f"{base_name}.wav"  # 使用 .wav 扩展名
-
-    # 如果文件已存在，直接返回
-    if os.path.exists(audio_only_path):
-        print_yellow(f"音频文件已存在: {audio_only_path}")
-        return audio_only_path
-
-    try:
-        # Step 1: 提取音频
-        subprocess.run([
-            'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
-            '-map', '0:a', '-c:a', 'pcm_s16le', '-y', extracted_audio_path
-        ], check=True)
-
-        # Step 2: 生成 30 秒静音文件
-        subprocess.run([
-            'ffmpeg', '-loglevel', 'quiet', '-f', 'lavfi',
-            '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
-            '-t', '30', '-c:a', 'pcm_s16le', '-y', silence_path
-        ], check=True)
-
-        # Step 3: 连接静音和提取的音频
-        subprocess.run([
-            'ffmpeg', '-loglevel', 'quiet',
-            '-i', silence_path, '-i', extracted_audio_path, '-i', silence_path,
-            '-filter_complex', '[0:a][1:a][2:a]concat=n=3:v=0:a=1[a]',
-            '-map', '[a]', '-c:a', 'pcm_s16le', '-y', audio_only_path
-        ], check=True)
-
-        # 清理临时文件
-        delete_file(extracted_audio_path)
-        delete_file(silence_path)
-
-        print(f'生成的音频文件已保存到: {audio_only_path}')
-        return audio_only_path
-
-    except subprocess.CalledProcessError as e:
-        print(f"发生错误: {e.stderr}")
-        delete_file(audio_only_path)
-        return None
+# def extract_audio_only_add60(video_path):
+#     # 定义输出文件路径
+#     base_dir = os.path.dirname(video_path)
+#     extracted_audio_path = os.path.join(base_dir, 'extracted_audio.wav')
+#     silence_path = os.path.join(base_dir, 'silence.wav')
+#
+#     base, ext = os.path.splitext(video_path)
+#     base_name = get_path_without_suffix(base)
+#     audio_only_path = f"{base_name}.wav"  # 使用 .wav 扩展名
+#
+#     # 如果文件已存在，直接返回
+#     if os.path.exists(audio_only_path):
+#         print_yellow(f"音频文件已存在: {audio_only_path}")
+#         return audio_only_path
+#
+#     try:
+#         # Step 1: 提取音频
+#         subprocess.run([
+#             'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
+#             '-map', '0:a', '-c:a', 'pcm_s16le', '-y', extracted_audio_path
+#         ], check=True)
+#
+#         # Step 2: 生成 30 秒静音文件
+#         subprocess.run([
+#             'ffmpeg', '-loglevel', 'quiet', '-f', 'lavfi',
+#             '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+#             '-t', '30', '-c:a', 'pcm_s16le', '-y', silence_path
+#         ], check=True)
+#
+#         # Step 3: 连接静音和提取的音频
+#         subprocess.run([
+#             'ffmpeg', '-loglevel', 'quiet',
+#             '-i', silence_path, '-i', extracted_audio_path, '-i', silence_path,
+#             '-filter_complex', '[0:a][1:a][2:a]concat=n=3:v=0:a=1[a]',
+#             '-map', '[a]', '-c:a', 'pcm_s16le', '-y', audio_only_path
+#         ], check=True)
+#
+#         # 清理临时文件
+#         delete_file(extracted_audio_path)
+#         delete_file(silence_path)
+#
+#         print(f'生成的音频文件已保存到: {audio_only_path}')
+#         return audio_only_path
+#
+#     except subprocess.CalledProcessError as e:
+#         print(f"发生错误: {e.stderr}")
+#         delete_file(audio_only_path)
+#         return None
 
 
 def get_user_confirmation():
@@ -367,12 +363,13 @@ def check_files(release_video_dir, num_of_covers):
 
 
 def run_main(url=None,
-
+             sub_directory=None,
+             video_name=None,
              cover_title=None,
              split_time_min=15,
 
              is_only_download=False,
-             sub_directory=None,
+
              is_test=False,
 
              video_download_name=None,
@@ -383,15 +380,16 @@ def run_main(url=None,
              is_get_fanyi=False,
              cover_title_split_postion=0
              ):
-    global src_path, release_video_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
+    global src_path, video_duration, release_video_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
+
 
     print_separator(f"初始化路径 : {sub_directory}")
 
-    if is_banned(sub_directory):
-        print_red(f"{sub_directory} 这个视频被禁播了,不能上传")
+    if is_banned(video_name):
+        print_red(f"{video_name} 这个视频被禁播了,不能上传")
         return
     else:
-        print(f"{sub_directory} 这个视频能上传")
+        print(f"{video_name} 这个视频能上传")
 
     release_video_dir = get_dir("release_video", sub_directory)
 
@@ -399,8 +397,8 @@ def run_main(url=None,
     mvsep_base_dir = os.path.join(os.getcwd(), "MVSEP-MDX23-Colab_v2")
     print(f"选择的目录是: {mvsep_base_dir}")
 
-    mvsep_input_dir = get_dir(os.path.join(mvsep_base_dir, "input"), sub_directory)
-    mvsep_output_dir = get_dir(os.path.join(mvsep_base_dir, "output"), sub_directory)
+    mvsep_input_dir = get_dir(os.path.join(mvsep_base_dir, "input"), video_name)
+    mvsep_output_dir = get_dir(os.path.join(mvsep_base_dir, "output"), video_name)
     src_path = os.path.join(release_video_dir)
 
     ensure_directory_exists(release_video_dir)
@@ -408,9 +406,10 @@ def run_main(url=None,
     ensure_directory_exists(mvsep_output_dir)
     ensure_directory_exists(src_path)
 
-    original_video = os.path.join(src_path, f"{sub_directory}.mp4")
-    video_nobgm = os.path.join(src_path, f"{sub_directory}_nobgm.mp4")
-    video_final = os.path.join(src_path, f"{sub_directory}_nobgm_final.mp4")
+    original_video = os.path.join(src_path, f"{video_name}.mp4")
+    video_nobgm = os.path.join(src_path, f"{video_name}_nobgm.mp4")
+    video_final = os.path.join(src_path, f"{video_name}_nobgm_final.mp4")
+    video_duration = get_mp4_duration(video_nobgm if os.path.exists(video_nobgm) else original_video)
 
     cache_util = DiskCacheUtil()
 
@@ -437,16 +436,20 @@ def run_main(url=None,
         # 记录开始时间
         try:
             print_separator(f"获取封面图 : {sub_directory}")
-            start_time = time.time()
+            start_time_get_cover = time.time()
             title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
             subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
 
-            crop_bottom = 150
+            crop_bottom = 0
             crop_left = 426 / 720 * crop_bottom
+
+            crop_top = 150
+            crop_right = 426 / 720 * crop_top
+
             crop_dict = {
                 'crop_left': crop_left,
-                'crop_right': 0,
-                'crop_top': 0,
+                'crop_right': crop_right,
+                'crop_top': crop_top,
                 'crop_bottom': crop_bottom
             }
 
@@ -460,9 +463,9 @@ def run_main(url=None,
                                        isTest=False,
                                        cover_title_split_postion=cover_title_split_postion
                                        )
-            print(f"获取封面情况:获取{num_of_covers}张图片时间: {(time.time() - start_time):.2f} 秒, "
-                  f"平均每张: {(time.time() - start_time) / num_of_covers:.2f} 秒")
-            print(f"\n总耗时情况:{(time.time() - start_time)}")
+            print(f"获取封面情况:获取{num_of_covers}张图片时间: {(time.time() - start_time_get_cover):.2f} 秒, "
+                  f"平均每张: {(time.time() - start_time_get_cover) / num_of_covers:.2f} 秒")
+            print(f"\n总耗时情况:{(time.time() - start_time_get_cover)}")
 
             # generate_video_metadata(release_video_dir, sub_directory)
         except Exception as e:
@@ -479,12 +482,11 @@ def run_main(url=None,
             video_clips = []
 
             if not os.path.exists(video_final):
-                start_time = time.time()
+                start_time_get_video = time.time()
 
                 print(f"1.处理视频,切成小块视频,进行处理 <<{sub_directory}>>")
                 if not os.path.exists(video_nobgm):
                     print(f"\n原始视频路径: {original_video}")
-                    video_duration = get_mp4_duration(original_video)
                     print(f"\n原始视频时长: {video_duration}")
                     keyframeextractor = KeyFrameExtractor(original_video, cache_util)
                     keyframe_times = keyframeextractor.extract_keyframes()
@@ -499,7 +501,7 @@ def run_main(url=None,
                      video_origin_clips, process_video_time) = process_video_files_list(video_clips)
                     video_nobgm = merge_videos(video_dest_list, video_nobgm)
 
-                zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh', sub_directory=sub_directory)
+                zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh')
                 # 修正翻译
                 zh_srt = correct_subtitles(video_nobgm, False)
                 # if not is_test:
@@ -516,7 +518,7 @@ def run_main(url=None,
                 delete_directory_contents(out_times)
                 delete_files_by_list(audio_only_path, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
 
-                print(f"\n总耗时情况:{(time.time() - start_time)}")
+                print(f"\nget_video总耗时情况:{(time.time() - start_time_get_video)}")
 
             else:
 
@@ -537,8 +539,8 @@ def run_main(url=None,
     if is_get_fanyi:
         try:
             print_separator(f"翻译,字幕,水印 : <<{sub_directory}>>")
-            start_time = time.time()
-            zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh', sub_directory=sub_directory)
+            start_time_get_fanyi = time.time()
+            zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh')
             # 修正翻译
             zh_srt = correct_subtitles(video_nobgm, False)
 
@@ -552,8 +554,8 @@ def run_main(url=None,
             # for code in target_languages:
             #     transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=102400)
 
-            generate_video_metadata(release_video_dir, sub_directory)
-            print(f"\n总耗时情况:{(time.time() - start_time)}")
+            generate_video_metadata(release_video_dir, video_name)
+            print(f"\nget_fanyi总耗时情况:{(time.time() - start_time_get_fanyi)}")
             voice_utils.play_voice_message(f'成功合成 {sub_directory} 可发布视频')
         except Exception as e:
             print_red(f'出错: {e}')
