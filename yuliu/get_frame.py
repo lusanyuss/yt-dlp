@@ -12,9 +12,14 @@ def create_directory(directory):
 def split_video(input_video, output_dir, segment_length=600):
     create_directory(output_dir)
     command = [
-        'ffmpeg', '-i', input_video, '-c', 'copy', '-map', '0',
-        '-segment_time', str(segment_length), '-f', 'segment',
-        '-reset_timestamps', '1', os.path.join(output_dir, 'part%02d.mp4')
+        'ffmpeg',
+        '-i', input_video,
+        '-c', 'copy',
+        '-map', '0',
+        '-segment_time', str(segment_length),
+        '-f', 'segment',
+        '-reset_timestamps', '1',
+        os.path.join(output_dir, 'part%02d.mp4')
     ]
     subprocess.run(command, check=True)
 

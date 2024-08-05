@@ -145,7 +145,7 @@ def process_video_files_list(video_origin_clips):
     for index, video_file_item in enumerate(video_origin_clips, start=1):
         pre_name = os.path.splitext(video_file_item)[0]
         video_dest_list.append(pre_name + '_processed.mp4')
-        audio_origin_list.append(pre_name + '_audio.m4a')
+        audio_origin_list.append(pre_name + '_audio.aac')
         video_origin_list.append(pre_name + '_video.mp4')
         audio_vocals_list.append(pre_name + '_audio_vocals.wav')
 

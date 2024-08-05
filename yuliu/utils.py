@@ -6,6 +6,7 @@ import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+import ffmpeg
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
@@ -208,7 +209,7 @@ def extract_audio_and_video(video_path):
     print(f"从视频中分离音频和视频: {video_path}")
     start_time = time.time()
     base, _ = os.path.splitext(video_path)
-    audio_output, video_output = f"{base}_audio.m4a", f"{base}_video.mp4"
+    audio_output, video_output = f"{base}_audio.aac", f"{base}_video.mp4"
 
     if not os.path.exists(audio_output) or not os.path.exists(video_output):
         # command = [
@@ -588,6 +589,46 @@ def minutes_to_milliseconds(minutes):
     return minutes * 60 * 1000
 
 
+# def preencode_video_with_fixed_gop(input_video):
+#     # 获取 input_video 的目录和文件名
+#     input_dir = os.path.dirname(input_video)
+#     input_name = os.path.basename(input_video)
+#
+#     # 创建临时文件名
+#     temp_video = os.path.join(input_dir, 'temp_' + input_name)
+#
+#     # 获取系统中的逻辑处理器数量
+#     num_threads = multiprocessing.cpu_count()
+#     # 记录开始时间
+#     start_time = time.time()
+#     # 预处理视频并输出到临时文件
+#     command = [
+#         'ffmpeg',
+#         '-i', input_video,  # 输入合并后的视频文件
+#         '-vf', 'scale=1280:720,fps=25,format=yuv420p',  # 统一分辨率、帧率和像素格式
+#         '-c:v', 'h264_nvenc',  # 使用 H.264 编码器
+#         '-b:v', '2M',  # 视频比特率
+#         '-maxrate', '2500k',  # 最大视频比特率
+#         '-bufsize', '5000k',  # 视频缓冲区大小
+#         '-preset', 'p5',  # 编码速度预设
+#         '-c:a', 'aac',  # 使用 AAC 音频编码
+#         '-b:a', '128k',  # 音频比特率
+#         '-strict', 'experimental',  # 处理可能不完全支持的编解码器
+#         temp_video,  # 输出文件路径
+#         '-loglevel', 'info'
+#     ]
+#
+#     CommandExecutor.run_command(command)
+#
+#     # 替换原始视频文件
+#     os.remove(input_video)  # 删除原始视频文件
+#     os.rename(temp_video, input_video)  # 重命名临时文件为原始文件名
+#
+#     # 记录结束时间并打印编码耗时
+#     end_time = time.time()
+#     print(f"Preencoding completed in {end_time - start_time:.2f} seconds")
+
+
 def merge_videos_recode(file_list, video):
     if os.path.exists(video):
         print(f"{video} 已存在，直接返回")
@@ -603,32 +644,44 @@ def merge_videos_recode(file_list, video):
             for file in file_list:
                 absolute_path = os.path.abspath(file)
                 f.write(f"file '{absolute_path}'\n")
+        # 使用过滤器进行视频的一致化处理和合并
+        # command = [
+        #     'ffmpeg',
+        #     '-f', 'concat',
+        #     '-safe', '0',
+        #     '-i', 'filelist.txt',  # 输入包含所有视频文件的列表
+        #     '-vf', 'scale=1280:720,fps=25',  # 统一分辨率和帧率
+        #     '-c:v', 'h264_nvenc',  # 使用 NVIDIA GPU H.265 编码
+        #     '-preset', 'p5',  # 编码预设
+        #     '-b:v', '2M',  # 视频比特率
+        #     '-c:a', 'aac',  # 使用 AAC 音频编码
+        #     '-b:a', '128k',  # 音频比特率
+        #     video,  # 输出文件路径
+        #     '-loglevel', 'info'
+        # ]
+
         command = [
             'ffmpeg',
             '-f', 'concat',
             '-safe', '0',
-            '-i', 'filelist.txt',
-            '-r', '25',  # 设置帧率为25帧每秒
-            '-c:v', 'hevc_nvenc',
-            '-preset', 'p5',
-            '-b:v', '2M',
-            '-g', '125',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-loglevel', 'quite',
-            video
+            '-i', 'filelist.txt',  # 输入包含所有视频文件的列表
+            '-vf', 'scale=1280:720,fps=25,format=yuv420p',  # 统一分辨率、帧率和像素格式
+            '-c:v', 'h264_nvenc',  # 使用 NVIDIA GPU H.264 编码
+            '-preset', 'p5',  # 编码预设
+            '-b:v', '2M',  # 视频比特率
+            '-maxrate', '2500k',  # 最大视频比特率
+            '-bufsize', '5000k',  # 视频缓冲区大小
+            '-c:a', 'aac',  # 使用 AAC 音频编码
+            '-b:a', '128k',  # 音频比特率
+            video,  # 输出文件路径
+            '-loglevel', 'info'
         ]
+
         print(f"执行命令: {' '.join(command)}")
-        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
-        if result.returncode != 0:
-            # 输出完整的 stdout 和 stderr
-            print(f"ffmpeg 命令执行失败，stdout: {result.stdout}")
-            print(f"ffmpeg 命令执行失败，stderr: {result.stderr}")
-            raise RuntimeError(f"合成视频失败，返回码 {result.returncode}")
-
-        print(f"合成视频成功，stdout: {result.stdout}")
-        print(f"合成视频成功，stderr: {result.stderr}")
-
+        CommandExecutor.run_command(command)
+    except Exception as e:
+        if os.path.exists(video):
+            os.remove(video)
     finally:
         if os.path.exists('filelist.txt'):
             os.remove('filelist.txt')
@@ -667,33 +720,87 @@ def merge_videos(file_list, video):
     return video
 
 
+def reencode_video(input_file, output_file, codec='h264_nvenc', crf=23, preset='medium'):
+    """Reencode a video to ensure consistent parameters with GPU acceleration."""
+    ffmpeg.input(input_file).output(
+        output_file,
+        vcodec=codec,
+        crf=crf,
+        preset=preset,
+        acodec='aac',
+        strict='experimental'
+    ).run()
+
+
+def concat_videos(input_dir, output_file):
+    # 获取目录中的所有 mp4 文件，并按名称中的数字排序
+    files = sorted([f for f in os.listdir(input_dir) if f.endswith('.mp4') and f[:-4].isdigit()],
+                   key=lambda x: int(x[:-4]))
+
+    # 确保目录中有文件可处理
+    if not files:
+        raise ValueError("No mp4 files found in the directory")
+
+    # 创建一个临时目录来存储重新编码的视频
+    temp_dir = os.path.join(input_dir, 'temp')
+    os.makedirs(temp_dir, exist_ok=True)
+
+    # 对每个视频进行重新编码
+    reencoded_files = []
+    for file in files:
+        input_path = os.path.join(input_dir, file)
+        output_path = os.path.join(temp_dir, file)
+        reencode_video(input_path, output_path)
+        reencoded_files.append(output_path)
+
+    # 创建临时文件列表供 FFmpeg 使用
+    with open('filelist.txt', 'w', encoding='utf-8') as f:
+        for file in reencoded_files:
+            f.write(f"file '{file}'\n")
+
+    # 使用 FFmpeg 拼接视频，并启用 GPU 加速
+    (
+        ffmpeg
+        .input('filelist.txt', format='concat', safe=0)
+        .output(output_file, c='copy')
+        .global_args('-hwaccel', 'cuda')
+        .global_args('-hwaccel_output_format', 'cuda')
+        .run()
+    )
+
+    # 清理临时文件列表和临时目录
+    os.remove('filelist.txt')
+    for file in reencoded_files:
+        os.remove(file)
+    os.rmdir(temp_dir)
+
+    print(f"Concatenated video saved to {output_file}")
+    return output_file
+
+
 def concatenate_folder_videos(folder_path):
     folder_name = os.path.basename(os.path.normpath(folder_path))
     parent_dir = os.path.dirname(folder_path)
     output_file = os.path.join(parent_dir, f"{folder_name}.mp4")
-
     # 获取文件夹中所有的文件名，并筛选出MP4文件
     files = [f for f in os.listdir(folder_path) if f.endswith('.mp4')]
-
     # 提取索引并排序
     indices = sorted([int(os.path.splitext(f)[0]) for f in files])
-
     # 检查索引是否连续
     if indices != list(range(1, len(indices) + 1)):
         raise ValueError("视频文件索引不连续或缺少文件")
-
     # 按顺序获取文件列表
     file_list = [os.path.join(folder_path, f"{index}.mp4") for index in indices]
-
     # 如果输出文件已经存在,就先删除
     if os.path.exists(output_file):
         os.remove(output_file)
     # 合并视频
-    merged_video = merge_videos_recode(file_list, output_file)
-
+    # Example usage
+    merged_video = concat_videos(folder_name, output_file)
+    # merged_video = merge_videos_recode(file_list, output_file)
     # 删除原始视频文件和目录
-    if 'test' not in os.path.basename(folder_path):
-        shutil.rmtree(folder_path)
+    # if 'test' not in os.path.basename(folder_path):
+    #     shutil.rmtree(folder_path)
 
     return merged_video
 

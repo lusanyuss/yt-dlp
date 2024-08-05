@@ -92,12 +92,15 @@ if __name__ == "__main__":
 
     base_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
     aasrc_folder = os.getcwd()
+    max_number, name_list = get_max_prefix_number_and_names()
 
     for folder in get_all_directories(aasrc_folder):
         start_time = time.time()
-        final_video = concatenate_folder_videos(folder)
-        print(f"视频合并消耗的时间: {time.time() - start_time:.2f} 秒")
-
+        if os.path.basename(folder) not in name_list:
+            final_video = concatenate_folder_videos(folder)
+            print(f"视频合并消耗的时间: {time.time() - start_time:.2f} 秒")
+        else:
+            print(f"{folder} 已经存在")
     if aasrc_folder:
         video_files = get_video_files(aasrc_folder)
         move_and_rename_videos(base_dir, aasrc_folder, video_files)
