@@ -3,7 +3,7 @@ import re
 import shutil
 import time
 
-from yuliu.utils import concatenate_folder_videos, preencode_video_with_fixed_gop
+from yuliu.utils import concatenate_folder_videos
 
 
 def get_aasrc_folder(base_dir):
@@ -97,8 +97,6 @@ if __name__ == "__main__":
         start_time = time.time()
         final_video = concatenate_folder_videos(folder)
         print(f"视频合并消耗的时间: {time.time() - start_time:.2f} 秒")
-        preencode_video_with_fixed_gop(final_video)
-        print(f"视频编码消耗的时间: {time.time() - start_time:.2f} 秒")
 
     if aasrc_folder:
         video_files = get_video_files(aasrc_folder)

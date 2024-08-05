@@ -154,7 +154,7 @@ def merge_single_audio_video(video_file, audio_file, result_file):
         '-c:v', 'hevc_nvenc',
         '-preset', 'p5',
         '-b:v', '2M',  # 使用固定比特率
-        '-g', '50',  # 设置固定 GOP 结构
+        '-g', '125',  # 设置固定 GOP 结构
         '-c:a', 'aac',
         '-b:a', '128k',
         '-shortest',  # 确保输出文件长度与最短的输入文件一致
@@ -588,6 +588,54 @@ def minutes_to_milliseconds(minutes):
     return minutes * 60 * 1000
 
 
+def merge_videos_recode(file_list, video):
+    if os.path.exists(video):
+        print(f"{video} 已存在，直接返回")
+        return video
+
+    if len(file_list) == 1:
+        print(f"只有一个文件，无需合并，复制 {file_list[0]} 为 {video}")
+        os.replace(file_list[0], video)
+        return video
+
+    try:
+        with open('filelist.txt', 'w', encoding='utf-8') as f:
+            for file in file_list:
+                absolute_path = os.path.abspath(file)
+                f.write(f"file '{absolute_path}'\n")
+        command = [
+            'ffmpeg',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', 'filelist.txt',
+            '-r', '25',  # 设置帧率为25帧每秒
+            '-c:v', 'hevc_nvenc',
+            '-preset', 'p5',
+            '-b:v', '2M',
+            '-g', '125',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-loglevel', 'quite',
+            video
+        ]
+        print(f"执行命令: {' '.join(command)}")
+        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+        if result.returncode != 0:
+            # 输出完整的 stdout 和 stderr
+            print(f"ffmpeg 命令执行失败，stdout: {result.stdout}")
+            print(f"ffmpeg 命令执行失败，stderr: {result.stderr}")
+            raise RuntimeError(f"合成视频失败，返回码 {result.returncode}")
+
+        print(f"合成视频成功，stdout: {result.stdout}")
+        print(f"合成视频成功，stderr: {result.stderr}")
+
+    finally:
+        if os.path.exists('filelist.txt'):
+            os.remove('filelist.txt')
+
+    return video
+
+
 def merge_videos(file_list, video):
     if os.path.exists(video):
         print(f"{video} 已存在，直接返回")
@@ -641,7 +689,7 @@ def concatenate_folder_videos(folder_path):
     if os.path.exists(output_file):
         os.remove(output_file)
     # 合并视频
-    merged_video = merge_videos(file_list, output_file)
+    merged_video = merge_videos_recode(file_list, output_file)
 
     # 删除原始视频文件和目录
     if 'test' not in os.path.basename(folder_path):
@@ -652,47 +700,7 @@ def concatenate_folder_videos(folder_path):
 
 import os
 import subprocess
-import multiprocessing
 import time
-
-
-def preencode_video_with_fixed_gop(input_video):
-    # 获取 input_video 的目录和文件名
-    input_dir = os.path.dirname(input_video)
-    input_name = os.path.basename(input_video)
-
-    # 创建临时文件名
-    temp_video = os.path.join(input_dir, 'temp_' + input_name)
-
-    # 获取系统中的逻辑处理器数量
-    num_threads = multiprocessing.cpu_count()
-
-    # 记录开始时间
-    start_time = time.time()
-
-    # 预处理视频并输出到临时文件
-    command = [
-        'ffmpeg',
-        '-loglevel', 'quiet',
-        '-i', input_video,
-        '-c:v', 'hevc_nvenc',
-        '-preset', 'p5',
-        '-b:v', '2M',  # 使用固定比特率
-        '-g', '50',  # 设置固定 GOP 结构
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        temp_video
-    ]
-
-    subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
-
-    # 替换原始视频文件
-    os.remove(input_video)  # 删除原始视频文件
-    os.rename(temp_video, input_video)  # 重命名临时文件为原始文件名
-
-    # 记录结束时间并打印编码耗时
-    end_time = time.time()
-    print(f"Preencoding completed in {end_time - start_time:.2f} seconds")
 
 
 # 示例调用
