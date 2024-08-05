@@ -597,7 +597,6 @@ def merge_videos(file_list, video):
 
 
 def reencode_video(input_file, output_file, codec='h264_nvenc', crf=23, preset='medium'):
-    """Reencode a video to ensure consistent parameters with GPU acceleration."""
     ffmpeg.input(input_file).output(
         output_file,
         vcodec=codec,
@@ -673,10 +672,9 @@ def concatenate_folder_videos(folder_path):
     # 合并视频
     # Example usage
     merged_video = concat_videos(folder_name, output_file)
-    # merged_video = merge_videos_recode(file_list, output_file)
     # 删除原始视频文件和目录
-    # if 'test' not in os.path.basename(folder_path):
-    #     shutil.rmtree(folder_path)
+    if 'test' not in os.path.basename(folder_path):
+        shutil.rmtree(folder_path)
 
     return merged_video
 
