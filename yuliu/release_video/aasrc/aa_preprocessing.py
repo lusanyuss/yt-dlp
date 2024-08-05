@@ -3,7 +3,7 @@ import re
 import shutil
 import time
 
-from yuliu.utils import concatenate_folder_videos
+from yuliu.utils import concatenate_folder_videos, preencode_video_with_fixed_gop
 
 
 def get_aasrc_folder(base_dir):
@@ -65,6 +65,7 @@ def get_all_directories(base_dir):
     return [os.path.join(base_dir, name) for name in os.listdir(base_dir)
             if os.path.isdir(os.path.join(base_dir, name)) and name not in exclude_dirs]
 
+
 def get_max_prefix_number_and_names():
     # 获取当前目录的上一级目录
     parent_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
@@ -96,9 +97,11 @@ if __name__ == "__main__":
         start_time = time.time()
         final_video = concatenate_folder_videos(folder)
         print(f"视频合并消耗的时间: {time.time() - start_time:.2f} 秒")
+        preencode_video_with_fixed_gop(final_video)
+        print(f"视频编码消耗的时间: {time.time() - start_time:.2f} 秒")
 
-    # if aasrc_folder:
-    #     video_files = get_video_files(aasrc_folder)
-    #     move_and_rename_videos(base_dir, aasrc_folder, video_files)
-    # else:
-    #     print("No 'aasrc' folder found in the current directory.")
+    if aasrc_folder:
+        video_files = get_video_files(aasrc_folder)
+        move_and_rename_videos(base_dir, aasrc_folder, video_files)
+    else:
+        print("No 'aasrc' folder found in the current directory.")

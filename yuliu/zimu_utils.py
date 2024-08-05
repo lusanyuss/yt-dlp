@@ -44,13 +44,13 @@ def add_final_shuiyin_to_video(video_nobgm, srt_path=None):
             f'\'FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}\', '
             f'drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
             f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-            f'-c:v h264_nvenc -c:a copy -y "{video_final}"'
+            f'-c:v h264_nvenc -preset p5 -b:v 2M -g 50 -c:a copy -y "{video_final}"'
         )
     else:
         command = (
             f'ffmpeg -hwaccel cuda -i "{video_nobgm}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
             f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-            f'-c:v h264_nvenc -c:a copy -y "{video_final}"'
+            f'-c:v h264_nvenc -preset p5 -b:v 2M -g 50 -c:a copy -y "{video_final}"'
         )
 
     # 打印命令以便手动检查

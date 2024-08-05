@@ -99,7 +99,7 @@ def separate_audio(input,
             {use_InstVoc_} \
             {use_BSRoformer_}')
         for input_file in os.listdir(input_dir):
-            if input_file.endswith('.mp3'):
+            if input_file.endswith('.mp3') or input_file.endswith('.m4a'):
                 base_filename = os.path.splitext(input_file)[0]
                 files_to_keep = [f"{base_filename}_vocals.wav"]
                 # 遍历 output_dir 并删除不需要的文件

@@ -1,7 +1,6 @@
 import concurrent.futures
 import hashlib
 import json
-import multiprocessing
 import re
 import shutil
 import threading
@@ -133,19 +132,36 @@ def merge_single_audio_video(video_file, audio_file, result_file):
         return result_file
 
     print(f"合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
+    # command = [
+    #     'ffmpeg',
+    #     '-loglevel', 'quiet',
+    #     '-i', video_file,
+    #     '-i', audio_file,
+    #     '-c:v', 'copy',  # 视频流不重新编码，直接复制
+    #     '-c:a', 'aac',  # 将音频流编码为AAC格式
+    #     '-b:a', '192k',  # 设置音频比特率
+    #     '-strict', 'experimental',  # 使用实验性AAC编码器
+    #     '-shortest',  # 保持视频和音频长度一致
+    #     '-y',  # 覆盖输出文件
+    #     result_file
+    # ]
+
     command = [
         'ffmpeg',
         '-loglevel', 'quiet',
         '-i', video_file,
         '-i', audio_file,
-        '-c:v', 'copy',  # 视频流不重新编码，直接复制
-        '-c:a', 'aac',  # 将音频流编码为AAC格式
-        '-b:a', '192k',  # 设置音频比特率
-        '-strict', 'experimental',  # 使用实验性AAC编码器
-        '-shortest',  # 保持视频和音频长度一致
+        '-c:v', 'hevc_nvenc',
+        '-preset', 'p5',
+        '-b:v', '2M',  # 使用固定比特率
+        '-g', '50',  # 设置固定 GOP 结构
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-shortest',  # 确保输出文件长度与最短的输入文件一致
         '-y',  # 覆盖输出文件
         result_file
     ]
+
     subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
     return result_file
 
@@ -192,38 +208,31 @@ def extract_audio_and_video(video_path):
     print(f"从视频中分离音频和视频: {video_path}")
     start_time = time.time()
     base, _ = os.path.splitext(video_path)
-    audio_output, video_output = f"{base}_audio.mp3", f"{base}_video.mp4"
+    audio_output, video_output = f"{base}_audio.m4a", f"{base}_video.mp4"
+
     if not os.path.exists(audio_output) or not os.path.exists(video_output):
-        command = [
-            'ffmpeg', '-i', video_path,
-            '-map', '0:a', '-acodec', 'libmp3lame', audio_output,
-            '-map', '0:v', '-vcodec', 'copy', video_output,
-            '-y', '-loglevel', 'quiet'
-        ]
-
-        # ffmpeg - i
-        # part1.mp4 - map
-        # 0: a - acodec
-        # copy
-        # part1_audio.aac - map
-        # 0: v - vcodec
-        # copy
-        # part1_video.mp4
-
         # command = [
         #     'ffmpeg', '-i', video_path,
-        #     '-map', '0:a', '-acodec', 'copy', audio_output,  # 使用copy操作提取音频
-        #     '-map', '0:v', '-vcodec', 'copy', video_output,  # 使用copy操作提取视频
+        #     '-map', '0:a', '-acodec', 'libmp3lame', audio_output,
+        #     '-map', '0:v', '-c', 'copy', video_output,
         #     '-y', '-loglevel', 'quiet'
         # ]
-        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-        # 联合提取音频和视频，不重新编码
-        # (ffmpeg.input(video_path)
-        #  .output(audio_output, map='0:a', codec='copy')
-        #  .output(video_output, map='0:v', codec='copy', an=None)
-        #  .run(quiet=True, overwrite_output=True))
-        # print(f"音频提取到: {audio_output}")
-        # print(f"视频提取到: {video_output}")
+
+        command = [
+            'ffmpeg',
+            '-i', video_path,
+            '-map', '0:a', '-c', 'copy', audio_output,  # 使用copy操作提取音频
+            '-map', '0:v', '-c', 'copy', video_output,  # 使用copy操作提取视频
+            '-y',
+            '-loglevel', 'info'
+        ]
+
+        try:
+            result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+            print(f'命令执行结果: {result.returncode}')
+        except subprocess.CalledProcessError as e:
+            print(f'命令执行失败: {e.returncode}')
+            print(f'错误输出: {e.stderr}')
 
     elapsed_time = time.time() - start_time
     print(f"耗时: {elapsed_time:.2f} 秒")
@@ -247,28 +256,6 @@ def separate_audio_and_video_list(video_paths):
 # 调用示例
 # video_files = ["path/to/your/video1.mp4", "path/to/your/video2.mp4"]
 # separate_audio_and_video(video_files)
-
-
-def separate_audio_and_video(video_path):
-    print(f"\n从视频中分离音频和视频: {video_path}")
-    start_time = time.time()
-    base, _ = os.path.splitext(video_path)
-    audio_output, video_output = f"{base}_audio.mp3", f"{base}_video.mp4"
-
-    if not os.path.exists(audio_output) or not os.path.exists(video_output):
-        command = [
-            'ffmpeg', '-i', video_path,
-            '-map', '0:a', '-acodec', 'libmp3lame', audio_output,
-            '-map', '0:v', '-vcodec', 'copy', video_output
-        ]
-        command += ['-loglevel', 'quiet']
-        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-        print(f"音频提取到: {audio_output}")
-        print(f"视频提取到: {video_output}")
-
-    elapsed_time = time.time() - start_time
-    print(f"耗时: {elapsed_time:.2f} 秒")
-    return audio_output, video_output
 
 
 # 缓存文件路径
@@ -663,13 +650,14 @@ def concatenate_folder_videos(folder_path):
     return merged_video
 
 
-import subprocess
 import os
+import subprocess
+import multiprocessing
 import time
 
 
-def reencode_video(input_video):
-    # 获取input_video的目录和文件名
+def preencode_video_with_fixed_gop(input_video):
+    # 获取 input_video 的目录和文件名
     input_dir = os.path.dirname(input_video)
     input_name = os.path.basename(input_video)
 
@@ -682,17 +670,29 @@ def reencode_video(input_video):
     # 记录开始时间
     start_time = time.time()
 
-    # 重新编码视频并输出到临时文件
-    reencode_command = [
-        'ffmpeg', '-i', input_video,
-        '-c:v', 'libx265', '-crf', '28', '-preset', 'ultrafast',
-        '-c:a', 'aac', '-b:a', '128k', temp_video,
-        '-threads', str(num_threads),  # 使用所有可用的逻辑处理器
-        '-loglevel', 'quiet'
+    # 预处理视频并输出到临时文件
+    command = [
+        'ffmpeg',
+        '-loglevel', 'quiet',
+        '-i', input_video,
+        '-c:v', 'hevc_nvenc',
+        '-preset', 'p5',
+        '-b:v', '2M',  # 使用固定比特率
+        '-g', '50',  # 设置固定 GOP 结构
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        temp_video
     ]
-    subprocess.run(reencode_command, capture_output=True, text=True, encoding='utf-8')
+
+    subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
+
     # 替换原始视频文件
-    os.replace(temp_video, input_video)
+    os.remove(input_video)  # 删除原始视频文件
+    os.rename(temp_video, input_video)  # 重命名临时文件为原始文件名
+
+    # 记录结束时间并打印编码耗时
+    end_time = time.time()
+    print(f"Preencoding completed in {end_time - start_time:.2f} seconds")
 
 
 # 示例调用

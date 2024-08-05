@@ -2,7 +2,6 @@ import glob
 import os
 import re
 import shutil
-import subprocess
 import time
 
 from torchvision.datasets.utils import calculate_md5
@@ -10,7 +9,7 @@ from torchvision.datasets.utils import calculate_md5
 from utils import get_mp4_duration, \
     find_split_points, \
     print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, \
-    print_red, print_yellow, get_path_without_suffix, delete_file
+    print_red, print_yellow, delete_file
 from yuliu import voice_utils, transcribe_srt
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.check_final import correct_subtitles
@@ -146,7 +145,7 @@ def process_video_files_list(video_origin_clips):
     for index, video_file_item in enumerate(video_origin_clips, start=1):
         pre_name = os.path.splitext(video_file_item)[0]
         video_dest_list.append(pre_name + '_processed.mp4')
-        audio_origin_list.append(pre_name + '_audio.mp3')
+        audio_origin_list.append(pre_name + '_audio.m4a')
         video_origin_list.append(pre_name + '_video.mp4')
         audio_vocals_list.append(pre_name + '_audio_vocals.wav')
 
@@ -154,7 +153,7 @@ def process_video_files_list(video_origin_clips):
         process_video_time = time.time() - start_time
         return video_dest_list, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, process_video_time
     else:
-        # 多线程分割视频
+        # 多线提取视频,音频
         audio_origin_list, video_origin_list = separate_audio_and_video_list(video_origin_clips)
         # 单线程去除视频背景音乐
         audio_vocals_list = process_audio_with_mvsep_mdx23_list(audio_origin_list)
@@ -227,10 +226,6 @@ xxx
     print(f"文件 {video_dest_result} 已生成。")
 
 
-# ffmpeg -i "release_video/aa测试目录/aa测试目录.mp4" -vf "drawtext=fontfile='ziti/fengmian/gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "release_video/aa测试目录/temp_output.mp4"
-# ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
-# ffmpeg -i "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\aa测试目录.mp4" -vf "drawtext=fontfile='C:\yuliu\workspace\yt-dlp\yuliu\ziti\fengmian\gwkt-SC-Black.ttf':text='爽剧风暴':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,10)'" -c:a copy -y "C:\yuliu\workspace\yt-dlp\yuliu\release_video\aa测试目录\temp_output.mp4"
-
 def get_dir(base_dir, sub_directory=None):
     dir_path = os.path.join(os.getcwd(), base_dir)
     if sub_directory:
@@ -260,74 +255,6 @@ def delete_files_by_list(*args):
     # 尝试删除每个文件
     for file in all_files:
         delete_file(file)
-
-
-# def check_directory(base_dir):
-#     output_dir = os.path.join(base_dir, 'output')
-#     output_pattern = re.compile(r"out_times_\d+_audio_vocals\.wav")
-#
-#     # 获取 input 和 output 目录下的所有子目录
-#     sub_directories = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
-#
-#     for sub_dir in sub_directories:
-#         input_files = [f for f in os.listdir(os.path.join(input_dir, sub_dir)) if input_pattern.match(f)]
-#         output_files = [f for f in os.listdir(os.path.join(output_dir, sub_dir)) if output_pattern.match(f)]
-#
-#         if len(input_files) > 0 and len(input_files) == len(output_files):
-#             return base_dir
-#
-#     return None
-
-
-# 检查base是否包含下划线
-# def extract_audio_only_add60(video_path):
-#     # 定义输出文件路径
-#     base_dir = os.path.dirname(video_path)
-#     extracted_audio_path = os.path.join(base_dir, 'extracted_audio.wav')
-#     silence_path = os.path.join(base_dir, 'silence.wav')
-#
-#     base, ext = os.path.splitext(video_path)
-#     base_name = get_path_without_suffix(base)
-#     audio_only_path = f"{base_name}.wav"  # 使用 .wav 扩展名
-#
-#     # 如果文件已存在，直接返回
-#     if os.path.exists(audio_only_path):
-#         print_yellow(f"音频文件已存在: {audio_only_path}")
-#         return audio_only_path
-#
-#     try:
-#         # Step 1: 提取音频
-#         subprocess.run([
-#             'ffmpeg', '-loglevel', 'quiet', '-i', video_path,
-#             '-map', '0:a', '-c:a', 'pcm_s16le', '-y', extracted_audio_path
-#         ], check=True)
-#
-#         # Step 2: 生成 30 秒静音文件
-#         subprocess.run([
-#             'ffmpeg', '-loglevel', 'quiet', '-f', 'lavfi',
-#             '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
-#             '-t', '30', '-c:a', 'pcm_s16le', '-y', silence_path
-#         ], check=True)
-#
-#         # Step 3: 连接静音和提取的音频
-#         subprocess.run([
-#             'ffmpeg', '-loglevel', 'quiet',
-#             '-i', silence_path, '-i', extracted_audio_path, '-i', silence_path,
-#             '-filter_complex', '[0:a][1:a][2:a]concat=n=3:v=0:a=1[a]',
-#             '-map', '[a]', '-c:a', 'pcm_s16le', '-y', audio_only_path
-#         ], check=True)
-#
-#         # 清理临时文件
-#         delete_file(extracted_audio_path)
-#         delete_file(silence_path)
-#
-#         print(f'生成的音频文件已保存到: {audio_only_path}')
-#         return audio_only_path
-#
-#     except subprocess.CalledProcessError as e:
-#         print(f"发生错误: {e.stderr}")
-#         delete_file(audio_only_path)
-#         return None
 
 
 def get_user_confirmation():
@@ -367,9 +294,9 @@ def run_main(url=None,
              video_name=None,
              cover_title=None,
              split_time_min=15,
-
+             crop_bottom=0,
+             crop_top=0,
              is_only_download=False,
-
              is_test=False,
 
              video_download_name=None,
@@ -381,7 +308,6 @@ def run_main(url=None,
              cover_title_split_postion=0
              ):
     global src_path, video_duration, release_video_dir, release_video_dir, mvsep_base_dir, mvsep_input_dir, mvsep_output_dir
-
 
     print_separator(f"初始化路径 : {sub_directory}")
 
@@ -439,20 +365,12 @@ def run_main(url=None,
             start_time_get_cover = time.time()
             title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
             subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
-
-            crop_bottom = 0
-            crop_left = 426 / 720 * crop_bottom
-
-            crop_top = 150
-            crop_right = 426 / 720 * crop_top
-
             crop_dict = {
-                'crop_left': crop_left,
-                'crop_right': crop_right,
+                'crop_left': 426 / 720 * crop_bottom,
+                'crop_right': 426 / 720 * crop_top,
                 'crop_top': crop_top,
                 'crop_bottom': crop_bottom
             }
-
             if not check_files(release_video_dir, num_of_covers):
                 extract_thumbnail_main(video_nobgm if os.path.exists(video_nobgm) else original_video,
                                        cover_title,
@@ -512,11 +430,12 @@ def run_main(url=None,
                 base, ext = os.path.splitext(video_nobgm)
                 audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
                 out_times = os.path.join(release_video_dir, 'out_times')
-                if os.path.exists(video_nobgm):
-                    os.remove(original_video)
 
-                delete_directory_contents(out_times)
-                delete_files_by_list(audio_only_path, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
+                if not is_test:
+                    if os.path.exists(video_nobgm):
+                        os.remove(original_video)
+                    delete_directory_contents(out_times)
+                    delete_files_by_list(audio_only_path, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
 
                 print(f"\nget_video总耗时情况:{(time.time() - start_time_get_video)}")
 
@@ -525,13 +444,12 @@ def run_main(url=None,
                 base, ext = os.path.splitext(video_nobgm)
                 audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
                 out_times = os.path.join(release_video_dir, 'out_times')
-                if os.path.exists(video_nobgm):
-                    delete_file(original_video)
 
-                delete_directory_contents(out_times)
-
-                delete_files_by_list(audio_only_path, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
-
+                if not is_test:
+                    if os.path.exists(video_nobgm):
+                        delete_file(original_video)
+                    delete_directory_contents(out_times)
+                    delete_files_by_list(audio_only_path, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
                 print_yellow(f"{os.path.relpath(video_final, './')} 最终视频 已经存在")
         except Exception as e:
             print_red(f'出错: {e}')
@@ -543,10 +461,12 @@ def run_main(url=None,
             zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh')
             # 修正翻译
             zh_srt = correct_subtitles(video_nobgm, False)
-
-            en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 6)
-            zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256 * 8 / 4)
-            video_nobgm, video_final = add_final_shuiyin_to_video(video_nobgm, en_srt)
+            if not is_test:
+                en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 6)
+                zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256 * 8 / 4)
+                video_nobgm, video_final = add_final_shuiyin_to_video(video_nobgm, en_srt)
+            else:
+                video_nobgm, video_final = add_final_shuiyin_to_video(video_nobgm, zh_srt)
 
             print(f"\n4.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
 

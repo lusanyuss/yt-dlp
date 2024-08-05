@@ -66,7 +66,8 @@ if __name__ == "__main__":
         # '隐婚后,我的下属老公掉马甲了',
         # '青春不死常胜不衰'
 
-        '隐龙之保安老爸不好惹'
+        # '隐龙之保安老爸不好惹',
+        '下山后我被四个绝色师姐包围了_test'
 
     ]
 
@@ -88,8 +89,10 @@ if __name__ == "__main__":
                              video_name=video_name,
                              cover_title=video_name,
                              split_time_min=60,
-                             is_test=False,
+                             crop_bottom=150,
+                             crop_top=0,
 
+                             is_test=True,
                              is_get_cover=True,
                              is_get_video=True,
                              is_get_fanyi=True,

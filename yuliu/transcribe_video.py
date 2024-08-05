@@ -44,7 +44,7 @@ def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", d
             beam_size=10,  # 使用较大的beam size以提高识别准确性
             best_of=3,  # 从多个候选中选择最佳输出，提高质量
             patience=0.8,  # 增加等待概率改善的时间，以获得更准确的结果
-            length_penalty=1.0,  # 保持标准长度，避免对输出进行惩罚或奖励
+            length_penalty=2.0,  # 保持标准长度，避免对输出进行惩罚或奖励
             repetition_penalty=1.1,  # 轻微增加重复惩罚，避免内容的重复
             no_repeat_ngram_size=4,  # 防止近距离的4个词的重复，提高内容的多样性
             temperature=[0.0],  # 保持输出的一致性和确定性
@@ -54,7 +54,7 @@ def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", d
             condition_on_previous_text=True,  # 使用上下文信息提高连贯性
             word_timestamps=True,  # 每个单词生成时间戳，提高字幕的时间准确性
             vad_filter=True,  # 启用VAD来检测有效语音活动
-            vad_parameters={"min_silence_duration_ms": 250},  # 150毫秒的最小静音时长，平衡对话自然停顿和快速响应
+            vad_parameters={"min_silence_duration_ms": 10},  # 150毫秒的最小静音时长，平衡对话自然停顿和快速响应
             without_timestamps=False,  # 生成带时间戳的输出，对SRT文件必须
             suppress_blank=True,  # 抑制无语音的输出，减少字幕中的空白
             initial_prompt=initial_prompt_text
