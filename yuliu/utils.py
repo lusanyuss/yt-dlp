@@ -133,32 +133,16 @@ def merge_single_audio_video(video_file, audio_file, result_file):
         return result_file
 
     print(f"合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
-    # command = [
-    #     'ffmpeg',
-    #     '-loglevel', 'quiet',
-    #     '-i', video_file,
-    #     '-i', audio_file,
-    #     '-c:v', 'copy',  # 视频流不重新编码，直接复制
-    #     '-c:a', 'aac',  # 将音频流编码为AAC格式
-    #     '-b:a', '192k',  # 设置音频比特率
-    #     '-strict', 'experimental',  # 使用实验性AAC编码器
-    #     '-shortest',  # 保持视频和音频长度一致
-    #     '-y',  # 覆盖输出文件
-    #     result_file
-    # ]
-
     command = [
         'ffmpeg',
         '-loglevel', 'quiet',
         '-i', video_file,
         '-i', audio_file,
-        '-c:v', 'hevc_nvenc',
-        '-preset', 'p5',
-        '-b:v', '2M',  # 使用固定比特率
-        '-g', '125',  # 设置固定 GOP 结构
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-shortest',  # 确保输出文件长度与最短的输入文件一致
+        '-c:v', 'copy',  # 视频流不重新编码，直接复制
+        '-c:a', 'aac',  # 将音频流编码为AAC格式
+        '-b:a', '128k',  # 设置音频比特率
+        '-strict', 'experimental',  # 使用实验性AAC编码器
+        '-shortest',  # 保持视频和音频长度一致
         '-y',  # 覆盖输出文件
         result_file
     ]
@@ -212,13 +196,6 @@ def extract_audio_and_video(video_path):
     audio_output, video_output = f"{base}_audio.aac", f"{base}_video.mp4"
 
     if not os.path.exists(audio_output) or not os.path.exists(video_output):
-        # command = [
-        #     'ffmpeg', '-i', video_path,
-        #     '-map', '0:a', '-acodec', 'libmp3lame', audio_output,
-        #     '-map', '0:v', '-c', 'copy', video_output,
-        #     '-y', '-loglevel', 'quiet'
-        # ]
-
         command = [
             'ffmpeg',
             '-i', video_path,
@@ -227,7 +204,6 @@ def extract_audio_and_video(video_path):
             '-y',
             '-loglevel', 'info'
         ]
-
         try:
             result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
             print(f'命令执行结果: {result.returncode}')
@@ -589,106 +565,6 @@ def minutes_to_milliseconds(minutes):
     return minutes * 60 * 1000
 
 
-# def preencode_video_with_fixed_gop(input_video):
-#     # 获取 input_video 的目录和文件名
-#     input_dir = os.path.dirname(input_video)
-#     input_name = os.path.basename(input_video)
-#
-#     # 创建临时文件名
-#     temp_video = os.path.join(input_dir, 'temp_' + input_name)
-#
-#     # 获取系统中的逻辑处理器数量
-#     num_threads = multiprocessing.cpu_count()
-#     # 记录开始时间
-#     start_time = time.time()
-#     # 预处理视频并输出到临时文件
-#     command = [
-#         'ffmpeg',
-#         '-i', input_video,  # 输入合并后的视频文件
-#         '-vf', 'scale=1280:720,fps=25,format=yuv420p',  # 统一分辨率、帧率和像素格式
-#         '-c:v', 'h264_nvenc',  # 使用 H.264 编码器
-#         '-b:v', '2M',  # 视频比特率
-#         '-maxrate', '2500k',  # 最大视频比特率
-#         '-bufsize', '5000k',  # 视频缓冲区大小
-#         '-preset', 'p5',  # 编码速度预设
-#         '-c:a', 'aac',  # 使用 AAC 音频编码
-#         '-b:a', '128k',  # 音频比特率
-#         '-strict', 'experimental',  # 处理可能不完全支持的编解码器
-#         temp_video,  # 输出文件路径
-#         '-loglevel', 'info'
-#     ]
-#
-#     CommandExecutor.run_command(command)
-#
-#     # 替换原始视频文件
-#     os.remove(input_video)  # 删除原始视频文件
-#     os.rename(temp_video, input_video)  # 重命名临时文件为原始文件名
-#
-#     # 记录结束时间并打印编码耗时
-#     end_time = time.time()
-#     print(f"Preencoding completed in {end_time - start_time:.2f} seconds")
-
-
-def merge_videos_recode(file_list, video):
-    if os.path.exists(video):
-        print(f"{video} 已存在，直接返回")
-        return video
-
-    if len(file_list) == 1:
-        print(f"只有一个文件，无需合并，复制 {file_list[0]} 为 {video}")
-        os.replace(file_list[0], video)
-        return video
-
-    try:
-        with open('filelist.txt', 'w', encoding='utf-8') as f:
-            for file in file_list:
-                absolute_path = os.path.abspath(file)
-                f.write(f"file '{absolute_path}'\n")
-        # 使用过滤器进行视频的一致化处理和合并
-        # command = [
-        #     'ffmpeg',
-        #     '-f', 'concat',
-        #     '-safe', '0',
-        #     '-i', 'filelist.txt',  # 输入包含所有视频文件的列表
-        #     '-vf', 'scale=1280:720,fps=25',  # 统一分辨率和帧率
-        #     '-c:v', 'h264_nvenc',  # 使用 NVIDIA GPU H.265 编码
-        #     '-preset', 'p5',  # 编码预设
-        #     '-b:v', '2M',  # 视频比特率
-        #     '-c:a', 'aac',  # 使用 AAC 音频编码
-        #     '-b:a', '128k',  # 音频比特率
-        #     video,  # 输出文件路径
-        #     '-loglevel', 'info'
-        # ]
-
-        command = [
-            'ffmpeg',
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', 'filelist.txt',  # 输入包含所有视频文件的列表
-            '-vf', 'scale=1280:720,fps=25,format=yuv420p',  # 统一分辨率、帧率和像素格式
-            '-c:v', 'h264_nvenc',  # 使用 NVIDIA GPU H.264 编码
-            '-preset', 'p5',  # 编码预设
-            '-b:v', '2M',  # 视频比特率
-            '-maxrate', '2500k',  # 最大视频比特率
-            '-bufsize', '5000k',  # 视频缓冲区大小
-            '-c:a', 'aac',  # 使用 AAC 音频编码
-            '-b:a', '128k',  # 音频比特率
-            video,  # 输出文件路径
-            '-loglevel', 'info'
-        ]
-
-        print(f"执行命令: {' '.join(command)}")
-        CommandExecutor.run_command(command)
-    except Exception as e:
-        if os.path.exists(video):
-            os.remove(video)
-    finally:
-        if os.path.exists('filelist.txt'):
-            os.remove('filelist.txt')
-
-    return video
-
-
 def merge_videos(file_list, video):
     if os.path.exists(video):
         print(f"{video} 已存在，直接返回")
@@ -813,65 +689,11 @@ import time
 # 示例调用
 
 
-def extract_first_5_minutes(original_video, release_video_dir):
-    """截取前5分钟的视频并移动到指定目录"""
-    base_name, ext = os.path.splitext(os.path.basename(original_video))
-    output_video = f"{base_name}_5min{ext}"
-    output_path = os.path.join(release_video_dir, output_video)
-    # 确保输出目录存在
-    os.makedirs(release_video_dir, exist_ok=True)
-
-    # 如果文件已经存在，不再重新生成
-    if os.path.exists(output_path):
-        print(f"\n文件已存在: {output_path},不需要重新生成测试视频\n")
-        return output_path
-
-    command = [
-        'ffmpeg',
-        '-i', original_video,
-        '-t', '00:05:00',
-        '-c', 'copy',
-        '-y',  # 添加覆盖参数
-        output_path
-    ]
-    command += ['-loglevel', 'quiet']
-    subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-
-    if os.path.exists(output_path):
-        print(f"成功生成视频: {output_path}")
-        return output_path
-    else:
-        raise FileNotFoundError(f"未能生成视频: {output_path}")
-
-
-from opencc import OpenCC
-
-
-def convert_simplified_to_traditional(text):
-    try:
-        cc = OpenCC('s2t')
-        return cc.convert(text)
-    except Exception as e:
-        print_red(f"错误: {e}")
-        return text
-
-
-def add_shuiyin_suffix(video_path):
-    if not has_shuiyin_suffix(video_path):
-        base, ext = os.path.splitext(video_path)
-        return f"{base}_shuiyin{ext}"
-    return video_path
-
-
 def add_final_suffix(video_path):
     if not has_final_suffix(video_path):
         base, ext = os.path.splitext(video_path)
         return f"{base}_final{ext}"
     return video_path
-
-
-def has_shuiyin_suffix(video_path):
-    return "_shuiyin" in os.path.basename(video_path)
 
 
 def has_final_suffix(video_path):
@@ -882,12 +704,6 @@ def get_relative_path(path, start=os.curdir):
     if os.path.isabs(path):
         return os.path.relpath(path, start).replace("\\", "/")
     return path.replace("\\", "/")
-
-
-def replace_comma_with_newline(input_string):
-    if ',' in input_string:
-        return input_string.replace(',', '\n')
-    return input_string
 
 
 def get_path_without_suffix(path):
@@ -904,10 +720,6 @@ def get_path_without_suffix(path):
     else:
         # 如果文件名不包含下划线，直接返回原路径
         return path
-
-
-def process_srt(input_file_path: str) -> str:
-    return input_file_path
 
 
 def extract_audio_only(video_path):

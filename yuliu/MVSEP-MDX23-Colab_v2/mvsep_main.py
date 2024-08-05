@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import subprocess
 import time
 from pathlib import Path
 
@@ -115,30 +116,52 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="一个演示命令行参数的示例程序。")
     parser.add_argument('--input', type=str, default='input', help='输入文件夹')
     parser.add_argument('--output', type=str, default='output', help='输出文件夹')
+    parser.add_argument('--is_test', action='store_true', help='是否为测试模式')
     args = parser.parse_args()
     print(f"    输入文件夹: {args.input}")
     print(f"    输出文件夹: {args.output}")
-    # 使用示例
-    separate_audio(
-        input=args.input,
-        output=args.output,
+    # 检查 is_test 参数
+    if args.is_test:
+        print("运行在测试模式下")
+        # 获取输入文件夹中的所有 .aac 文件
+        file_paths = sorted(glob.glob(args.input + "/*.aac"))
+        # 创建输出文件夹
+        Path(args.output).mkdir(parents=True, exist_ok=True)
+        # 遍历所有 .aac 文件并转换为 .wav 文件
+        for file_path in file_paths:
+            input_file = Path(file_path)
+            # 检查输入文件是否存在
+            if not input_file.exists():
+                print(f"Error: Input file {input_file} does not exist.")
+                continue
+            output_file = Path(args.output) / (input_file.stem + '_vocals.wav')
+            # 使用 ffmpeg 进行文件转换
+            subprocess.run(['ffmpeg', '-i', str(input_file), str(output_file)], check=True)
+            if args.is_test:
+                print(f"Converted {input_file} to {output_file}")
+        print("所有文件转换完成。")
+    else:
+        print("运行在正常模式下")
+        separate_audio(
+            input=args.input,
+            output=args.output,
 
-        output_format='PCM_16',
-        Separation_mode='Vocals/Instrumental',
-        input_gain=0,
-        restore_gain_after_separation=False,
-        filter_vocals_below_50hz=False,
-        BigShifts=3,
-        BSRoformer_model='ep_317_1297',
-        weight_BSRoformer=10,
-        weight_InstVoc=4,
-        use_VitLarge=True,
-        weight_VitLarge=1,
-        use_InstHQ4=False,
-        weight_InstHQ4=2,
-        overlap_InstHQ4=0.1,
-        use_VOCFT=False,
-        weight_VOCFT=2,
-        overlap_VOCFT=0.1,
-        overlap_demucs=0.6
-    )
+            output_format='PCM_16',
+            Separation_mode='Vocals/Instrumental',
+            input_gain=0,
+            restore_gain_after_separation=False,
+            filter_vocals_below_50hz=False,
+            BigShifts=3,
+            BSRoformer_model='ep_317_1297',
+            weight_BSRoformer=10,
+            weight_InstVoc=4,
+            use_VitLarge=True,
+            weight_VitLarge=1,
+            use_InstHQ4=False,
+            weight_InstHQ4=2,
+            overlap_InstHQ4=0.1,
+            use_VOCFT=False,
+            weight_VOCFT=2,
+            overlap_VOCFT=0.1,
+            overlap_demucs=0.6
+        )

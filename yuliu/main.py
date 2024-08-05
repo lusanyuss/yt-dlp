@@ -65,15 +65,15 @@ if __name__ == "__main__":
         # '闪婚老公竟想凭子上位',
         # '隐婚后,我的下属老公掉马甲了',
         # '青春不死常胜不衰'
-
         # '隐龙之保安老爸不好惹',
+
         # '为妃作歹',
         # '双生荣耀',
         # '无敌六皇子',
         # '真假千金姐姐死后成为霸总白月光',
         # '荒岛探宝',
-        # '下山后我被四个绝色师姐包围了',
-        '真假千金姐姐死后成为霸总白月光'
+        # '下山后我被四个绝色师姐包围了1',
+        '下山后我被四个绝色师姐包围了2',
 
     ]
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         common.check_and_run(sub_directory=sub_directory,
                              video_name=video_name,
                              cover_title=video_name,
-                             split_time_min=60,
+                             split_time_min=30,
                              crop_bottom=150,
                              crop_top=0,
 

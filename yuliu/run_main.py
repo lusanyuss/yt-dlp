@@ -51,7 +51,7 @@ def clear_cache():
         delete_directory_contents(directory)
 
 
-def process_audio_with_mvsep_mdx23_list(audio_files):
+def process_audio_with_mvsep_mdx23_list(audio_files, is_test=False):
     start_time = time.time()
     print(f"\n========================================处理音频文件(去除背景音乐)")
     # 输出文件列表定义
@@ -70,11 +70,15 @@ def process_audio_with_mvsep_mdx23_list(audio_files):
 
     if not all(os.path.exists(file) for file in output_file_vocals_list):
         print(f"并不所有文件都存在。清空目录{mvsep_output_dir}")
-        # clear_directory_contents(mvsep_output_dir)
+
         try:
             start_time_vocal = time.time()
             mvsep_main = os.path.join(mvsep_base_dir, 'mvsep_main.py')
-            command = ['python', mvsep_main, '--input', mvsep_input_dir, '--output', mvsep_output_dir]
+            if is_test:
+                # clear_directory_contents(mvsep_output_dir)
+                command = ['python', mvsep_main, '--input', mvsep_input_dir, '--output', mvsep_output_dir, '--is_test']
+            else:
+                command = ['python', mvsep_main, '--input', mvsep_input_dir, '--output', mvsep_output_dir]
             print(' '.join(command))
             CommandExecutor.run_command(command)
             total_time_seconds = (time.time() - start_time_vocal)
@@ -135,7 +139,7 @@ def check_files_exist(file_list):
     return file_list
 
 
-def process_video_files_list(video_origin_clips):
+def process_video_files_list(video_origin_clips, is_test=False):
     start_time = time.time()
     video_dest_list = []
     audio_origin_list = []
@@ -156,7 +160,7 @@ def process_video_files_list(video_origin_clips):
         # 多线提取视频,音频
         audio_origin_list, video_origin_list = separate_audio_and_video_list(video_origin_clips)
         # 单线程去除视频背景音乐
-        audio_vocals_list = process_audio_with_mvsep_mdx23_list(audio_origin_list)
+        audio_vocals_list = process_audio_with_mvsep_mdx23_list(audio_origin_list, is_test)
 
         video_dest_list = merge_audio_and_video_list(video_origin_list, audio_vocals_list, video_dest_list)
 
@@ -416,16 +420,12 @@ def run_main(url=None,
                     print(f"2.对视频人声分离 <<{sub_directory}>>")
                     (video_dest_list, audio_origin_list,
                      video_origin_list, audio_vocals_list,
-                     video_origin_clips, process_video_time) = process_video_files_list(video_clips)
+                     video_origin_clips, process_video_time) = process_video_files_list(video_clips, is_test)
                     video_nobgm = merge_videos(video_dest_list, video_nobgm)
 
                 zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh')
                 # 修正翻译
                 zh_srt = correct_subtitles(video_nobgm, False)
-                # if not is_test:
-
-                # base, ext = os.path.splitext(video_nobgm)
-                # audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
 
                 base, ext = os.path.splitext(video_nobgm)
                 audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
