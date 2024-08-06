@@ -80,19 +80,19 @@ def generate_offsets(next_line, start_seconds, end_seconds, step=0.5):
     num = len(next_line)
     if end_seconds - start_seconds > 5:
         if 10 <= num < 20:
-            step = (100 / 6) / 100
-        elif 20 <= num < 30:
-            step = (100 / 8) / 100
-        elif 30 <= num < 40:
             step = (100 / 10) / 100
-        elif 40 <= num < 50:
+        elif 20 <= num < 30:
             step = (100 / 12) / 100
-        elif num >= 50:
+        elif 30 <= num < 40:
+            step = (100 / 14) / 100
+        elif 40 <= num < 50:
             step = (100 / 16) / 100
+        elif num >= 50:
+            step = (100 / 20) / 100
 
     offsets = []
     current_time = end_seconds
-    while current_time > start_seconds + (end_seconds - start_seconds) * 0.24:
+    while current_time > start_seconds + (end_seconds - start_seconds) * 0.1:
         if current_time == end_seconds:
             current_time -= (end_seconds - start_seconds) * step
             continue
