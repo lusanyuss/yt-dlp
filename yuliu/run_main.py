@@ -482,7 +482,7 @@ def run_main(url=None,
 
             generate_video_metadata(release_video_dir, video_name)
             print(f"\nget_fanyi总耗时情况:{(time.time() - start_time_get_fanyi)}")
-            voice_utils.play_voice_message(f'成功合成 {sub_directory} 可发布视频')
+
         except Exception as e:
             print_red(f'出错: {e}')
 

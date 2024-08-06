@@ -4,6 +4,7 @@ import time
 
 import ffmpeg
 
+from yuliu import voice_utils
 from yuliu.utils import get_mp4_duration, add_final_suffix, has_final_suffix, get_relative_path, print_yellow, print_red, delete_file
 
 
@@ -78,7 +79,7 @@ def add_final_shuiyin_to_video(video_nobgm, srt_path=None, codec='h264_nvenc', c
         print_red(f"添加字幕和水印失败,发生错误: {e}\n")
         delete_file(video_final)
         return None, None
-
+    voice_utils.play_voice_message(f'成功合成 {os.path.basename(os.path.dirname(video_final))} 可发布视频')
     return video_nobgm, video_final
 
 
