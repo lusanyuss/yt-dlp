@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 from paddleocr import PaddleOCR
 
+from yuliu.VideoFrameProcessor import VideoFrameProcessor
 from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_yellow, print_red
 
 
@@ -257,6 +258,50 @@ def get_cover_images(frame_images, output_dir):
             range(0, frame_images_length, batch_size)]
 
 
+def capture_random_frames(self):
+    # 打开视频文件
+    cap = cv2.VideoCapture(self.video_path)
+
+    # 检查视频是否成功打开
+    if not cap.isOpened():
+        print(f"无法打开视频文件: {self.video_path}")
+        return []
+
+    # 获取视频的总帧数
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    # 检查视频是否包含帧
+    if total_frames == 0:
+        print(f"视频文件中没有帧: {self.video_path}")
+        return []
+
+    # 确保输出文件夹存在
+    if not os.path.exists(self.output_folder):
+        os.makedirs(self.output_folder)
+
+    frame_paths = []
+    for i in range(self.num_frames):
+        # 随机选择一个帧号
+        frame_id = random.randint(0, total_frames - 1)
+
+        # 设置视频帧位置
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
+
+        # 读取帧
+        ret, frame = cap.read()
+        if ret:
+            frame_path = os.path.join(self.output_folder, f'frame_{i + 1}.jpg')
+            cv2.imwrite(frame_path, frame)
+            frame_paths.append(frame_path)
+        else:
+            print(f"无法读取帧 {frame_id} from {self.video_path}")
+
+    # 释放视频捕获对象
+    cap.release()
+
+    return frame_paths
+
+
 def generate_frame(index, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock):
     output_path = os.path.join(output_dir, f"frame_{index + 1}.jpg")
     if os.path.exists(output_path):
@@ -358,7 +403,10 @@ def extract_covers_and_frames(video, crop_dict, num_frames=3 * 1):
     os.makedirs(images_dir, exist_ok=True)
 
     # 截图列表
-    frame_images = get_frame_images(num_frames, video, duration, images_dir, crop_dict, model_path, timeout_duration)
+    processor = VideoFrameProcessor(video)
+    coordinates = processor.process_and_get_coordinates()
+    frame_images = processor.capture_and_process_frames(num_frames, coordinates)
+    # frame_images = get_frame_images(num_frames, video, duration, images_dir, crop_dict, model_path, timeout_duration)
     # 封面图列表
     cover_images = []
     if len(frame_images) == num_frames:
@@ -519,8 +567,8 @@ def write_big_title(title, subtitle, title_color, subtitle_color, font_path, sub
     subtitle_font = ImageFont.truetype(subtitle_font, subtitle_font_size)
 
     beilv = 0.05
-    margin_left = int(cover_image.width * (beilv-0.03))
-    margin_right = int(cover_image.width * (beilv-0.03))
+    margin_left = int(cover_image.width * (beilv - 0.03))
+    margin_right = int(cover_image.width * (beilv - 0.03))
     margin_bottom = int(cover_image.height * beilv)
     text_area_width = cover_image.width - margin_left - margin_right
 

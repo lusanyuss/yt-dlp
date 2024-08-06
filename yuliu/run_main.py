@@ -12,6 +12,7 @@ from utils import get_mp4_duration, \
     print_red, print_yellow, delete_file
 from yuliu import voice_utils, transcribe_srt
 from yuliu.DiskCacheUtil import DiskCacheUtil
+from yuliu.VideoFrameProcessor import VideoFrameProcessor
 from yuliu.check_final import correct_subtitles
 from yuliu.check_utils import is_banned
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
@@ -298,8 +299,6 @@ def run_main(url=None,
              video_name=None,
              cover_title=None,
              split_time_min=15,
-             crop_bottom=0,
-             crop_top=0,
              is_only_download=False,
              is_test=False,
 
@@ -339,7 +338,18 @@ def run_main(url=None,
     original_video = os.path.join(src_path, f"{video_name}.mp4")
     video_nobgm = os.path.join(src_path, f"{video_name}_nobgm.mp4")
     video_final = os.path.join(src_path, f"{video_name}_nobgm_final.mp4")
-    video_duration = get_mp4_duration(video_nobgm if os.path.exists(video_nobgm) else original_video)
+    video_real = video_nobgm if os.path.exists(video_nobgm) else original_video
+    video_duration = get_mp4_duration(video_real)
+    # 示例调用方法：
+    processor = VideoFrameProcessor(video_real)
+    coordinates = processor.process_and_get_coordinates()
+    print(coordinates)
+    crop_dict = {
+        'crop_left': coordinates['left'],
+        'crop_right': coordinates['right'],
+        'crop_top': coordinates['top'],
+        'crop_bottom': coordinates['bottom']
+    }
 
     cache_util = DiskCacheUtil()
 
@@ -369,14 +379,9 @@ def run_main(url=None,
             start_time_get_cover = time.time()
             title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
             subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
-            crop_dict = {
-                'crop_left': 426 / 720 * crop_bottom,
-                'crop_right': 426 / 720 * crop_top,
-                'crop_top': crop_top,
-                'crop_bottom': crop_bottom
-            }
             if not check_files(release_video_dir, num_of_covers):
-                extract_thumbnail_main(video_nobgm if os.path.exists(video_nobgm) else original_video,
+
+                extract_thumbnail_main(video_real,
                                        cover_title,
                                        title_font,
                                        subtitle_font,
@@ -425,7 +430,7 @@ def run_main(url=None,
 
                 zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh')
                 # 修正翻译
-                zh_srt = correct_subtitles(video_nobgm, False)
+                zh_srt = correct_subtitles(video_nobgm, coordinates, False)
 
                 base, ext = os.path.splitext(video_nobgm)
                 audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
@@ -460,7 +465,7 @@ def run_main(url=None,
             start_time_get_fanyi = time.time()
             zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh')
             # 修正翻译
-            zh_srt = correct_subtitles(video_nobgm, False)
+            zh_srt = correct_subtitles(video_nobgm, coordinates, False)
             if not is_test:
                 en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 6)
                 zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256 * 8 / 4)

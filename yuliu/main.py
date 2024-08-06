@@ -2,6 +2,8 @@ import warnings
 
 from cryptography.utils import CryptographyDeprecationWarning
 
+from yuliu.VideoFrameProcessor import VideoFrameProcessor
+
 warnings.simplefilter("ignore", CryptographyDeprecationWarning)
 import yuliu.utils
 from yuliu import common, voice_utils
@@ -69,11 +71,16 @@ if __name__ == "__main__":
 
         # '为妃作歹',
         # '双生荣耀',
-        # '无敌六皇子',
-        # '真假千金姐姐死后成为霸总白月光',
+        '无敌六皇子',
         # '荒岛探宝',
-        # '下山后我被四个绝色师姐包围了1',
-        '下山后我被四个绝色师姐包围了2',
+        # '真假千金姐姐死后成为霸总白月光',
+        # '我为人间第一仙',
+        # '裁员重组计划',
+        # '请回答1990',
+        # '重生之扭转乾坤',
+        # '重返流金岁月回档2011当歌神',
+        # '鉴宝神婿',
+        # '重生之我靠古玩再发家',
 
     ]
 
@@ -84,24 +91,22 @@ if __name__ == "__main__":
         index = mapping[video_name]
         sub_directory = f"{index}_{video_name}"
 
-        if video_name == '隐龙之保安老爸不好惹':
+        if video_name == '重返流金岁月回档2011当歌神':
+            cover_title_split_postion = 6
+        if video_name == '真假千金姐姐死后成为霸总白月光':
+            cover_title_split_postion = 6
+        if video_name == '重生之我靠古玩再发家':
             cover_title_split_postion = 3
-        # if video_name == '重返地球我的圣人身份泄露了':
-        #     cover_title_split_postion = 4
-        # if video_name == '抓娃娃之女儿也要穷养':
-        #     cover_title_split_postion = 3
 
         common.check_and_run(sub_directory=sub_directory,
                              video_name=video_name,
                              cover_title=video_name,
                              split_time_min=30,
-                             crop_bottom=150,
-                             crop_top=0,
 
-                             is_test=True,
-                             # is_get_cover=True,
+                             # is_test=True,
+                             is_get_cover=True,
                              is_get_video=True,
-                             # is_get_fanyi=True,
+                             is_get_fanyi=True,
 
                              num_of_covers=8,
                              cover_title_split_postion=cover_title_split_postion

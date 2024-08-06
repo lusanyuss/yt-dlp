@@ -30,12 +30,17 @@ def convert_to_seconds(time_str):
 
 
 # 获取 OCR 结果
-def get_ocr_text(frame, bfb=10):
+def get_ocr_text(frame, coordinates, bfb=12):
     height, width = frame.shape[:2]
     x_start = 0
     x_end = width
-    y_start = int((71 - bfb) % 100 * height / 100)
-    y_end = int((71 + bfb) % 100 * height / 100)
+
+    if coordinates['center'] != 0 and coordinates['center_height'] != 0:
+        y_start = int(coordinates['center'] - 2 * coordinates['center_height'] - 8)
+        y_end = int(coordinates['center'] + 2 * coordinates['center_height'] + 8)
+    else:
+        y_start = int((71 - bfb) % 100 * height / 100)
+        y_end = int((71 + bfb) % 100 * height / 100)
     # 裁剪指定区域
     roi = frame[y_start:y_end, x_start:x_end]
 
@@ -154,7 +159,7 @@ def compare_chinese_strings(t1, t2):
 
 
 # 修正字幕内容
-def correct_subtitles(video_file_path, is_test=True):
+def correct_subtitles(video_file_path, coordinates, is_test=True):
     start_time_correct_subtitles = time.time()
     file_name = os.path.splitext(os.path.basename(video_file_path))[0]
     video_name = file_name.split('_')[0]
@@ -164,28 +169,6 @@ def correct_subtitles(video_file_path, is_test=True):
     if os.path.exists(output_srt_file_path):
         print_yellow(f"纠正文件已经存在 : {output_srt_file_path}")
         return output_srt_file_path
-
-    # tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
-    # model = BertForMaskedLM.from_pretrained('bert-base-chinese')
-    # model.eval()  # 设置为评估模式
-    #
-    # def compare_texts(text1, text2):
-    #     # 函数：计算文本的平均对数似然度
-    #     # 加载分词器和模型
-    #     def score_text(text):
-    #         tokenize_input = tokenizer([text], return_tensors="pt", padding=True, truncation=True, max_length=512)
-    #         input_ids = tokenize_input["input_ids"]
-    #         with torch.no_grad():
-    #             outputs = model(input_ids, labels=input_ids)
-    #         # 返回标量值
-    #         return outputs.loss.item()
-    #
-    #     # 为两个文本计算得分
-    #     score1 = score_text(text1)
-    #     score2 = score_text(text2)
-    #
-    #     # 比较文本的得分，选择得分较低（更自然）的文本
-    #     return text1 if score1 < score2 else text2
 
     srt_file_path = os.path.join(output_image_path, f'{video_name}_zh.srt')
     srt_content = read_srt_file(srt_file_path)
@@ -226,7 +209,7 @@ def correct_subtitles(video_file_path, is_test=True):
                 cap.set(cv2.CAP_PROP_POS_MSEC, offset * 1000)
                 ret, frame = cap.read()
                 if ret:
-                    text, roi = get_ocr_text(frame)
+                    text, roi = get_ocr_text(frame, coordinates)
                     if text and text != last_text:  # 只拼接不相等的文本
                         detected_texts.append(text)  # 从右向左拼接内容
                         last_text = text
@@ -276,10 +259,3 @@ def correct_subtitles(video_file_path, is_test=True):
 
     print(f"核对字幕耗时:{time.time() - start_time_correct_subtitles}")
     return output_srt_file_path
-
-
-if __name__ == "__main__":
-    # 文件路径
-
-    video_file_path = 'release_video/aa测试目录big/aa测试目录big.mp4'
-    corrected_srt_content = correct_subtitles(video_file_path, False)

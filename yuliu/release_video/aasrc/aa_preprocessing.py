@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 import time
-
+import re
 from yuliu.utils import concatenate_folder_videos
 
 
@@ -88,15 +88,30 @@ def get_max_prefix_number_and_names():
     return max_number, name_list
 
 
+
+
+
+
 if __name__ == "__main__":
+
+    # 读取文件内容
+    with open('../../banned_list.sh', 'r', encoding='utf-8') as file:
+        data = file.read()
+    # 使用正则表达式提取单引号中的内容
+    pattern = re.compile(r"'(.*?)'")
+    result = pattern.findall(data)
+    # 打印提取结果
+    for item in result:
+        print(item)
 
     base_dir = os.path.abspath(os.path.join(os.getcwd(), '..'))
     aasrc_folder = os.getcwd()
     max_number, name_list = get_max_prefix_number_and_names()
+    result.extend(name_list)
 
     for folder in get_all_directories(aasrc_folder):
         start_time = time.time()
-        if os.path.basename(folder) not in name_list:
+        if os.path.basename(folder) not in result:
             final_video = concatenate_folder_videos(folder)
             print(f"视频合并消耗的时间: {time.time() - start_time:.2f} 秒")
         else:
