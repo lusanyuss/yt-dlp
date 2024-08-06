@@ -11,6 +11,12 @@ from yuliu.utils import print_yellow
 ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=True, show_log=False)
 
 
+# ocr_engine = RapidOCR()
+
+
+# 进行 OCR 识别
+
+
 # 读取 SRT 文件
 def read_srt_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -46,14 +52,17 @@ def get_ocr_text(frame, coordinates, bfb=12):
 
     # 进行 OCR 识别
     result = ocr.ocr(roi, cls=True)
+    # result, elapse = ocr_engine(roi)
+    # print(result)
     # 提取识别结果的文字
     detected_text = ''
-    if result:
+    if result and result[0]:
         for line in result:
             if line and isinstance(line, list):
                 for word in line:
                     if word and isinstance(word, list) and len(word) > 1:
-                        detected_text += word[1][0]
+                        if word[1][1] and word[1][1] >= 0.8:
+                            detected_text += word[1][0]
     return detected_text, roi
 
 

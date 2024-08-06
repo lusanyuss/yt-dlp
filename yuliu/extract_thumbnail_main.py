@@ -388,7 +388,7 @@ def get_frame_images(num_frames, video_path, duration, output_dir, crop_dict, mo
     return frame_paths
 
 
-def extract_covers_and_frames(video, crop_dict, num_frames=3 * 1):
+def extract_covers_and_frames(video, processor, coordinates,  num_frames=3 * 1):
     # Get video duration
     video_dir = os.path.dirname(video)
     command = ['ffprobe', '-v', 'quiet', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', video]
@@ -403,8 +403,9 @@ def extract_covers_and_frames(video, crop_dict, num_frames=3 * 1):
     os.makedirs(images_dir, exist_ok=True)
 
     # 截图列表
-    processor = VideoFrameProcessor(video)
-    coordinates = processor.process_and_get_coordinates()
+    # processor = VideoFrameProcessor(video)
+    # coordinates = processor.process_and_get_coordinates()
+
     frame_images = processor.capture_and_process_frames(num_frames, coordinates)
     # frame_images = get_frame_images(num_frames, video, duration, images_dir, crop_dict, model_path, timeout_duration)
     # 封面图列表
@@ -679,7 +680,7 @@ def replace_subtitle(subtitle):
     return new_subtitle
 
 
-def extract_thumbnail_main(video, cover_title, title_font, subtitle_font, crop_dict, num_of_covers=1,
+def extract_thumbnail_main(video, processor, coordinates, cover_title, title_font, subtitle_font,  num_of_covers=1,
                            isTest=False, cover_title_split_postion=0):
     # 截取3张没有汉字的截图
     frame_image_list = []
@@ -687,7 +688,7 @@ def extract_thumbnail_main(video, cover_title, title_font, subtitle_font, crop_d
 
     print(f"开始制作封面图 <<{cover_title}>>")
 
-    cover_images_list, frame_images_list = extract_covers_and_frames(video, crop_dict, 3 * num_of_covers)
+    cover_images_list, frame_images_list = extract_covers_and_frames(video, processor, coordinates,  3 * num_of_covers)
     if len(cover_images_list) != num_of_covers:
         print_yellow("制作封面图超过设定时间，退出不获取了")
         return frame_image_list
@@ -813,7 +814,10 @@ if __name__ == "__main__":
         title_font = os.path.join('ziti', fooo[0], fooo[1])  # 标题
         subtitle_font = os.path.join('ziti', fooo[0], fooo[1])  # 副标题
         crop_dict = {}
-        extract_thumbnail_main(original_video, "摊牌了我的五个哥哥是大佬", title_font, subtitle_font, crop_dict, 1, True, 0)
+
+        processor = VideoFrameProcessor(original_video)
+        coordinates = processor.process_and_get_coordinates()
+        extract_thumbnail_main(original_video, processor, coordinates, "摊牌了我的五个哥哥是大佬", title_font, subtitle_font,  1, True, 0)
         # extract_thumbnail_main(original_video, release_video_dir, "目录测试目", title_font, subtitle_font, 1,  True,0)
         # extract_thumbnail_main(original_video, release_video_dir, "试目录测试目", title_font, subtitle_font, 1,  True,0)
         # extract_thumbnail_main(original_video, release_video_dir, "测试目录测试目", title_font, subtitle_font, 1,  True,0)

@@ -344,12 +344,13 @@ def run_main(url=None,
     processor = VideoFrameProcessor(video_real)
     coordinates = processor.process_and_get_coordinates()
     print(coordinates)
-    crop_dict = {
-        'crop_left': coordinates['left'],
-        'crop_right': coordinates['right'],
-        'crop_top': coordinates['top'],
-        'crop_bottom': coordinates['bottom']
-    }
+
+    # crop_dict = {
+    #     'crop_left': coordinates['left'],
+    #     'crop_right': coordinates['right'],
+    #     'crop_top': coordinates['top'],
+    #     'crop_bottom': coordinates['bottom']
+    # }
 
     cache_util = DiskCacheUtil()
 
@@ -380,12 +381,12 @@ def run_main(url=None,
             title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
             subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
             if not check_files(release_video_dir, num_of_covers):
-
                 extract_thumbnail_main(video_real,
+                                       processor,
+                                       coordinates,
                                        cover_title,
                                        title_font,
                                        subtitle_font,
-                                       crop_dict,
                                        num_of_covers=num_of_covers,
                                        isTest=False,
                                        cover_title_split_postion=cover_title_split_postion
