@@ -2,7 +2,6 @@ import argparse
 import glob
 import os
 import subprocess
-import time
 from pathlib import Path
 
 
@@ -100,16 +99,16 @@ def separate_audio(input,
             {use_InstVoc_} \
             {use_BSRoformer_}')
         for input_file in os.listdir(input_dir):
-            if input_file.endswith('.mp3') or input_file.endswith('.m4a')or input_file.endswith('.aac'):
+            if input_file.endswith('.mp3') or input_file.endswith('.m4a') or input_file.endswith('.aac'):
                 base_filename = os.path.splitext(input_file)[0]
                 files_to_keep = [f"{base_filename}_vocals.wav"]
                 # 遍历 output_dir 并删除不需要的文件
                 for output_file in os.listdir(output_dir):
                     if output_file.startswith(base_filename) and output_file not in files_to_keep:
                         file_to_delete = os.path.join(output_dir, output_file)
-                        os.remove(file_to_delete)
-                        print(f"删除文件: {file_to_delete}")
-
+                        if os.path.exists(file_to_delete):
+                            os.remove(file_to_delete)
+                            print(f"删除文件: {file_to_delete}")
 
 
 if __name__ == '__main__':

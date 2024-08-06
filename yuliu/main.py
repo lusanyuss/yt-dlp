@@ -69,11 +69,10 @@ if __name__ == "__main__":
         # '青春不死常胜不衰'
         # '隐龙之保安老爸不好惹',
 
-        # '为妃作歹',
+        '为妃作歹',
         # '双生荣耀',
         # '无敌六皇子',
         # '荒岛探宝',
-        '真假千金姐姐死后成为霸总白月光',
         # '我为人间第一仙',
         # '裁员重组计划',
         # '请回答1990',
@@ -106,7 +105,7 @@ if __name__ == "__main__":
                              # is_test=True,
                              is_get_cover=True,
                              is_get_video=True,
-                             # is_get_fanyi=True,
+                             is_get_fanyi=True,
 
                              num_of_covers=8,
                              cover_title_split_postion=cover_title_split_postion

@@ -5,7 +5,7 @@ import time
 import cv2
 from paddleocr import PaddleOCR
 
-from yuliu.utils import print_yellow
+from yuliu.utils import print_yellow, delete_file
 
 # 初始化 PaddleOCR
 ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=True, show_log=False)
@@ -232,7 +232,7 @@ def correct_subtitles(video_file_path, coordinates, is_test=True):
                                     os.replace(roi_file, target_file_path)
                                     moved_count += 1
                                 else:
-                                    os.remove(roi_file)
+                                    delete_file(roi_file)
                         else:
                             raise FileNotFoundError(f"文件未能成功保存: {roi_file}")
 

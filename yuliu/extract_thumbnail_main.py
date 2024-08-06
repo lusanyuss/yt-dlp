@@ -10,7 +10,7 @@ import numpy as np
 from paddleocr import PaddleOCR
 
 from yuliu.VideoFrameProcessor import VideoFrameProcessor
-from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_yellow, print_red
+from yuliu.utils import resize_images_if_needed, convert_jpeg_to_png, print_yellow, print_red, delete_file
 
 
 def is_resolution_gte_1920x1080(image_path):
@@ -21,11 +21,7 @@ def is_resolution_gte_1920x1080(image_path):
 
 def delete_files_if_exist(files_list):
     for file_name in files_list:
-        if os.path.exists(file_name):
-            os.remove(file_name)
-            print(f"删除文件: {file_name}")
-        else:
-            print(f"{file_name} 不存在")
+        delete_file(file_name)
 
 
 def get_image_dimensions(image_path):
@@ -496,14 +492,7 @@ def get_unique_path(dst_path):
 
 def delete_files(file_paths):
     for file_path in file_paths:
-        try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                print(f"已删除文件: {file_path}")
-            else:
-                print(f"文件不存在: {file_path}")
-        except Exception as e:
-            print_red(f"删除 {file_path} 时出错: {e}")
+        delete_file(file_path)
 
 
 def move_images_to_release(cover_images, frame_images, release_video_dir):
@@ -649,7 +638,7 @@ def delete_matching_images(directory):
         if filename.endswith('.png') or filename.endswith('.jpg'):
             file_path = os.path.join(directory, filename)
             if os.path.isfile(file_path):
-                os.remove(file_path)
+                delete_file(file_path)
                 print(f"Deleted: {file_path}")
 
 

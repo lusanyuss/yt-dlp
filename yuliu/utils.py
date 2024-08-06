@@ -343,11 +343,7 @@ def concatenate_videos(video_list, merged_output):
         except subprocess.CalledProcessError as e:
             print(f"拼接过程中出错: {e}")
         finally:
-            if os.path.exists(input_txt_path):
-                os.remove(input_txt_path)
-                # for video in video_list:
-                #     if os.path.exists(video):
-                #         os.remove(video)
+            delete_file(input_txt_path)
 
         return merged_output
     else:
@@ -473,7 +469,7 @@ def convert_jpeg_to_png(input_imgs):
                     img.save(new_file_name, 'PNG')
                     with Image.open(new_file_name) as new_img:
                         width, height = new_img.size
-                    os.remove(input_img)
+                    delete_file(input_img)
                     new_image_paths.append(new_file_name)
         except Exception as e:
             print_red(f"错误: {e}")
@@ -591,9 +587,7 @@ def merge_videos(file_list, video):
             raise RuntimeError(f"合成视频失败: {result.stderr}")
 
     finally:
-        if os.path.exists('filelist.txt'):
-            os.remove('filelist.txt')
-
+        delete_file('filelist.txt')
     return video
 
 
@@ -645,9 +639,9 @@ def concat_videos(input_dir, output_file):
     )
 
     # 清理临时文件列表和临时目录
-    os.remove('filelist.txt')
+    delete_file('filelist.txt')
     for file in reencoded_files:
-        os.remove(file)
+        delete_file(file)
     os.rmdir(temp_dir)
 
     print(f"Concatenated video saved to {output_file}")
@@ -669,8 +663,7 @@ def concatenate_folder_videos(folder_path):
     # 按顺序获取文件列表
     file_list = [os.path.join(folder_path, f"{index}.mp4") for index in indices]
     # 如果输出文件已经存在,就先删除
-    if os.path.exists(output_file):
-        os.remove(output_file)
+    delete_file(output_file)
     # 合并视频
     # Example usage
     merged_video = concat_videos(folder_name, output_file)

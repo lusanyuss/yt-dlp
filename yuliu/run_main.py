@@ -439,7 +439,7 @@ def run_main(url=None,
 
                 if not is_test:
                     if os.path.exists(video_nobgm):
-                        os.remove(original_video)
+                        delete_file(original_video)
                     delete_directory_contents(out_times)
                     delete_files_by_list(audio_only_path, audio_origin_list, video_origin_list, audio_vocals_list, video_origin_clips, video_clips)
 

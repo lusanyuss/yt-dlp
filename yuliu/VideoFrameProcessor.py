@@ -6,6 +6,8 @@ import cv2
 from PIL import Image
 from rapidocr_onnxruntime import RapidOCR
 
+from yuliu.utils import delete_file
+
 
 class VideoFrameProcessor:
     def __init__(self, video_path, output_folder='frames', num_frames=8):
@@ -243,7 +245,7 @@ class VideoFrameProcessor:
 
                     print(f"保存干净图片: {frame_path}")
                     saved_frame_paths.append(frame_path)
-                os.remove(temp_frame_path)
+                delete_file(temp_frame_path)
 
         cap.release()
         return saved_frame_paths

@@ -5,7 +5,7 @@ import time
 from faster_whisper import WhisperModel  # 假设这是一个已安装的库
 from moviepy.config import change_settings
 
-from yuliu.utils import extract_audio_only
+from yuliu.utils import extract_audio_only, delete_file
 from yuliu.utils import print_yellow, get_path_without_suffix, print_red
 
 # 设置环境变量
@@ -22,8 +22,8 @@ def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", d
     srt_path = f"{base_name}_{language}.srt"
     temp_srt_path = f"{base_name}_{language}_temp.srt"
 
-    if os.path.exists(temp_srt_path):
-        os.remove(temp_srt_path)
+    delete_file(temp_srt_path)
+
     if os.path.exists(srt_path):
         print_yellow(f"字幕文件已存在: {srt_path}")
         return srt_path
@@ -79,13 +79,11 @@ def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", d
         os.replace(temp_srt_path, srt_path)
         print(f"字幕已保存到 {srt_path}")
     except Exception as e:
-        if os.path.exists(temp_srt_path):
-            os.remove(temp_srt_path)
+        delete_file(temp_srt_path)
         print_red(f"发生异常: {str(e)}")
         raise e
     finally:
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+        delete_file(audio_path)
     return srt_path
 
 

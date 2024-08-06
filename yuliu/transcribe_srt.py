@@ -7,7 +7,7 @@ import requests
 import urllib3.exceptions
 from requests.packages.urllib3.util.retry import Retry
 
-from yuliu.utils import print_yellow, print_red
+from yuliu.utils import print_yellow, print_red, delete_file
 
 requests.packages.urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -216,8 +216,7 @@ if __name__ == "__main__":
     source_file_path = 'release_video/aa测试目录/aa测试目录_zh.srt'
     target_file_path = 'release_video/aa测试目录/aa测试目录_en.srt'
 
-    if os.path.exists(target_file_path):
-        os.remove(target_file_path)
+    delete_file(target_file_path)
 
     target_language = 'en'
     new_srt_path = translate_srt_file(source_file_path, target_language, max_payload_size=256)

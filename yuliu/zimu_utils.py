@@ -2,7 +2,9 @@ import os
 import shutil
 import time
 
-from yuliu.utils import get_mp4_duration, add_final_suffix, has_final_suffix, get_relative_path, CommandExecutor, print_yellow, print_red
+import ffmpeg
+
+from yuliu.utils import get_mp4_duration, add_final_suffix, has_final_suffix, get_relative_path, print_yellow, print_red, delete_file
 
 
 def read_output(pipe, log_file):
@@ -12,7 +14,7 @@ def read_output(pipe, log_file):
     pipe.close()
 
 
-def add_final_shuiyin_to_video(video_nobgm, srt_path=None):
+def add_final_shuiyin_to_video(video_nobgm, srt_path=None, codec='h264_nvenc', crf=23, preset='medium'):
     if not os.path.exists(video_nobgm):
         raise Exception("无背景音乐视频不存在")
 
@@ -32,41 +34,107 @@ def add_final_shuiyin_to_video(video_nobgm, srt_path=None):
     video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
     # 计算分钟数
     minutes_needed = video_duration_s / 60 / 24
-    # 构建命令字符串，使用相对路径，并确保格式正确
-    # 设置黄色的PrimaryColour值为&H00FFFF00
+    # 设置黄色的PrimaryColour值为&H0000FFFF
     primary_colour = '&H0000FFFF'
     outline_colour = '&H00000000'
     margin_v = 25  # 调整字幕离底部的距离
 
-    if srt_path and os.path.exists(srt_path):
-        command = (
-            f'ffmpeg -loglevel info -hwaccel cuda -i "{video_nobgm}" -vf "subtitles=\'{get_relative_path(srt_path)}\':force_style='
-            f'\'FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}\', '
-            f'drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
-            f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-            f'-c:v h264_nvenc -preset p5 -b:v 2M -g 50 -c:a copy -y "{video_final}"'
-        )
-    else:
-        command = (
-            f'ffmpeg -hwaccel cuda -i "{video_nobgm}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
-            f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
-            f'-c:v h264_nvenc -preset p5 -b:v 2M -g 50 -c:a copy -y "{video_final}"'
-        )
+    # 构建过滤器字符串
+    subtitles_filter = f"subtitles='{get_relative_path(srt_path)}':force_style='FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}'"
+    drawtext_filter = f"drawtext=fontfile='{font_file}':text='{text}':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,{video_duration_s})'"
 
-    # 打印命令以便手动检查
-    print("运行命令,加字幕和水印: \n", command)
-    print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
+    if srt_path and os.path.exists(srt_path):
+        # 如果字幕文件存在，添加字幕和水印
+        filters = [subtitles_filter, drawtext_filter]
+    else:
+        # 如果字幕文件不存在，仅添加水印
+        filters = [drawtext_filter]
+
+    filter_str = ",".join(filters)
+
     try:
-        pattern = r"(frame=|Parsed_subtitles)"  # 只打印包含 "frame=" 或 "Parsed_subtitles" 的行
-        CommandExecutor.run_command(command, pattern)
-        print(f"\n\n添加水印和字幕成功{video_final}\n耗时: {time.time() - start_time:.2f} seconds")
+        # 使用 ffmpeg-python 进行重新编码并添加过滤器
+        (
+            ffmpeg
+            .input(video_nobgm)
+            .output(
+                video_final,
+                vcodec=codec,
+                vf=filter_str,
+                crf=crf,
+                preset=preset,
+                acodec='aac',
+                strict='experimental',
+                y=None  # 覆盖输出文件
+            )
+            .global_args(
+                '-hwaccel', 'cuda',  # 添加硬件加速参数
+                # '-stats',  # 添加统计信息
+                '-progress', 'pipe:1'  # 添加进度显示
+            ).run()
+        )
+        print(f"\n\n添加水印和字幕成功: {video_final}\n耗时: {time.time() - start_time:.2f} seconds")
     except Exception as e:
         print_red(f"添加字幕和水印失败,发生错误: {e}\n")
-        if os.path.exists(video_final):
-            os.remove(video_final)
+        delete_file(video_final)
         return None, None
 
     return video_nobgm, video_final
+
+
+# def add_final_shuiyin_to_video(video_nobgm, srt_path=None):
+#     if not os.path.exists(video_nobgm):
+#         raise Exception("无背景音乐视频不存在")
+#
+#     if not srt_path or not os.path.exists(srt_path):
+#         print("字幕不存在")
+#
+#     video_final = add_final_suffix(video_nobgm)
+#     if os.path.exists(video_final) and has_final_suffix(video_final):
+#         print_yellow(f"文件已存在且已添加字幕和水印: {video_nobgm}")
+#         return video_nobgm, video_final
+#
+#     start_time = time.time()
+#     font_file = 'ziti/fengmian/gwkt-SC-Black.ttf'  # 使用相对路径
+#     text = "爽剧风暴"
+#     # 获取视频时长
+#     video_duration_ms = get_mp4_duration(video_nobgm)
+#     video_duration_s = video_duration_ms / 1000  # 将毫秒转换为秒
+#     # 计算分钟数
+#     minutes_needed = video_duration_s / 60 / 24
+#     # 构建命令字符串，使用相对路径，并确保格式正确
+#     # 设置黄色的PrimaryColour值为&H00FFFF00
+#     primary_colour = '&H0000FFFF'
+#     outline_colour = '&H00000000'
+#     margin_v = 25  # 调整字幕离底部的距离
+#
+#     if srt_path and os.path.exists(srt_path):
+#         command = (
+#             f'ffmpeg -loglevel info -hwaccel cuda -i "{video_nobgm}" -vf "subtitles=\'{get_relative_path(srt_path)}\':force_style='
+#             f'\'FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}\', '
+#             f'drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
+#             f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
+#             f'-c:v h264_nvenc -c:a copy -y "{video_final}"'
+#         )
+#     else:
+#         command = (
+#             f'ffmpeg -hwaccel cuda -i "{video_nobgm}" -vf "drawtext=fontfile=\'{font_file}\':text=\'{text}\':'
+#             f'fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable=\'between(t,0,{video_duration_s})\'" '
+#             f'-c:v h264_nvenc -c:a copy -y "{video_final}"'
+#         )
+#     # 打印命令以便手动检查
+#     print("运行命令,加字幕和水印: \n", command)
+#     print(f"请耐心等待...大概需要 {minutes_needed:.2f} 分钟")
+#     try:
+#         pattern = r"(frame=|Parsed_subtitles)"  # 只打印包含 "frame=" 或 "Parsed_subtitles" 的行
+#         CommandExecutor.run_command(command, pattern)
+#         print(f"\n\n添加水印和字幕成功{video_final}\n耗时: {time.time() - start_time:.2f} seconds")
+#     except Exception as e:
+#         print_red(f"添加字幕和水印失败,发生错误: {e}\n")
+#         delete_file(video_final)
+#         return None, None
+#
+#     return video_nobgm, video_final
 
 
 if __name__ == '__main__':
@@ -77,8 +145,7 @@ if __name__ == '__main__':
 
     shutil.copy2('download_cache/aa测试目录/1.mp4', video_path)
 
-    if os.path.exists(result):
-        os.remove(result)
+    delete_file(result)
     # print("==============绝对===================")
     # video_path = os.path.abspath(video_path).replace("\\", "/")
     # srt_path = os.path.abspath(srt_path).replace("\\", "/")
