@@ -7,7 +7,7 @@ from pathlib import Path
 
 def separate_audio(input,
                    output,
-                   output_format='PCM_16',
+                   output_format='FLAC',
                    Separation_mode='Vocals/Instrumental',
                    input_gain=0,
                    restore_gain_after_separation=False,
@@ -144,8 +144,7 @@ if __name__ == '__main__':
         separate_audio(
             input=args.input,
             output=args.output,
-
-            output_format='PCM_16',
+            output_format='FLAC',
             Separation_mode='Vocals/Instrumental',
             input_gain=0,
             restore_gain_after_separation=False,
