@@ -241,16 +241,20 @@ def correct_subtitles(video_file_path, coordinates, is_test=True):
             print(f"Detected Text: {detected_text}")  # 调试信息
 
             # 修正内容
-            if next_line == detected_text:
-                corrected_content = next_line
-            elif compare_chinese_strings(next_line, detected_text):
+            if detected_text:
                 corrected_content = detected_text
-            elif next_line in detected_text:
-                corrected_content = next_line
-            elif detected_text in next_line:
-                corrected_content = next_line
             else:
                 corrected_content = next_line
+            # if next_line == detected_text:
+            #     corrected_content = next_line
+            # elif compare_chinese_strings(next_line, detected_text):
+            #     corrected_content = detected_text
+            # elif next_line in detected_text:
+            #     corrected_content = next_line
+            # elif detected_text in next_line:
+            #     corrected_content = next_line
+            # else:
+            #     corrected_content = next_line
 
             corrected_srt_content.append(f"{index}\n")
             corrected_srt_content.append(f"{time_info}\n")

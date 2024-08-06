@@ -3,6 +3,7 @@ import os
 import time
 
 from faster_whisper import WhisperModel  # 假设这是一个已安装的库
+from faster_whisper.vad import VadOptions
 from moviepy.config import change_settings
 
 from yuliu.utils import extract_audio_only, delete_file
@@ -37,6 +38,20 @@ def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", d
         start_time1 = time.time()
         model = WhisperModel(model_size_or_path=model_size, device=device, compute_type=compute_type)
         initial_prompt_text = "以下是普通话的句子。"
+        vad_options = VadOptions(
+            # threshold=0.5,
+            # min_speech_duration_ms=250,
+            # max_speech_duration_s=float("inf"),
+            # min_silence_duration_ms=2000,
+            # speech_pad_ms=400
+
+            # threshold=0.6,
+            # min_speech_duration_ms=250,
+            # max_speech_duration_s=1,
+            min_silence_duration_ms=10,
+            # speech_pad_ms=50
+
+        )
         segments, info = model.transcribe(
             audio=audio_path,
             language="zh",  # 假设对话是中文
@@ -54,7 +69,8 @@ def transcribe_audio_to_srt(video_nobgm, language='zh', model_size="large-v2", d
             condition_on_previous_text=True,  # 使用上下文信息提高连贯性
             word_timestamps=True,  # 每个单词生成时间戳，提高字幕的时间准确性
             vad_filter=True,  # 启用VAD来检测有效语音活动
-            vad_parameters={"min_silence_duration_ms": 10},  # 150毫秒的最小静音时长，平衡对话自然停顿和快速响应
+            vad_parameters=vad_options,
+            # 150毫秒的最小静音时长，平衡对话自然停顿和快速响应
             without_timestamps=False,  # 生成带时间戳的输出，对SRT文件必须
             suppress_blank=True,  # 抑制无语音的输出，减少字幕中的空白
             initial_prompt=initial_prompt_text

@@ -172,7 +172,7 @@ class VideoFrameProcessor:
         return results
 
     def capture_and_process_frames(self, n, crop_params):
-        error_count = 0
+        count = 0
         cap = cv2.VideoCapture(self.video_path)
 
         if not cap.isOpened():
@@ -192,15 +192,14 @@ class VideoFrameProcessor:
 
         saved_frame_paths = []
 
-        while error_count < n:
+        while count < n:
             frame_id = random.randint(0, total_frames - 1)
-            frame_path = os.path.join(images_folder, f'frame_{error_count + 1}.jpg')
-
+            frame_path = os.path.join(images_folder, f"{count + 1}.jpg")
             # 检查是否已经存在当前编号的图片
             if os.path.exists(frame_path):
                 print(f"缓存中已存在图片: {frame_path}")
                 saved_frame_paths.append(frame_path)
-                error_count += 1
+                count += 1
                 continue
 
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
@@ -236,7 +235,7 @@ class VideoFrameProcessor:
             if os.path.exists(temp_frame_path):
                 result, elapse = self.engine(temp_frame_path)
                 if not result:  # 判断result是否为空列表
-                    error_count += 1
+                    count += 1
 
                     # 使用PIL放大裁剪后的图像到原始尺寸
                     cropped_image = Image.open(temp_frame_path)

@@ -10,7 +10,7 @@ from utils import get_mp4_duration, \
     find_split_points, \
     print_separator, segment_video_times, merge_videos, minutes_to_milliseconds, separate_audio_and_video_list, merge_audio_and_video_list, CommandExecutor, \
     print_red, print_yellow, delete_file
-from yuliu import voice_utils, transcribe_srt
+from yuliu import transcribe_srt
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.VideoFrameProcessor import VideoFrameProcessor
 from yuliu.check_final import correct_subtitles
@@ -270,23 +270,34 @@ def get_user_confirmation():
         return False
 
 
-def rename_file(original_video, sub_directory):
-    # 获取文件目录和后缀
-    directory, filename = os.path.split(original_video)
-    _, extension = os.path.splitext(filename)
-    # 新的文件路径
-    new_path = os.path.join(directory, sub_directory + extension)
-    # 如果目标文件已存在，删除它
-    delete_file(new_path)
-    # 重命名文件
-    os.rename(original_video, new_path)
-    # 返回新的文件路径
-    return new_path
+def rename_frames(release_video_dir):
+    image_dir = os.path.join(release_video_dir, 'images')
+
+    # 检查目录是否存在
+    if not os.path.exists(image_dir):
+        print(f"目录不存在: {image_dir}")
+        return
+
+    frame_pattern = os.path.join(image_dir, 'frame_*.jpg')
+    frame_files = sorted(glob.glob(frame_pattern))
+
+    for i, file_path in enumerate(frame_files, start=1):
+        new_file_name = f"{i}.jpg"
+        new_file_path = os.path.join(image_dir, new_file_name)
+        os.rename(file_path, new_file_path)
+        print(f"重命名: {file_path} -> {new_file_path}")
 
 
 def check_files(release_video_dir, num_of_covers):
-    frame_pattern = os.path.join(release_video_dir, 'images', 'frame_*.jpg')
-    input_img_pattern = os.path.join(release_video_dir, 'images', 'input_img*.png')
+    # 处理frame_*.jpg文件的重命名
+    rename_frames(release_video_dir)
+    image_dir = os.path.join(release_video_dir, 'images')
+    # 如果images目录不存在，直接返回False
+    if not os.path.exists(image_dir):
+        return False
+    # 匹配整数的文件名
+    frame_pattern = os.path.join(image_dir, '[0-9]*.jpg')
+    input_img_pattern = os.path.join(image_dir, 'input_img*.png')
 
     frame_files = glob.glob(frame_pattern)
     input_img_files = glob.glob(input_img_pattern)
