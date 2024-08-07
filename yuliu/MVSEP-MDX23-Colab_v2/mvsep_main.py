@@ -144,7 +144,7 @@ if __name__ == '__main__':
         separate_audio(
             input=args.input,
             output=args.output,
-            output_format='FLAC',
+            output_format='float',
             Separation_mode='Vocals/Instrumental',
             input_gain=0,
             restore_gain_after_separation=False,

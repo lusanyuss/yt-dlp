@@ -13,7 +13,7 @@ if __name__ == "__main__":
                          video_name=sub_directory,
                          cover_title=sub_directory,
                          split_time_min=1,
-                         is_test=True,
+                         is_test=False,
 
                          # is_get_cover=True,
                          is_get_video=True,

@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 import time
-import re
+
 from yuliu.utils import concatenate_folder_videos
 
 
@@ -88,8 +88,33 @@ def get_max_prefix_number_and_names():
     return max_number, name_list
 
 
+def clean_and_check_folder(folder):
+    # 列出目录中的所有文件
+    files = os.listdir(folder)
 
+    # 删除非 mp4 文件
+    for f in files:
+        if not f.lower().endswith('.mp4'):
+            os.remove(os.path.join(folder, f))
 
+    # 获取剩余的 mp4 文件
+    mp4_files = [f for f in os.listdir(folder) if f.lower().endswith('.mp4')]
+
+    # 检查 mp4 文件是否按 1 到 n 连续命名
+    pattern = re.compile(r'^(\d+)\.mp4$')
+    numbers = []
+    for f in mp4_files:
+        match = pattern.match(f)
+        if match:
+            numbers.append(int(match.group(1)))
+        else:
+            return False
+
+    numbers.sort()
+    if numbers != list(range(1, len(numbers) + 1)):
+        return False
+
+    return True
 
 
 if __name__ == "__main__":
@@ -110,12 +135,18 @@ if __name__ == "__main__":
     result.extend(name_list)
 
     for folder in get_all_directories(aasrc_folder):
-        start_time = time.time()
-        if os.path.basename(folder) not in result:
-            final_video = concatenate_folder_videos(folder)
-            print(f"视频合并消耗的时间: {time.time() - start_time:.2f} 秒")
+        if clean_and_check_folder(folder):
+            print("目录合格，继续执行")
+            start_time = time.time()
+            if os.path.basename(folder) not in result:
+                final_video = concatenate_folder_videos(folder)
+                print(f"视频合并消耗的时间: {time.time() - start_time:.2f} 秒")
+            else:
+                print(f"{folder} 已经存在")
         else:
-            print(f"{folder} 已经存在")
+            print("目录不合格，停止执行")
+            exit()
+
     if aasrc_folder:
         video_files = get_video_files(aasrc_folder)
         move_and_rename_videos(base_dir, aasrc_folder, video_files)

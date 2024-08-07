@@ -13,8 +13,8 @@ from utils import get_mp4_duration, \
 from yuliu import transcribe_srt
 from yuliu.DiskCacheUtil import DiskCacheUtil
 from yuliu.VideoFrameProcessor import VideoFrameProcessor
-from yuliu.check_final import correct_subtitles
-from yuliu.check_utils import is_banned
+from yuliu.check_banned_utils import is_banned
+from yuliu.check_srt_utils import correct_subtitles
 from yuliu.extract_thumbnail_main import extract_thumbnail_main
 from yuliu.keyframe_extractor import KeyFrameExtractor
 from yuliu.transcribe_video import transcribe_audio_to_srt
@@ -199,20 +199,21 @@ def generate_video_metadata(release_video_dir, video_name):
 
     # 文件路径
     video_dest_result = f"{release_video_dir}/{video_name}.txt"
-
+    # language = f"中文繁体,英文,西班牙语,印地语,阿拉伯语,葡萄牙语,法语,德语,日语,韩语"
+    language = f"中文繁体,英文"
     # 保存标题和描述
     content = f"""
 请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，
 要求如下:
-1.我需10种不同国家语言的版本(一个都不能少),分别是中文台湾繁体,英文,西班牙语,印地语,阿拉伯语,葡萄牙语,法语,德语,日语,韩语
+1.我需10种不同国家语言的版本(一个都不能少),分别是{language}
 2.整个标题组成:主标题和副标题和标签从左到右顺序一整行,标签最后用' | '隔开。参考格式如下(80-95字符):
-《主标题》【高清合集】副标题 | #爽剧风暴 #标签2 #标签3 ...
+《主标题》【高清合集】副标题 | #爽剧风暴 #标签2 #标签3
 3.整个标题要便于搜索，足够接地气，容易出现在搜索列表中，
 4.整个标题富有吸引力，让人感兴趣，使人立即点击观看。
 5.说明描述中也包含用|分割的相关标签,别超过500字符
 6.你回答的格式都按照下面格式返回,如下:
 整个标题 (80-95字符):
-xxx (格式:《主标题》【高清合集】副标题 | #标签1 #标签2 #标签3 ... )
+xxx (格式:《主标题》【高清合集】副标题 | #标签1 #标签2 #标签3)
 说明描述:
 xxx (第一个段落)
 xxx
@@ -406,7 +407,6 @@ def run_main(url=None,
                   f"平均每张: {(time.time() - start_time_get_cover) / num_of_covers:.2f} 秒")
             print(f"\n总耗时情况:{(time.time() - start_time_get_cover)}")
 
-            # generate_video_metadata(release_video_dir, sub_directory)
         except Exception as e:
             print_red(f'出错: {e}')
 
@@ -440,11 +440,10 @@ def run_main(url=None,
                      video_origin_clips, process_video_time) = process_video_files_list(video_clips, is_test)
                     video_nobgm = merge_videos(video_dest_list, video_nobgm)
 
-                zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh')
-                # 修正翻译
-                zh_srt = correct_subtitles(video_nobgm, coordinates, False)
+                add_final_shuiyin_to_video(video_nobgm)
 
                 base, ext = os.path.splitext(video_nobgm)
+
                 audio_only_path = f"{base}_audio.wav"  # 使用 .wav 扩展名
                 out_times = os.path.join(release_video_dir, 'out_times')
 
@@ -475,26 +474,23 @@ def run_main(url=None,
         try:
             print_separator(f"翻译,字幕,水印 : <<{sub_directory}>>")
             start_time_get_fanyi = time.time()
+            # 中文翻译
             zh_srt = transcribe_audio_to_srt(video_nobgm, language='zh')
-            # 修正翻译
+            # 修正中文翻译
             zh_srt = correct_subtitles(video_nobgm, coordinates, False)
-            if not is_test:
-                en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 6)
-                zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256 * 8 / 4)
-                video_nobgm, video_final = add_final_shuiyin_to_video(video_nobgm, en_srt)
-            else:
-                video_nobgm, video_final = add_final_shuiyin_to_video(video_nobgm, zh_srt)
-
+            # 英文翻译
+            en_srt = transcribe_srt.translate_srt_file(zh_srt, 'en', 256 * 6)
+            # 台湾翻译
+            zh_tw_srt = transcribe_srt.translate_srt_file(zh_srt, 'zh-TW', 256 * 8 / 4)
+            # 英文+视频合成
+            video_nobgm, video_final = add_final_shuiyin_to_video(video_nobgm, en_srt)
             print(f"\n4.翻译 8 国翻译 srt文件 <<{sub_directory}>>")
-
             # target_languages = ["es", "hi", "ar", "pt", "fr", "de", "ja", "ko"]
             # for code in target_languages:
             #     transcribe_srt.translate_srt_file(corrected_zh_srt, code, max_payload_size=102400)
-
-            generate_video_metadata(release_video_dir, video_name)
             print(f"\nget_fanyi总耗时情况:{(time.time() - start_time_get_fanyi)}")
-
         except Exception as e:
             print_red(f'出错: {e}')
 
+    generate_video_metadata(release_video_dir, video_name)
     cache_util.close_cache()

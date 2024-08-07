@@ -41,18 +41,15 @@ def add_final_shuiyin_to_video(video_nobgm, srt_path=None, codec='h264_nvenc', c
     margin_v = 25  # 调整字幕离底部的距离
 
     # 构建过滤器字符串
-    subtitles_filter = f"subtitles='{get_relative_path(srt_path)}':force_style='FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}'"
     drawtext_filter = f"drawtext=fontfile='{font_file}':text='{text}':fontcolor=white@0.20:fontsize=70:x=W-tw-10:y=10:enable='between(t,0,{video_duration_s})'"
-
     if srt_path and os.path.exists(srt_path):
         # 如果字幕文件存在，添加字幕和水印
+        subtitles_filter = f"subtitles='{get_relative_path(srt_path)}':force_style='FontFile={font_file},FontSize=12,PrimaryColour={primary_colour},OutlineColour={outline_colour},Alignment=2,MarginV={margin_v}'"
         filters = [subtitles_filter, drawtext_filter]
     else:
         # 如果字幕文件不存在，仅添加水印
         filters = [drawtext_filter]
-
     filter_str = ",".join(filters)
-
     try:
         # 使用 ffmpeg-python 进行重新编码并添加过滤器
         (
@@ -65,14 +62,15 @@ def add_final_shuiyin_to_video(video_nobgm, srt_path=None, codec='h264_nvenc', c
                 crf=crf,
                 preset=preset,
                 acodec='aac',
+                audio_bitrate='192k',
                 strict='experimental',
                 y=None  # 覆盖输出文件
             )
             .global_args(
-                '-hwaccel', 'cuda',  # 添加硬件加速参数
-                # '-stats',  # 添加统计信息
-                '-progress', 'pipe:1'  # 添加进度显示
-            ).run()
+                '-hwaccel', 'cuda'  # 添加硬件加速参数
+            )
+            .global_args('-hwaccel_output_format', 'cuda')
+            .run()
         )
         print(f"\n\n添加水印和字幕成功: {video_final}\n耗时: {time.time() - start_time:.2f} seconds")
     except Exception as e:

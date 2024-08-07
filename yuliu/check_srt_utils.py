@@ -23,6 +23,41 @@ def read_srt_file(file_path):
         return file.readlines()
 
 
+def parse_srt(srt):
+    subtitles = []
+    blocks = srt.strip().split('\n\n')
+    for block in blocks:
+        lines = block.split('\n')
+        index = int(lines[0])
+        time_frame = lines[1]
+        content = ' '.join(lines[2:])
+        subtitles.append((index, time_frame, content))
+    return subtitles
+
+
+# 检测字幕重复行数
+def check_duplicates(zh_srt_path):
+    from collections import defaultdict
+
+    # 读取并解析srt字幕文件
+    zh_srt = read_srt_file(zh_srt_path)
+    subtitles = parse_srt(zh_srt)
+
+    # 检查异常情况
+    content_indices = defaultdict(list)
+    for sub in subtitles:
+        content_indices[sub[2]].append(sub[0])
+
+    # 检查并打印异常情况
+    for content, indices in content_indices.items():
+        if len(indices) > 5:
+            for i in range(len(indices) - 5):
+                if indices[i + 5] - indices[i] == 5:
+                    raise Exception(f"异常: 内容 '{content}' 在以下索引中重复出现: {indices[i]} 到 {indices[i + 5]}")
+
+    print("检查完成，没有发现异常")
+
+
 # 写入新的 SRT 文件
 def write_srt_file(file_path, srt_content):
     with open(file_path, 'w', encoding='utf-8') as file:
@@ -78,8 +113,10 @@ def generate_offsets(next_line, start_seconds, end_seconds, step=0.5):
     # if len(next_line) > 0:
     #     print(f"每个字的时间:{(end_seconds - start_seconds) / len(next_line)}")
     num = len(next_line)
-    if end_seconds - start_seconds > 5:
-        if 10 <= num < 20:
+    if end_seconds - start_seconds >= 2:
+        if 5 <= num < 10:
+            step = (100 / 8) / 100
+        elif 10 <= num < 20:
             step = (100 / 10) / 100
         elif 20 <= num < 30:
             step = (100 / 12) / 100

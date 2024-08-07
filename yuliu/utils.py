@@ -3,7 +3,6 @@ import hashlib
 import json
 import re
 import shutil
-import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -141,7 +140,7 @@ def merge_single_audio_video(video_file, audio_file, result_file):
         '-i', audio_file,
         '-c:v', 'copy',  # 视频流不重新编码，直接复制
         '-c:a', 'aac',  # 将音频流编码为AAC格式
-        '-b:a', '128k',  # 设置音频比特率
+        '-b:a', '192k',  # 设置音频比特率
         '-strict', 'experimental',  # 使用实验性AAC编码器
         '-shortest',  # 保持视频和音频长度一致
         '-y',  # 覆盖输出文件
@@ -592,14 +591,20 @@ def merge_videos(file_list, video):
 
 
 def reencode_video(input_file, output_file, codec='h264_nvenc', crf=23, preset='medium'):
-    ffmpeg.input(input_file).output(
+    (ffmpeg.input(input_file)
+     .output(
         output_file,
         vcodec=codec,
         crf=crf,
         preset=preset,
         acodec='aac',
+        audio_bitrate='192k',
         strict='experimental'
-    ).run()
+    ).global_args('-hwaccel_output_format', 'cuda')
+     .global_args(
+        '-hwaccel', 'cuda',
+        '-progress', 'pipe:1'
+    ).run())
 
 
 def concat_videos(input_dir, output_file):
