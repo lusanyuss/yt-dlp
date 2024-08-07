@@ -1,12 +1,22 @@
 import os
 import random
 import shutil
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import cv2
 from PIL import Image
 from rapidocr_onnxruntime import RapidOCR
 
-from yuliu.utils import delete_file
+os.environ["OPENCV_FFMPEG_READ_ATTEMPTS"] = "8192"
+
+
+def delete_file(file_path):
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"删除文件: {file_path}")
+    except OSError as e:
+        print(f"删除文件时出错: {e}")
 
 
 class VideoFrameProcessor:
@@ -17,39 +27,29 @@ class VideoFrameProcessor:
         self.engine = RapidOCR()
 
     def capture_random_frames(self):
-        # 打开视频文件
         cap = cv2.VideoCapture(self.video_path)
 
-        # 检查视频是否成功打开
         if not cap.isOpened():
             print(f"无法打开视频文件: {self.video_path}")
             return []
 
-        # 获取视频的总帧数
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        # 检查视频是否包含帧
         if total_frames == 0:
             print(f"视频文件中没有帧: {self.video_path}")
             return []
 
-        # 确保输出文件夹存在
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
 
         frame_paths = []
         for i in range(self.num_frames):
-            # 随机选择一个帧号
             frame_id = random.randint(0, total_frames - 1)
-
-            # 设置视频帧位置
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
-
-            # 读取帧
             ret, frame = cap.read()
             if ret:
                 frame_path = os.path.join(self.output_folder, f'frame_{i + 1}.jpg')
-                cv2.imencode('.jpg', frame)[1].tofile(frame_path)  # 使用tofile方法保存带有汉字的路径
+                cv2.imencode('.jpg', frame)[1].tofile(frame_path)
                 if os.path.exists(frame_path):
                     frame_paths.append(frame_path)
                 else:
@@ -57,9 +57,7 @@ class VideoFrameProcessor:
             else:
                 print(f"无法读取帧 {frame_id} from {self.video_path}")
 
-        # 释放视频捕获对象
         cap.release()
-
         return frame_paths
 
     def get_image_results(self, frame_paths):
@@ -85,7 +83,6 @@ class VideoFrameProcessor:
 
         image_results = self.get_image_results(frame_paths)
 
-        # 删除生成的图片和文件夹
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
@@ -122,7 +119,6 @@ class VideoFrameProcessor:
                         directions_found['bottom'] = True
                         coordinates['bottom'].append(top_y)
 
-                    # 检测图片下半部分区域
                     if not directions_found['center'] and image_height / 2 <= top_y < image_height - 100:
                         directions_found['center'] = True
                         coordinates['center'].append(bottom_y)
@@ -171,8 +167,60 @@ class VideoFrameProcessor:
 
         return results
 
-    def capture_and_process_frames(self, n, crop_params):
-        count = 0
+    def process_frame_range(self, start, end, crop_params, images_folder, temp_folder, total_frames):
+        frame_paths = []
+        cap = cv2.VideoCapture(self.video_path)
+
+        for index in range(start, end + 1):
+            frame_path = os.path.join(images_folder, f"{index}.jpg")
+            if os.path.exists(frame_path):
+                print(f"缓存中已存在图片: {frame_path}")
+                frame_paths.append(frame_path)
+                continue
+
+            while True:
+                frame_id = random.randint(0, total_frames - 1)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
+                ret, frame = cap.read()
+                if not ret:
+                    continue
+
+                crop_left = int(crop_params.get('left', 0))
+                crop_right = int(crop_params.get('right', 0))
+                crop_top = int(crop_params.get('top', 0))
+                crop_bottom = int(crop_params.get('bottom', 0))
+
+                original_height, original_width = frame.shape[:2]
+
+                new_width = original_width - crop_left - crop_right
+                new_height = original_height - crop_top - crop_bottom
+                if new_width <= 0 or new_height <= 0:
+                    print("裁剪尺寸过大，导致图像尺寸为非正值。")
+                    continue
+
+                left = crop_left
+                top = crop_top
+                right = original_width - crop_right
+                bottom = original_height - crop_bottom
+                cropped_frame = frame[top:bottom, left:right]
+
+                temp_frame_path = os.path.join(temp_folder, f'temp_frame_{index}.jpg')
+                cv2.imencode('.jpg', cropped_frame)[1].tofile(temp_frame_path)
+
+                if os.path.exists(temp_frame_path):
+                    result, elapse = self.engine(temp_frame_path)
+                    if not result:
+                        cropped_image = Image.open(temp_frame_path)
+                        resized_image = cropped_image.resize((original_width, original_height), Image.Resampling.LANCZOS)
+                        resized_image.save(frame_path)
+                        frame_paths.append(frame_path)
+                        os.remove(temp_frame_path)  # 删除临时文件
+                        break
+                    os.remove(temp_frame_path)  # 删除临时文件
+        cap.release()
+        return frame_paths
+
+    def capture_and_process_frames(self, n, num_threads, crop_params):
         cap = cv2.VideoCapture(self.video_path)
 
         if not cap.isOpened():
@@ -184,81 +232,44 @@ class VideoFrameProcessor:
             print(f"视频文件中没有帧: {self.video_path}")
             return []
 
-        # 确保images文件夹相对于视频路径存在
+        cap.release()
+
         video_dir = os.path.dirname(self.video_path)
         images_folder = os.path.join(video_dir, 'images')
         if not os.path.exists(images_folder):
             os.makedirs(images_folder)
 
+        temp_folder = os.path.join(video_dir, 'temp_frames')
+        if not os.path.exists(temp_folder):
+            os.makedirs(temp_folder)
+
         saved_frame_paths = []
+        frames_per_thread = n // num_threads
+        ranges = [(i * frames_per_thread + 1, (i + 1) * frames_per_thread) for i in range(num_threads)]
+        # 如果不能整除，处理剩余部分
+        if n % num_threads != 0:
+            ranges[-1] = (ranges[-1][0], ranges[-1][1] + (n % num_threads))
 
-        while count < n:
-            frame_id = random.randint(0, total_frames - 1)
-            frame_path = os.path.join(images_folder, f"{count + 1}.jpg")
-            # 检查是否已经存在当前编号的图片
-            if os.path.exists(frame_path):
-                print(f"缓存中已存在图片: {frame_path}")
-                saved_frame_paths.append(frame_path)
-                count += 1
-                continue
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(self.process_frame_range, start, end, crop_params, images_folder, temp_folder, total_frames) for start, end in ranges]
+            for future in as_completed(futures):
+                saved_frame_paths.extend(future.result())
 
-            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
-            ret, frame = cap.read()
-            if not ret:
-                continue
+        # 删除临时文件夹
+        shutil.rmtree(temp_folder)
 
-            crop_left = int(crop_params.get('left', 0))
-            crop_right = int(crop_params.get('right', 0))
-            crop_top = int(crop_params.get('top', 0))
-            crop_bottom = int(crop_params.get('bottom', 0))
+        # 对保存的路径进行排序
+        saved_frame_paths.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
 
-            original_height, original_width = frame.shape[:2]
-
-            # 计算裁剪后的图像尺寸
-            new_width = original_width - crop_left - crop_right
-            new_height = original_height - crop_top - crop_bottom
-            if new_width <= 0 or new_height <= 0:
-                print("裁剪尺寸过大，导致图像尺寸为非正值。")
-                continue
-
-            # 中间最大区域裁剪
-            left = crop_left
-            top = crop_top
-            right = original_width - crop_right
-            bottom = original_height - crop_bottom
-            cropped_frame = frame[top:bottom, left:right]
-
-            # 创建临时路径保存裁剪的帧用于检测
-            temp_frame_path = os.path.join(video_dir, 'temp_frame.jpg')
-            cv2.imencode('.jpg', cropped_frame)[1].tofile(temp_frame_path)  # 使用tofile方法保存带有汉字的路径
-
-            if os.path.exists(temp_frame_path):
-                result, elapse = self.engine(temp_frame_path)
-                if not result:  # 判断result是否为空列表
-                    count += 1
-
-                    # 使用PIL放大裁剪后的图像到原始尺寸
-                    cropped_image = Image.open(temp_frame_path)
-                    resized_image = cropped_image.resize((original_width, original_height), Image.Resampling.LANCZOS)
-                    resized_image.save(frame_path)
-
-                    print(f"保存干净图片: {frame_path}")
-                    saved_frame_paths.append(frame_path)
-                delete_file(temp_frame_path)
-
-        cap.release()
         return saved_frame_paths
 
 
 if __name__ == '__main__':
-    # 示例调用方法：
-    video_path = 'release_video/无敌六皇子/test_video.mp4'
+    video_path = 'release_video/aa测试目录/aa测试目录_nobgm.mp4'
     processor = VideoFrameProcessor(video_path)
 
-    # 获取文本显示坐标
     coordinates = processor.process_and_get_coordinates()
     print(coordinates)
 
-    # 捕获并处理帧，并返回截图地址列表
-    saved_frame_paths = processor.capture_and_process_frames(3, coordinates)
+    saved_frame_paths = processor.capture_and_process_frames(24, 4, coordinates)
     print("保存的图片路径：", saved_frame_paths)

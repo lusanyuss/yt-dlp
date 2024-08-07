@@ -402,7 +402,7 @@ def extract_covers_and_frames(video, processor, coordinates,  num_frames=3 * 1):
     # processor = VideoFrameProcessor(video)
     # coordinates = processor.process_and_get_coordinates()
 
-    frame_images = processor.capture_and_process_frames(num_frames, coordinates)
+    frame_images = processor.capture_and_process_frames(num_frames, 4, coordinates)
     # frame_images = get_frame_images(num_frames, video, duration, images_dir, crop_dict, model_path, timeout_duration)
     # 封面图列表
     cover_images = []

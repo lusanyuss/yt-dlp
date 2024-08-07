@@ -28,6 +28,9 @@ if __name__ == '__main__':
         # '当丑女遇上总裁',
         # '我的爷爷是大佬',
         # '鉴宝神婿'
+        # '凤凌天下',
+        # '凤燕归巢',
+
     ]
     base_dirs = ["release_video",
                  os.path.join("MVSEP-MDX23-Colab_v2", "input"),
