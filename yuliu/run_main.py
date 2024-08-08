@@ -213,7 +213,7 @@ def generate_video_metadata(release_video_dir, video_name):
     video_dest_result = f"{release_video_dir}/{video_name}.txt"
     # language = f"中文繁体,英文,西班牙语,印地语,阿拉伯语,葡萄牙语,法语,德语,日语,韩语"
     language = f"中文繁体,英文"
-    # 保存标题和描述
+    # 保存标题和描述 chinese drama
     content = \
         f"""
 请根据以下标题生成适合搜索和吸引点击的整个标题和说明描述，

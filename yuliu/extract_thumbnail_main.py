@@ -298,90 +298,92 @@ def capture_random_frames(self):
     return frame_paths
 
 
-def generate_frame(index, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock):
-    output_path = os.path.join(output_dir, f"frame_{index + 1}.jpg")
-    if os.path.exists(output_path):
-        with lock:
-            frame_paths[index] = output_path
-            print(f"文件 frame_{index + 1}.jpg 已存在,直接返回: {output_path}")
-            return
+# def generate_frame(index, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock):
+#     output_path = os.path.join(output_dir, f"frame_{index + 1}.jpg")
+#     if os.path.exists(output_path):
+#         with lock:
+#             frame_paths[index] = output_path
+#             print(f"文件 frame_{index + 1}.jpg 已存在,直接返回: {output_path}")
+#             return
+#
+#     while True:
+#         command = [
+#             'ffmpeg',
+#             '-y',
+#             '-ss', str(random.randint(1, int(duration))),
+#             '-i', video_path,
+#             '-frames:v', '1',
+#             '-q:v', '2', output_path,
+#             '-loglevel', 'quiet'
+#         ]
+#         subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+#
+#         if os.path.exists(output_path):
+#             try:
+#                 crop_left = crop_dict['crop_left']
+#                 crop_right = crop_dict['crop_right']
+#                 crop_top = crop_dict['crop_top']
+#                 crop_bottom = crop_dict['crop_bottom']
+#
+#                 image = Image.open(output_path)
+#                 original_width, original_height = image.size
+#
+#                 # 计算裁剪后的图像尺寸
+#                 new_width = original_width - crop_left - crop_right
+#                 new_height = original_height - crop_top - crop_bottom
+#                 if new_width <= 0 or new_height <= 0:
+#                     raise ValueError("Crop dimensions are too large, resulting in a non-positive dimension image.")
+#                 cropped_image = image.crop((crop_left, crop_top, crop_left + new_width, crop_top + new_height))
+#                 cropped_image.save(output_path)
+#                 chinese_text = extract_and_print_chinese_text(output_path)
+#
+#                 if not has_chinese_characters(chinese_text):
+#                     cropped_image_cv = cv2.cvtColor(np.array(cropped_image), cv2.COLOR_RGB2BGR)
+#                     sr = cv2.dnn_superres.DnnSuperResImpl_create()
+#                     sr.readModel(model_path)
+#                     sr.setModel("espcn", 3)
+#                     enhanced_image_cv = sr.upsample(cropped_image_cv)
+#                     enhanced_image_cv = cv2.resize(enhanced_image_cv, (original_width, original_height))
+#                     enhanced_image = Image.fromarray(cv2.cvtColor(enhanced_image_cv, cv2.COLOR_BGR2RGB))
+#                     enhanced_image.save(output_path)
+#                     with lock:
+#                         frame_paths[index] = output_path
+#                         print(f"生成 frame_{index + 1}.jpg 图片: {output_path}")
+#                     break
+#             except Exception as e:
+#                 print_red(f"Error processing image {output_path}: {e}")
+#         else:
+#             print(f"Failed to generate frame at {output_path}")
 
-    while True:
-        command = [
-            'ffmpeg',
-            '-y',
-            '-ss', str(random.randint(1, int(duration))), '-i', video_path, '-frames:v', '1',
-            '-q:v', '2', output_path,
-            '-loglevel', 'quiet'
-        ]
-        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
 
-        if os.path.exists(output_path):
-            try:
-                crop_left = crop_dict['crop_left']
-                crop_right = crop_dict['crop_right']
-                crop_top = crop_dict['crop_top']
-                crop_bottom = crop_dict['crop_bottom']
-
-                image = Image.open(output_path)
-                original_width, original_height = image.size
-
-                # 计算裁剪后的图像尺寸
-                new_width = original_width - crop_left - crop_right
-                new_height = original_height - crop_top - crop_bottom
-                if new_width <= 0 or new_height <= 0:
-                    raise ValueError("Crop dimensions are too large, resulting in a non-positive dimension image.")
-                cropped_image = image.crop((crop_left, crop_top, crop_left + new_width, crop_top + new_height))
-                cropped_image.save(output_path)
-                chinese_text = extract_and_print_chinese_text(output_path)
-
-                if not has_chinese_characters(chinese_text):
-                    cropped_image_cv = cv2.cvtColor(np.array(cropped_image), cv2.COLOR_RGB2BGR)
-                    sr = cv2.dnn_superres.DnnSuperResImpl_create()
-                    sr.readModel(model_path)
-                    sr.setModel("espcn", 3)
-                    enhanced_image_cv = sr.upsample(cropped_image_cv)
-                    enhanced_image_cv = cv2.resize(enhanced_image_cv, (original_width, original_height))
-                    enhanced_image = Image.fromarray(cv2.cvtColor(enhanced_image_cv, cv2.COLOR_BGR2RGB))
-                    enhanced_image.save(output_path)
-                    with lock:
-                        frame_paths[index] = output_path
-                        print(f"生成 frame_{index + 1}.jpg 图片: {output_path}")
-                    break
-            except Exception as e:
-                print_red(f"Error processing image {output_path}: {e}")
-        else:
-            print(f"Failed to generate frame at {output_path}")
-
-
-def get_frame_images(num_frames, video_path, duration, output_dir, crop_dict, model_path, timeout_duration):
-    frame_paths = [None] * num_frames
-    lock = threading.Lock()
-
-    def timeout_handler():
-        print(f"在 {timeout_duration} 秒内未能完成所有任务，返回空的数据。")
-        nonlocal frame_paths
-        frame_paths = [None] * num_frames
-        # 取消所有正在进行的任务
-        executor.shutdown(wait=False, cancel_futures=True)
-
-    timer = threading.Timer(timeout_duration, timeout_handler)
-    timer.start()
-
-    with ThreadPoolExecutor(max_workers=12) as executor:
-        futures = [
-            executor.submit(generate_frame, i, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock)
-            for i in range(num_frames)
-        ]
-        try:
-            for future in as_completed(futures):
-                future.result()  # 处理可能的异常
-        except Exception as e:
-            print_red(f"任务执行过程中出现异常: {e}")
-        finally:
-            timer.cancel()  # 如果任务在超时前完成，取消定时器
-
-    return frame_paths
+# def get_frame_images(num_frames, video_path, duration, output_dir, crop_dict, model_path, timeout_duration):
+#     frame_paths = [None] * num_frames
+#     lock = threading.Lock()
+#
+#     def timeout_handler():
+#         print(f"在 {timeout_duration} 秒内未能完成所有任务，返回空的数据。")
+#         nonlocal frame_paths
+#         frame_paths = [None] * num_frames
+#         # 取消所有正在进行的任务
+#         executor.shutdown(wait=False, cancel_futures=True)
+#
+#     timer = threading.Timer(timeout_duration, timeout_handler)
+#     timer.start()
+#
+#     with ThreadPoolExecutor(max_workers=12) as executor:
+#         futures = [
+#             executor.submit(generate_frame, i, video_path, duration, output_dir, crop_dict, model_path, frame_paths, lock)
+#             for i in range(num_frames)
+#         ]
+#         try:
+#             for future in as_completed(futures):
+#                 future.result()  # 处理可能的异常
+#         except Exception as e:
+#             print_red(f"任务执行过程中出现异常: {e}")
+#         finally:
+#             timer.cancel()  # 如果任务在超时前完成，取消定时器
+#
+#     return frame_paths
 
 
 def extract_covers_and_frames(video, processor, coordinates,  num_frames=3 * 1):

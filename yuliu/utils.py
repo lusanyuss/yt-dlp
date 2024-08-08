@@ -6,7 +6,6 @@ import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-import ffmpeg
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
@@ -133,21 +132,21 @@ def merge_single_audio_video(video_file, audio_file, result_file):
         return result_file
 
     print(f"合并音频: {get_file_only_name(audio_file)} 和视频: {get_file_only_name(video_file)} 到: {get_file_only_name(result_file)}")
+
     command = [
         'ffmpeg',
-        '-loglevel', 'quiet',
         '-i', video_file,
         '-i', audio_file,
         '-c:v', 'copy',  # 视频流不重新编码，直接复制
         '-c:a', 'aac',  # 将音频流编码为AAC格式
-        '-b:a', '192k',  # 设置音频比特率
         '-strict', 'experimental',  # 使用实验性AAC编码器
         '-shortest',  # 保持视频和音频长度一致
         '-y',  # 覆盖输出文件
+        '-map', '0:v',  # 映射视频流
+        '-map', '1:a',  # 映射音频流
         result_file
     ]
-
-    subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+    CommandExecutor.run_command(command)
     return result_file
 
 
@@ -201,6 +200,7 @@ def extract_audio_and_video(video_path):
             '-i', video_path,
             '-map', '0:a', '-c', 'copy', audio_output,  # 使用copy操作提取音频
             '-map', '0:v', '-c', 'copy', video_output,  # 使用copy操作提取视频
+            # '-copyts',  # 保留输入文件的时间戳
             '-y',
             '-loglevel', 'info'
         ]
@@ -303,51 +303,51 @@ def find_split_points(keyframe_times, split_time_ms):
     return split_points
 
 
-def concatenate_videos(video_list, merged_output):
-    print(f"\n拼接视频文件列表: {video_list}")
-    print(f"\n拼接完成的视频 merged_output: {merged_output}")
-
-    # 检查输出文件是否已存在
-    if os.path.exists(merged_output):
-        print(f"{merged_output} 已经存在，跳过拼接。")
-        return merged_output
-
-    video_dir = os.path.dirname(video_list[0])
-    if len(video_list) > 1:
-        for video in video_list:
-            if not os.path.exists(video):
-                raise FileNotFoundError(f"文件不存在: {video}")
-
-        input_txt_path = os.path.join(video_dir, 'input.txt')
-        with open(input_txt_path, 'w', encoding='utf-8') as file:
-            for video in video_list:
-                abs_video_path = os.path.abspath(video)
-                file.write(f"file '{abs_video_path}'\n")
-
-        with open(input_txt_path, 'r', encoding='utf-8') as file:
-            print(file.read())
-
-        try:
-            command = [
-                'ffmpeg',
-                '-loglevel', 'quiet',
-                '-f', 'concat',
-                '-safe', '0',
-                '-i', input_txt_path,
-                '-c', 'copy',
-                merged_output
-            ]
-            command += ['-loglevel', 'quiet']
-            subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-        except subprocess.CalledProcessError as e:
-            print(f"拼接过程中出错: {e}")
-        finally:
-            delete_file(input_txt_path)
-
-        return merged_output
-    else:
-        shutil.move(video_list[0], merged_output)
-        return merged_output
+# def concatenate_videos(video_list, merged_output):
+#     print(f"\n拼接视频文件列表: {video_list}")
+#     print(f"\n拼接完成的视频 merged_output: {merged_output}")
+#
+#     # 检查输出文件是否已存在
+#     if os.path.exists(merged_output):
+#         print(f"{merged_output} 已经存在，跳过拼接。")
+#         return merged_output
+#
+#     video_dir = os.path.dirname(video_list[0])
+#     if len(video_list) > 1:
+#         for video in video_list:
+#             if not os.path.exists(video):
+#                 raise FileNotFoundError(f"文件不存在: {video}")
+#
+#         input_txt_path = os.path.join(video_dir, 'input.txt')
+#         with open(input_txt_path, 'w', encoding='utf-8') as file:
+#             for video in video_list:
+#                 abs_video_path = os.path.abspath(video)
+#                 file.write(f"file '{abs_video_path}'\n")
+#
+#         with open(input_txt_path, 'r', encoding='utf-8') as file:
+#             print(file.read())
+#
+#         try:
+#             command = [
+#                 'ffmpeg',
+#                 '-loglevel', 'quiet',
+#                 '-f', 'concat',
+#                 '-safe', '0',
+#                 '-i', input_txt_path,
+#                 '-c', 'copy',
+#                 merged_output
+#             ]
+#             command += ['-loglevel', 'quiet']
+#             subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
+#         except subprocess.CalledProcessError as e:
+#             print(f"拼接过程中出错: {e}")
+#         finally:
+#             delete_file(input_txt_path)
+#
+#         return merged_output
+#     else:
+#         shutil.move(video_list[0], merged_output)
+#         return merged_output
 
 
 def close_chrome():
@@ -575,13 +575,18 @@ def merge_videos(file_list, video):
         with open('filelist.txt', 'w', encoding='utf-8') as f:
             for file in file_list:
                 f.write(f"file '{file}'\n")
-
         command = [
-            'ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'filelist.txt', '-c', 'copy', video,
-            '-loglevel', 'quiet'
+            "ffmpeg",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", 'filelist.txt',
+            "-c:v", "h264_nvenc",
+            "-c:a", "aac",
+            "-strict", "experimental",
+            '-loglevel', 'quiet',
+            video
         ]
         result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8')
-
         if result.returncode != 0:
             raise RuntimeError(f"合成视频失败: {result.stderr}")
 
@@ -590,73 +595,49 @@ def merge_videos(file_list, video):
     return video
 
 
-def reencode_video(input_file, output_file, codec='h264_nvenc', crf=23, preset='medium'):
-    (ffmpeg.input(input_file)
-     .output(
+def concat_videos(file_list, output_file):
+    # 临时文件路径
+    temp_files = [os.path.splitext(f)[0] + "_temp.mp4" for f in file_list]
+    # 对每个视频文件进行标准化处理
+    for i, video in enumerate(file_list):
+        subprocess.run([
+            "ffmpeg",
+            "-i", video,
+            "-c:v", "h264_nvenc",  # 使用NVIDIA的硬件加速H.264编码器
+            "-c:a", "aac",
+            "-strict", "experimental",  # 使用AAC音频编码器
+            "-r", "30",  # 设置帧率为30fps
+            temp_files[i],
+            "-loglevel", "quiet"
+        ], capture_output=True, text=True, encoding='utf-8')
+    # 创建一个临时的文本文件，列出所有要合并的标准化视频文件
+    file_list_path = "file_list.txt"
+    with open(file_list_path, "w", encoding="utf-8") as file:
+        for temp in temp_files:
+            file.write(f"file '{temp}'\n")
+    # 使用ffmpeg合并视频，并使用GPU加速进行重新编码
+    subprocess.run([
+        "ffmpeg",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", file_list_path,
+        "-c:v", "h264_nvenc",
+        "-c:a", "aac",
+        "-strict", "experimental",
         output_file,
-        vcodec=codec,
-        crf=crf,
-        preset=preset,
-        acodec='aac',
-        audio_bitrate='192k',
-        strict='experimental'
-    ).global_args('-hwaccel_output_format', 'cuda')
-     .global_args(
-        '-hwaccel', 'cuda',
-        '-progress', 'pipe:1'
-    ).run())
-
-
-def concat_videos(input_dir, output_file):
-    # 获取目录中的所有 mp4 文件，并按名称中的数字排序
-    files = sorted([f for f in os.listdir(input_dir) if f.endswith('.mp4') and f[:-4].isdigit()],
-                   key=lambda x: int(x[:-4]))
-
-    # 确保目录中有文件可处理
-    if not files:
-        raise ValueError("No mp4 files found in the directory")
-
-    # 创建一个临时目录来存储重新编码的视频
-    temp_dir = os.path.join(input_dir, 'temp')
-    os.makedirs(temp_dir, exist_ok=True)
-
-    # 对每个视频进行重新编码
-    reencoded_files = []
-    for file in files:
-        input_path = os.path.join(input_dir, file)
-        output_path = os.path.join(temp_dir, file)
-        reencode_video(input_path, output_path)
-        reencoded_files.append(output_path)
-
-    # 创建临时文件列表供 FFmpeg 使用
-    with open('filelist.txt', 'w', encoding='utf-8') as f:
-        for file in reencoded_files:
-            f.write(f"file '{file}'\n")
-
-    # 使用 FFmpeg 拼接视频，并启用 GPU 加速
-    (
-        ffmpeg
-        .input('filelist.txt', format='concat', safe=0)
-        .output(output_file, c='copy')
-        .global_args('-hwaccel', 'cuda')
-        .global_args('-hwaccel_output_format', 'cuda')
-        .run()
-    )
-
-    # 清理临时文件列表和临时目录
-    delete_file('filelist.txt')
-    for file in reencoded_files:
-        delete_file(file)
-    os.rmdir(temp_dir)
-
-    print(f"Concatenated video saved to {output_file}")
-    return output_file
+        "-loglevel", "quiet"
+    ], capture_output=True, text=True, encoding='utf-8')
+    # 删除临时文件
+    for temp in temp_files:
+        os.remove(temp)
+    os.remove(file_list_path)
 
 
 def concatenate_folder_videos(folder_path):
     folder_name = os.path.basename(os.path.normpath(folder_path))
     parent_dir = os.path.dirname(folder_path)
     output_file = os.path.join(parent_dir, f"{folder_name}.mp4")
+
     # 获取文件夹中所有的文件名，并筛选出MP4文件
     files = [f for f in os.listdir(folder_path) if f.endswith('.mp4')]
     # 提取索引并排序
@@ -670,13 +651,12 @@ def concatenate_folder_videos(folder_path):
     # 如果输出文件已经存在,就先删除
     delete_file(output_file)
     # 合并视频
-    # Example usage
-    merged_video = concat_videos(folder_name, output_file)
+    concat_videos(file_list, output_file)
     # 删除原始视频文件和目录
     if 'test' not in os.path.basename(folder_path):
         shutil.rmtree(folder_path)
 
-    return merged_video
+    return output_file
 
 
 import os
