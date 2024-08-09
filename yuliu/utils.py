@@ -599,39 +599,47 @@ def merge_videos(file_list, video):
 def concat_videos(file_list, output_file):
     # 临时文件路径
     temp_files = [os.path.splitext(f)[0] + "_temp.mp4" for f in file_list]
-    # 对每个视频文件进行标准化处理
-    for i, video in enumerate(file_list):
+    file_list_path = "file_list.txt"
+
+    try:
+        # 对每个视频文件进行标准化处理
+        for i, video in enumerate(file_list):
+            subprocess.run([
+                "ffmpeg",
+                "-i", video,
+                "-c:v", "h264_nvenc",  # 使用NVIDIA的硬件加速H.264编码器
+                "-c:a", "aac",
+                "-strict", "experimental",  # 使用AAC音频编码器
+                "-r", "30",  # 设置帧率为30fps
+                temp_files[i],
+                "-loglevel", "quiet"
+            ], capture_output=True, text=True, encoding='utf-8')
+
+        # 创建一个临时的文本文件，列出所有要合并的标准化视频文件
+        with open(file_list_path, "w", encoding="utf-8") as file:
+            for temp in temp_files:
+                file.write(f"file '{temp}'\n")
+
+        # 使用ffmpeg合并视频，并使用GPU加速进行重新编码
         subprocess.run([
             "ffmpeg",
-            "-i", video,
-            "-c:v", "h264_nvenc",  # 使用NVIDIA的硬件加速H.264编码器
+            "-f", "concat",
+            "-safe", "0",
+            "-i", file_list_path,
+            "-c:v", "h264_nvenc",
             "-c:a", "aac",
-            "-strict", "experimental",  # 使用AAC音频编码器
-            "-r", "30",  # 设置帧率为30fps
-            temp_files[i],
+            "-strict", "experimental",
+            output_file,
             "-loglevel", "quiet"
         ], capture_output=True, text=True, encoding='utf-8')
-    # 创建一个临时的文本文件，列出所有要合并的标准化视频文件
-    file_list_path = "file_list.txt"
-    with open(file_list_path, "w", encoding="utf-8") as file:
+
+    finally:
+        # 删除临时文件
         for temp in temp_files:
-            file.write(f"file '{temp}'\n")
-    # 使用ffmpeg合并视频，并使用GPU加速进行重新编码
-    subprocess.run([
-        "ffmpeg",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", file_list_path,
-        "-c:v", "h264_nvenc",
-        "-c:a", "aac",
-        "-strict", "experimental",
-        output_file,
-        "-loglevel", "quiet"
-    ], capture_output=True, text=True, encoding='utf-8')
-    # 删除临时文件
-    for temp in temp_files:
-        os.remove(temp)
-    os.remove(file_list_path)
+            if os.path.exists(temp):
+                os.remove(temp)
+        if os.path.exists(file_list_path):
+            os.remove(file_list_path)
 
 
 def concatenate_folder_videos(folder_path):
@@ -639,22 +647,29 @@ def concatenate_folder_videos(folder_path):
     parent_dir = os.path.dirname(folder_path)
     output_file = os.path.join(parent_dir, f"{folder_name}.mp4")
 
-    # 获取文件夹中所有的文件名，并筛选出MP4文件
-    files = [f for f in os.listdir(folder_path) if f.endswith('.mp4')]
-    # 提取索引并排序
-    indices = sorted([int(os.path.splitext(f)[0]) for f in files])
-    # 检查索引是否连续
-    if indices != list(range(1, len(indices) + 1)):
-        raise ValueError("视频文件索引不连续或缺少文件")
-    # 按顺序获取文件列表
-    file_list = [os.path.join(folder_path, f"{index}.mp4") for index in indices]
-    # 如果输出文件已经存在,就先删除
-    delete_file(output_file)
-    # 合并视频
-    concat_videos(file_list, output_file)
-    # 删除原始视频文件和目录
-    if 'test' not in os.path.basename(folder_path):
-        shutil.rmtree(folder_path)
+    try:
+        # 获取文件夹中所有的文件名，并筛选出MP4文件
+        files = [f for f in os.listdir(folder_path) if f.endswith('.mp4')]
+        # 提取索引并排序
+        indices = sorted([int(os.path.splitext(f)[0]) for f in files])
+        # 检查索引是否连续
+        if indices != list(range(1, len(indices) + 1)):
+            raise ValueError("视频文件索引不连续或缺少文件")
+        # 按顺序获取文件列表
+        file_list = [os.path.join(folder_path, f"{index}.mp4") for index in indices]
+        # 如果输出文件已经存在,就先删除
+        delete_file(output_file)
+        # 合并视频
+        concat_videos(file_list, output_file)
+        # 删除原始视频文件和目录
+        if 'test' not in os.path.basename(folder_path):
+            shutil.rmtree(folder_path)
+
+    except Exception as e:
+        print(f"发生错误: {e}")
+        if os.path.exists(output_file):
+            delete_file(output_file)
+        raise e
 
     return output_file
 
@@ -699,6 +714,7 @@ def get_path_without_suffix(path):
         # 如果文件名不包含下划线，直接返回原路径
         return path
 
+
 def simplified_to_traditional(text):
     """
     将简体中文转换为台湾繁体中文
@@ -715,6 +731,7 @@ def traditional_to_simplified(text):
     converter = opencc.OpenCC('tw2sp')  # tw2sp: Traditional Chinese (Taiwan) to Simplified Chinese
     simplified_text = converter.convert(text)
     return simplified_text
+
 
 def extract_audio_only(video_path):
     # 生成新的文件路径

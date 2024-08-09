@@ -68,26 +68,6 @@ def get_max_prefix_number_and_names():
 
 def clean_and_check_folder(folder):
     try:
-        files = os.listdir(folder)
-    except Exception as e:
-        print(f"无法列出目录中的文件: {e}")
-        return False
-
-    for f in files:
-        if not f.lower().endswith('.mp4') or re.search(r'\.(jpg|jpeg|png|gif|webp)$', f, re.IGNORECASE):
-            try:
-                os.remove(os.path.join(folder, f))
-            except Exception as e:
-                print(f"无法删除文件 {f}: {e}")
-
-    for f in files:
-        if '..' in f:
-            try:
-                os.rename(os.path.join(folder, f), os.path.join(folder, f.replace('..', '.')))
-            except Exception as e:
-                print(f"无法重命名文件 {f}: {e}")
-
-    try:
         mp4_files = [f for f in os.listdir(folder) if f.lower().endswith('.mp4')]
     except Exception as e:
         print(f"无法获取目录中的 mp4 文件: {e}")
@@ -103,6 +83,29 @@ def clean_and_check_folder(folder):
     return True
 
 
+def clean_directory(entry_path):
+    try:
+        files = os.listdir(entry_path)
+    except Exception as e:
+        print(f"无法列出目录中的文件: {e}")
+        return False
+
+    for f in files:
+        file_path = os.path.join(entry_path, f)
+        if not f.lower().endswith('.mp4') or re.search(r'\.(jpg|jpeg|png|gif|webp)$', f, re.IGNORECASE) or f.lower().endswith('_temp.mp4'):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"无法删除文件 {f}: {e}")
+
+    for f in files:
+        if '..' in f:
+            try:
+                os.rename(os.path.join(entry_path, f), os.path.join(entry_path, f.replace('..', '.')))
+            except Exception as e:
+                print(f"无法重命名文件 {f}: {e}")
+
+
 def remove_chinese_punctuation(text):
     return re.sub(r'[，。！？：（）《》【】]', '', text)
 
@@ -110,7 +113,9 @@ def remove_chinese_punctuation(text):
 def rename_directories(directory):
     for entry in os.listdir(directory):
         entry_path = os.path.join(directory, entry)
-        if os.path.isdir(entry_path) and not entry.startswith('.accelerate'):
+        if os.path.isdir(entry_path) and not entry.startswith('.accelerate') and entry != '__pycache__':
+            # 这里加代码
+            clean_directory(entry_path)
             cleaned_name = remove_chinese_punctuation(entry.split('-', 1)[-1].split('（', 1)[0].strip())
             new_path = os.path.join(directory, cleaned_name)
             try:
