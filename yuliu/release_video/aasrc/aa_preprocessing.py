@@ -132,6 +132,7 @@ if __name__ == "__main__":
     result.extend(name_list)
 
     rename_directories(aasrc_folder)
+
     for folder in get_all_directories(aasrc_folder):
         if clean_and_check_folder(folder):
             print("目录合格，继续执行")

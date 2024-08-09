@@ -193,16 +193,16 @@ def ensure_directory_exists(path):
 import os
 
 
-#短劇
-#浪漫
-#宮廷劇
-#愛情
-#追劇
-#青春
-#勵志
-#仙俠劇
-#修仙
-#兄弟情
+# 短劇
+# 浪漫
+# 宮廷劇
+# 愛情
+# 追劇
+# 青春
+# 勵志
+# 仙俠劇
+# 修仙
+# 兄弟情
 
 
 def generate_video_metadata(release_video_dir, video_name):
@@ -403,8 +403,18 @@ def run_main(url=None,
         try:
             print_separator(f"获取封面图 : {sub_directory}")
             start_time_get_cover = time.time()
-            title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
-            subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
+            # title_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 标题
+            # subtitle_font = os.path.join('ziti', 'hongleibanshu', 'hongleibanshu.ttf')  # 副标题
+
+            fontts = [
+                # ['fanti', 'BiMoChunQiu-ChaoQingKaiShu-2.ttf'],
+                # ['fanti', 'GuoZiWenMaiShuFaShiJi-2.ttf'],
+                # ['fanti', 'ZhaoCaiKaiShu-2.ttf'],
+                ['fengmian', 'gwkt-SC-Black.ttf'],
+            ]
+            title_font = os.path.join('ziti', fontts[0], fontts[1])  # 标题
+            subtitle_font = os.path.join('ziti', fontts[0], fontts[1])  # 副标题
+
             if not check_files(release_video_dir, num_of_covers):
                 extract_thumbnail_main(video_real,
                                        processor,

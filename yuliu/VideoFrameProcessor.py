@@ -220,7 +220,7 @@ class VideoFrameProcessor:
         cap.release()
         return frame_paths
 
-    def capture_and_process_frames(self, n, num_threads, crop_params):
+    def capture_and_process_frames(self, n, num_threads, crop_params, images_folder=None):
         cap = cv2.VideoCapture(self.video_path)
 
         if not cap.isOpened():
@@ -235,9 +235,10 @@ class VideoFrameProcessor:
         cap.release()
 
         video_dir = os.path.dirname(self.video_path)
-        images_folder = os.path.join(video_dir, 'images')
-        if not os.path.exists(images_folder):
-            os.makedirs(images_folder)
+        if not images_folder:
+            images_folder = os.path.join(video_dir, 'images')
+            if not os.path.exists(images_folder):
+                os.makedirs(images_folder)
 
         temp_folder = os.path.join(video_dir, 'temp_frames')
         if not os.path.exists(temp_folder):

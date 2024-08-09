@@ -1,17 +1,12 @@
 import os
 import re
 
-from opencc import OpenCC
+import opencc
 
 from yuliu.utils import print_red
 
 
-def convert_simplified_to_traditional(text):
-    try:
-        cc = OpenCC('s2t')
-        return cc.convert(text)
-    except Exception:
-        return text
+
 
 
 def read_banned_list(file_path):
@@ -25,7 +20,7 @@ def read_banned_list(file_path):
 # 示例调用
 def is_banned(title):
     banned_list = read_banned_list('banned_list.sh')
-    traditional_title = convert_simplified_to_traditional(title)
+    traditional_title = simplified_to_traditional(title)
     return title in banned_list or traditional_title in banned_list
 
 
@@ -80,7 +75,3 @@ if __name__ == '__main__':
 
     print("\n未上传的视频 (总数: {}):".format(len(uploadable_videos)))
     print(format_video_list(uploadable_videos))
-
-
-
-

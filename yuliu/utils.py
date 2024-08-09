@@ -6,6 +6,7 @@ import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+import opencc
 import psutil
 
 from yuliu.DiskCacheUtil import DiskCacheUtil
@@ -698,6 +699,22 @@ def get_path_without_suffix(path):
         # 如果文件名不包含下划线，直接返回原路径
         return path
 
+def simplified_to_traditional(text):
+    """
+    将简体中文转换为台湾繁体中文
+    """
+    converter = opencc.OpenCC('s2twp')  # s2twp: Simplified Chinese to Traditional Chinese (Taiwan)
+    traditional_text = converter.convert(text)
+    return traditional_text
+
+
+def traditional_to_simplified(text):
+    """
+    将台湾繁体中文转换为简体中文
+    """
+    converter = opencc.OpenCC('tw2sp')  # tw2sp: Traditional Chinese (Taiwan) to Simplified Chinese
+    simplified_text = converter.convert(text)
+    return simplified_text
 
 def extract_audio_only(video_path):
     # 生成新的文件路径
