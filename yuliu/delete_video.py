@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 
 
@@ -17,27 +18,65 @@ def delete_dir(directory):
         print(f"文件夹不存在: {directory}")
 
 
+def get_name_to_number_mapping():
+    parent_dir = os.path.abspath(os.path.join(os.getcwd(), 'release_video'))
+    pattern = re.compile(r'^(\d{3})_(.+)')
+    name_mapping = {}
+
+    for d in os.listdir(parent_dir):
+        match = pattern.match(d)
+        if match:
+            name = match.group(2)
+            number_name = match.group(0)
+            name_mapping[name] = number_name
+
+    return name_mapping
+
+
 if __name__ == '__main__':
-    sub_directory_list = [
-        # '新版-护国神帅',
-        # '玄门侠女',
-        # '萌宝助攻我帮妈妈改嫁总裁大佬',
-        # '逃婚当天我抓了个总裁过日子',
-        # '隐秘的婚姻',
-        # '我无敌于世间',
-        # '当丑女遇上总裁',
-        # '我的爷爷是大佬',
-        # '鉴宝神婿'
-        # '凤凌天下',
-        # '凤燕归巢',
 
+    name_mapping = get_name_to_number_mapping()
+    with open('banned_list.sh', 'r', encoding='utf-8') as file:
+        data = file.read()
+    pattern = re.compile(r"'(.*?)'")
+    video_name_list = pattern.findall(data)
+    base_dirs = [
+        # "release_video",
+        os.path.join("MVSEP-MDX23-Colab_v2", "input"),
+        os.path.join("MVSEP-MDX23-Colab_v2", "output")
     ]
-    base_dirs = ["release_video",
-                 os.path.join("MVSEP-MDX23-Colab_v2", "input"),
-                 os.path.join("MVSEP-MDX23-Colab_v2", "output")
-                 ]
 
-    for sub_directory in sub_directory_list:
-        for base_dir in base_dirs:
-            dir_path = get_dir(base_dir, sub_directory)
-            delete_dir(dir_path)
+    for video_name in video_name_list:
+        if video_name in name_mapping:
+            video_path = f'release_video/{name_mapping[video_name]}'
+
+            video_path_input = os.path.join("MVSEP-MDX23-Colab_v2", "input", f"{name_mapping[video_name]}")
+            delete_dir(video_path_input)
+
+            video_path_output = os.path.join("MVSEP-MDX23-Colab_v2", "output", f"{name_mapping[video_name]}")
+            delete_dir(video_path_output)
+
+            video_path_image = f'{video_path}/images'
+            # 要保留的文件名列表
+            if os.path.exists(video_path_image):
+                keep_files = {'1.jpg', '2.jpg', '3.jpg', 'input_img123.png'}
+                # 删除不在保留列表中的文件
+                for filename in os.listdir(video_path_image):
+                    if filename not in keep_files:
+                        os.remove(os.path.join(video_path_image, filename))
+
+            video_path_offset = f'{video_path}/offset'
+            delete_dir(video_path_offset)
+
+            video_path_out_times = f'{video_path}/out_times'
+            delete_dir(video_path_out_times)
+
+            video_path_nobgm = f'{video_path}/{video_name}_nobgm.mp4'
+            video_path_nobgm_final = f'{video_path}/{video_name}_nobgm_final.mp4'
+            # 如果两个文件都存在，删除 video_path_nobgm_final
+            if os.path.exists(video_path_nobgm) and os.path.exists(video_path_nobgm_final):
+                os.remove(video_path_nobgm_final)
+
+            # for base_dir in base_dirs:
+            #     dir_path = get_dir(base_dir, sub_directory)
+            #     delete_dir(dir_path)
