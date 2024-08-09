@@ -31,24 +31,13 @@ if __name__ == "__main__":
         # '青春不死常胜不衰'
         # '隐龙之保安老爸不好惹',
 
-        # '请回答1990',
-        # '重生之扭转乾坤',
+
 
         # # 88-97
-        # '重生之我靠古玩再发家',
-        # '儿臣请父皇退位',
-        '气运将至',
+        # '光影下的少女',
+        # '天王归来',
 
 
-        # '金手指1997',
-        # '龙归故里',
-        # '神医驸马爷',
-        # '至尊国士',
-        # '裁员裁到大动脉第二部',
-
-
-
-        # '一场误会的闪婚契约',
 
     ]
 
@@ -59,12 +48,16 @@ if __name__ == "__main__":
         index = mapping[video_name]
         sub_directory = f"{index}_{video_name}"
 
-        if video_name == '重返流金岁月回档2011当歌神':
-            cover_title_split_postion = 6
-        if video_name == '真假千金姐姐死后成为霸总白月光':
-            cover_title_split_postion = 6
-        if video_name == '重生之我靠古玩再发家':
+        if video_name == '我穿成了自己笔下反派男主':
+            cover_title_split_postion = 4
+        if video_name == '拜托都要死了谁还惯着你':
+            cover_title_split_postion = 2
+        if video_name == '退隐后三个美女住我家':
             cover_title_split_postion = 3
+        if video_name == '丑女大翻身之换脸游戏':
+            cover_title_split_postion = 2
+        if video_name == '萌宝送上门爹地请签收':
+            cover_title_split_postion = 2
 
         common.check_and_run(sub_directory=sub_directory,
                              video_name=video_name,
@@ -73,10 +66,10 @@ if __name__ == "__main__":
 
                              # is_test=True,
                              is_get_cover=True,
-                             is_get_video=True,
+                             # is_get_video=True,
                              is_get_fanyi=False,
 
-                             num_of_covers=8,
+                             num_of_covers=16,
                              cover_title_split_postion=cover_title_split_postion
                              )
 

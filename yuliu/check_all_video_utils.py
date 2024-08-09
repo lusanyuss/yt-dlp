@@ -1,8 +1,6 @@
 import os
-import re
 
 import jieba
-from opencc import OpenCC
 
 
 def get_directory_and_mp4_names(directory):
@@ -58,15 +56,44 @@ def get_valid_directories(base_dir):
     return directory_numbers
 
 
+import re
+from opencc import OpenCC
+
+
+def convert_to_simplified_and_save(filename):
+    # 初始化转换器，将繁体转换为简体
+    cc = OpenCC('tw2sp')
+
+    # 读取文件内容
+    with open(filename, 'r', encoding='utf-8') as file:
+        data = file.read()
+
+    # 将文件内容转换为简体中文
+    data_simplified = cc.convert(data)
+
+    # 使用正则表达式匹配单引号内的内容
+    pattern = re.compile(r"'(.*?)'")
+    matches = pattern.findall(data_simplified)
+
+    # 去重并保持原有顺序
+    unique_matches = list(dict.fromkeys(matches))
+
+    # 将去重后的内容重新组装回文件内容
+    data_unique = ',\n'.join([f"'{item}'" for item in unique_matches])
+
+    # 将去重后的简体中文内容写回文件，覆盖旧版本
+    with open(filename, 'w', encoding='utf-8') as file:
+        file.write(data_unique)
+
+
 if __name__ == '__main__':
     directory_path = r'C:\download_short_film\baidu'
     result = get_directory_and_mp4_names(directory_path)
-    print("现有资源集合:", result)
-
-    # 读取文件内容
+    print("百度网盘集合:\n", result)
+    # 转换繁体,并去重
+    convert_to_simplified_and_save('banned_list.sh')
     with open('banned_list.sh', 'r', encoding='utf-8') as file:
         data = file.read()
-    # 使用正则表达式提取单引号中的内容
     pattern = re.compile(r"'(.*?)'")
     banned_result = pattern.findall(data)
     # 处理提取的结果
@@ -74,7 +101,6 @@ if __name__ == '__main__':
     release_video_dir = os.path.join('./', 'release_video')
     # 获取有效的目录
     valid_dirs = list(set(process_strings(get_valid_directories(release_video_dir)) + process_strings(banned_result)))
-    # print("已上架目录集合:", valid_dirs)
 
     # 将结果转换为集合
     result_set = set(result)
@@ -84,5 +110,5 @@ if __name__ == '__main__':
     already_uploaded = sorted(result_set.intersection(valid_dirs_set), key=lambda x: result.index(x))
     not_uploaded = sorted(result_set.difference(valid_dirs_set), key=lambda x: result.index(x))
 
-    print("\n\n已上架的资源:", already_uploaded)
-    print(f"未上架的资源{len(not_uploaded)}:", not_uploaded)
+    print("\n\nYoutube已上架的资源:\n", already_uploaded)
+    print(f"\n\n未上架的资源{len(not_uploaded)}:\n", not_uploaded)

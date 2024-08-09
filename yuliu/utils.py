@@ -642,7 +642,6 @@ def concatenate_folder_videos(folder_path):
     files = [f for f in os.listdir(folder_path) if f.endswith('.mp4')]
     # 提取索引并排序
     indices = sorted([int(os.path.splitext(f)[0]) for f in files])
-    print(indices)
     # 检查索引是否连续
     if indices != list(range(1, len(indices) + 1)):
         raise ValueError("视频文件索引不连续或缺少文件")
